@@ -60,7 +60,7 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   | F0.1 | Primer commit en `main`, remoto conectado, rama `feat/f0-base` | `git log --oneline; git branch -vv` |
   | F0.2 | Monorepo con npm workspaces, TypeScript estricto y Vitest, con una prueba de control positivo. Los módulos y sus dependencias permitidas van en una ADR | `npm test; echo $?` da 0, y da 1 con la prueba de control invertida |
   | F0.3 | Prueba de arquitectura: el núcleo no importa adaptadores ni el SDK de Anthropic (ADR-0001 D2) | Una importación plantada en el núcleo hace fallar `npm test` |
-  | F0.4 | PostgreSQL en Docker Compose, publicado solo en `127.0.0.1`; Drizzle y una migración inicial probada contra una base desechable | `docker compose up -d db; npm run db:migrate; npm test; echo $?` |
+  | F0.4 | PostgreSQL en Docker Compose, publicado solo en `127.0.0.1`; Drizzle y una migración inicial probada contra una base desechable | `docker compose up -d --wait db; npm run db:migrate; npm test; echo $LASTEXITCODE` |
   | F0.5 | GitHub Actions: tipos, pruebas con cobertura, frases prohibidas sobre el README y las apps, finales de línea y patrones de secretos | La rama en verde; una frase plantada la pone en rojo |
   | F0.6 | README mínimo (solo lo que existe), comandos verificados en `CLAUDE.md`. Se piden los insumos de F1: nombre de la escuela inventada, programas y etapas del CRM | Seguir el README en una terminal limpia |
 
@@ -72,12 +72,17 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   tapados por tuberías (`guards/run-checked.sh`); Docker Desktop apagado; mezcla de ESM y
   CommonJS en TypeScript; versión del proveedor de cobertura distinta de la de Vitest;
   npm lanzado desde Git Bash (ver `CLAUDE.md`, sección 8); un lockfile hecho en Windows sin
-  los binarios nativos de Linux (TypeScript 7, rolldown, lightningcss), que rompe `npm ci`
-  en CI y en Docker. El 2026-11-24 el lockfile sí los traía.
+  los binarios nativos de Linux (TypeScript 7, rolldown, lightningcss, esbuild), que rompe
+  `npm ci` en CI y en Docker. El 2026-11-24 el lockfile sí los traía. La imagen de
+  PostgreSQL 18 guarda los datos en otra ruta, y Drizzle se salta sin avisar un `.sql` que
+  no está en el journal (ver `CLAUDE.md`, sección 8).
 - **Estado:** en curso en `feat/f0-base`. F0.1 cerrado el 2026-11-23. F0.2 cerrado el
   2026-11-24, con la ADR-0003 aceptada (opción 4). F0.3 cerrado el 2026-11-24 con la
   confirmación del dueño: 33 pruebas, cuatro violaciones plantadas en el árbol real y dos
-  mutantes del verificador, todos en rojo.
+  mutantes del verificador, todos en rojo. F0.4 cerrado el 2026-11-24 con la confirmación
+  del dueño: 76 pruebas; seis violaciones plantadas, cada una en rojo en su prueba, y
+  ninguna base desechable sobrante. Sin auditoría de `adr-guard` (el dueño hizo el commit
+  sin ella).
 
 ### F1 · CRM simulado
 
@@ -189,6 +194,9 @@ Lo que una respuesta recomienda y no se aplica en ese paso queda aquí hasta apl
 | R3 | Comparar «Circuit» con productos y paquetes existentes | Un nombre repetido resta en un enlace corto | Claude, en F0.6 | Abierta |
 | R4 | Confirmar en el navegador que la vacante sigue abierta | No se pudo comprobar por consola | El dueño | Abierta |
 | R5 | Elegir el canal del mensaje (plataforma de la vacante o LinkedIn) | Define el formato del GIF y de las tres líneas | El dueño, antes de F6 | Abierta |
+| R6 | Script de respaldo (`pg_dump` dentro del contenedor, no por la tubería de PowerShell) con una restauración probada | Hoy no hay datos que respaldar; el ritual de `safe-database` lo exige desde el primer dato | Claude, antes de la semilla de F1.5 | Abierta |
+| R7 | CI levanta la base con el mismo `compose.yaml` y una contraseña generada en la corrida | Una sola definición de la base; las pruebas de Compose y de migración corren igual que en local | Claude, en F0.5 | Abierta |
+| R8 | Generar `database/schema.sql` desde una base migrada y compararlo en una prueba | Hoy se escribe a mano porque solo hay dos esquemas vacíos; con tablas se desvía | Claude, en F1.1 | Abierta |
 
 ## 6. Mapa de documentos
 

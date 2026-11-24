@@ -42,8 +42,9 @@ de una empresa real.
 Remoto: https://github.com/ru3enaa1/Circuit. F0 en curso en `feat/f0-base`: F0.1 cerrado;
 F0.2 cerrado (npm workspaces con `apps/circuit` y `apps/crm`, TypeScript estricto, Vitest
 con un proyecto por app). F0.3 cerrado (los cinco módulos de circuit, vacíos, y la prueba
-de arquitectura con controles positivos). Sin código de producto todavía. En curso: F0.4,
-PostgreSQL en Docker con Drizzle.
+de arquitectura con controles positivos). F0.4 cerrado (PostgreSQL 18.7 en Compose, solo en
+`127.0.0.1`; Drizzle; la migración inicial con los esquemas `circuit` y `crm`, y sus pruebas
+contra una base desechable). Sin código de producto todavía. En curso: F0.5, GitHub Actions.
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -79,8 +80,12 @@ Verificado en esta máquina el 2026-11-23: Node 24.20.0, npm 11.19.0, Docker 29.
 **Terraform y psql no están instalados**; PostgreSQL corre en Docker.
 Las dependencias entran una a una, en la fase que las necesita, con la versión verificada ese día.
 En uso, verificadas en el registro de npm el 2026-11-24: TypeScript 7.0.2, Vitest 5.1.1 (trae
-Vite 8.3.8) y @types/node 24.19.2 (la línea de Node 24, no la última). Versiones exactas
-(`save-exact` en `.npmrc`) y lockfile versionado.
+Vite 8.3.8) y @types/node 24.19.2 (la línea de Node 24, no la última); drizzle-orm 0.45.4 y
+drizzle-kit 0.31.11 (la 1.0 sigue en RC), pg 8.23.1 y @types/pg 8.23.1. PostgreSQL 18.7
+(`postgres:18.7-trixie`, fijada por digest; la 19.0 acababa de salir). Versiones exactas
+(`save-exact` en `.npmrc`) y lockfile versionado. El `overrides` de `package.json` sube el
+esbuild que drizzle-kit arrastra por `@esbuild-kit/core-utils` (0.18.20, GHSA-67mh-4wv8-2f99)
+al 0.25.12 que ya usa; se quita cuando drizzle-kit suelte esa dependencia.
 
 ## 6. Convenciones de código
 
@@ -111,6 +116,21 @@ Se registran con el formato de pitfall-log: regla, síntoma, causa, chequeo y fe
   lo lanza Git Bash. Se vio en el Bash de Claude Code; no se ha confirmado en otra terminal
   de Git Bash. Chequeo: desde bash, `cmd //c "where node"` debe encontrar node antes de
   usar npm.
+- **Docker Desktop está instalado por usuario** (2026-11-24). Síntoma: `failed to connect
+  to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine`. Causa: Docker Desktop
+  apagado; el ejecutable está en `%LOCALAPPDATA%\Programs\DockerDesktop\Docker Desktop.exe`,
+  no en `Program Files`. Chequeo: `docker version --format '{{.Server.Version}}'` da versión.
+
+**Base de datos:**
+- **PostgreSQL 18 cambió dónde guarda los datos** (2026-11-24). Regla: el volumen va en
+  `/var/lib/postgresql`. Causa: desde la 18 la imagen usa `/var/lib/postgresql/18/docker`;
+  montar el antiguo `/var/lib/postgresql/data` deja los datos en un volumen anónimo que se
+  pierde al recrear. Chequeo: `docker image inspect <imagen> --format '{{json .Config.Volumes}}'`.
+- **Drizzle se salta migraciones sin avisar** (2026-11-24). Síntoma: un `.sql` que no está
+  en `meta/_journal.json`, o con un `when` no posterior al último aplicado, no se aplica y
+  la migración «sale bien». Chequeo: `database/test/migration-files.test.ts`.
+- **`npm test` necesita la base levantada** (2026-11-24). Sin ella, la prueba de base
+  desechable falla con el comando para levantarla; no se salta.
 
 ## 9. Comandos
 
@@ -133,6 +153,19 @@ $env:CIRCUIT_INVERT_CONTROL='1'; npm test; echo $LASTEXITCODE; Remove-Item Env:C
 Set-Content apps\circuit\src\modules\circuit\planted.ts "import '@anthropic-ai/sdk';"; npm test; echo $LASTEXITCODE; Remove-Item apps\circuit\src\modules\circuit\planted.ts   # arquitectura: debe dar 1
 ```
 
+Verificados el 2026-11-24 en PowerShell, con seis violaciones plantadas (puerto en todas las
+interfaces, imagen sin digest, `.sql` fuera del journal, `DROP`, SQL roto y un esquema que
+falta), cada una en rojo en su prueba:
+
+```powershell
+Copy-Item .env.example .env                       # y poner POSTGRES_PASSWORD (sin BOM)
+docker compose up -d --wait db                    # PostgreSQL 18.7 en 127.0.0.1, espera a que esté sano
+npm run db:migrate                                # aplica las migraciones pendientes a la base de desarrollo
+npm run db:generate -- --name <nombre>            # escribe una migración desde database/schema.ts
+npx vitest run --project database                 # solo las pruebas de la base y de Compose
+docker compose stop db                            # detiene la base y conserva el volumen
+```
+
 Arrancar la app se agrega cuando exista un servidor (F1).
 
 ## 10. Dónde está todo lo demás
@@ -142,6 +175,8 @@ Arrancar la app se agrega cuando exista un servidor (F1).
 | `docs/privado/propuesta.md` | El porqué, el escenario y la cobertura de la vacante (local) |
 | `DEVELOPMENT_PLAN.md` | Las fases, en orden, y su estado |
 | `docs/adr/` | Decisiones de arquitectura |
+| `database/` | Migraciones, esquema legible, conexión y sus pruebas |
+| `.env.example` | Las variables locales, sin la contraseña |
 | `guards/` | Guardas: frases prohibidas, finales de línea, código de salida |
 | `forbidden-phrases.txt` | Lo que Circuit nunca dice (pública, en CI) |
 | `forbidden-phrases.local.txt` | Nombres privados; fuera de git, se corre antes de cada push |

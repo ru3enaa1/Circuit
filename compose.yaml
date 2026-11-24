@@ -1,0 +1,33 @@
+# Circuit, local only (ADR-0002). For now only the database: crm and circuit join when they
+# have a server (F1 and F2; ADR-0003, M5).
+name: circuit
+
+services:
+  db:
+    # Exact version and digest: every clone runs the same image (CLAUDE.md, Reproducible).
+    # 18.7 and not 19.0: a fresh .0 release is not a base for a demo (checked 2026-11-24).
+    image: postgres:18.7-trixie@sha256:c699303802144847d238196173655dbbecf7a96aeca1565f2b02eb671a1f0b6b
+    environment:
+      # `:?` stops Compose with the variable's name when .env is missing or incomplete.
+      POSTGRES_USER: ${POSTGRES_USER:?copy .env.example to .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?copy .env.example to .env}
+    ports:
+      # Loopback only: the database is never reachable from the local network
+      # (DEVELOPMENT_PLAN, F0 security). database/test/compose.test.ts enforces it.
+      - "127.0.0.1:${DB_PORT:?copy .env.example to .env}:5432"
+    volumes:
+      # Since PostgreSQL 18 the image keeps its data in /var/lib/postgresql/18/docker and
+      # declares the volume on the parent; mounting the old /var/lib/postgresql/data path
+      # would leave the data in an anonymous volume that a recreate throws away.
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      # Over TCP on purpose: during first-time init the entrypoint runs a temporary server
+      # on the Unix socket only, so a socket check reports ready before the real server is.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  db-data:

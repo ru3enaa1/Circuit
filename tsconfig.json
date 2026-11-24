@@ -1,5 +1,6 @@
 {
-  // Root files only (the test runner config). Each app type-checks with its own tsconfig.
+  // Root files (test runner and drizzle-kit configs) and the database tooling. Each app
+  // type-checks with its own tsconfig.
   "extends": "./tsconfig.base.json",
-  "include": ["vitest.config.ts"]
+  "include": ["vitest.config.ts", "drizzle.config.ts", "database"]
 }
