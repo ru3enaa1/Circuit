@@ -86,6 +86,8 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   cuatro medidas (confirmado por el dueño), `guards/check-secrets.sh` con
   16 casos plantados y cinco mutantes en rojo, y `.github/workflows/ci.yml` con los mismos
   comandos que en local. El workflow no se ha corrido: la prueba del dueño necesita push.
+  ADR-0004, retroactiva, aceptada el 2026-11-24 con sus supuestos; la auditoría de
+  `adr-guard` va antes del push.
 
 ### F1 · CRM simulado
 

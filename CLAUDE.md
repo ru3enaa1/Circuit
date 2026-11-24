@@ -46,7 +46,9 @@ de arquitectura con controles positivos). F0.4 cerrado (PostgreSQL 18.7 en Compo
 `127.0.0.1`; Drizzle; la migración inicial con los esquemas `circuit` y `crm`, y sus pruebas
 contra una base desechable). Sin código de producto todavía. F0.5 hecho en local: cobertura
 con piso de 80 (confirmado por el dueño), guarda de secretos con sus controles positivos y `.github/workflows/ci.yml`;
-falta su prueba en GitHub, que necesita un push con el sí del dueño.
+falta su prueba en GitHub, que necesita un push con el sí del dueño. ADR-0004 (retroactiva
+de F0.5) aceptada el 2026-11-24, con su línea base en `docs/reviews/`; la auditoría va en una
+sesión nueva, antes del push.
 
 ## 3. Reglas de producto que gobiernan el código
 
