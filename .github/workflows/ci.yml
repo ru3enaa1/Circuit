@@ -44,8 +44,8 @@ jobs:
       - name: Finales de línea de los archivos comparados byte a byte
         run: bash guards/check-line-endings.sh '*.sh' '*.json' '*.sql' 'database/examples/**' '**/golden/**'
       - name: Frases prohibidas
-        # README.md joins this list when it exists (F0.6).
-        run: bash guards/check-forbidden-phrases.sh forbidden-phrases.txt apps database
+        # The README is the first text a reader sees, so it is checked like the apps (F0.6).
+        run: bash guards/check-forbidden-phrases.sh forbidden-phrases.txt README.md apps database
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -67,6 +67,7 @@ jobs:
           echo "::add-mask::${password}"
           echo "POSTGRES_PASSWORD=${password}" >> "$GITHUB_ENV"
       - name: PostgreSQL desde compose.yaml
+        id: db
         run: docker compose up -d --wait db
       - name: Migraciones sobre la base de desarrollo
         run: npm run db:migrate
@@ -75,5 +76,7 @@ jobs:
       - name: Pruebas con cobertura
         run: npm run test:coverage
       - name: Registro de PostgreSQL si algo falló
-        if: failure()
+        # Only when Compose got to run: an earlier failure (a guard, npm ci) leaves no .env and
+        # no container, and this step would add a second, misleading red step (run 45449147850).
+        if: failure() && steps.db.outcome != 'skipped'
         run: docker compose logs db

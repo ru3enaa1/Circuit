@@ -44,13 +44,13 @@ F0.2 cerrado (npm workspaces con `apps/circuit` y `apps/crm`, TypeScript estrict
 con un proyecto por app). F0.3 cerrado (los cinco módulos de circuit, vacíos, y la prueba
 de arquitectura con controles positivos). F0.4 cerrado (PostgreSQL 18.7 en Compose, solo en
 `127.0.0.1`; Drizzle; la migración inicial con los esquemas `circuit` y `crm`, y sus pruebas
-contra una base desechable). Sin código de producto todavía. F0.5 hecho en local: cobertura
-con piso de 80 (confirmado por el dueño), guarda de secretos con sus controles positivos y `.github/workflows/ci.yml`;
-falta su prueba en GitHub, que necesita un push con el sí del dueño. ADR-0004 (retroactiva
-de F0.5) aceptada y auditada el 2026-11-24: APROBAR CON CONDICIONES, 0 bloqueantes. H1–H5
-resueltos el mismo día (la guarda de secretos revisa el índice, la forma YAML y, con
-`--range`, cada commit) y la ADR enmendada; H6 se aplica en F2 y H8 en F3. Antes del push:
-`check-secrets.sh --range` sobre lo que se publica y la lista privada (R9, a mano).
+contra una base desechable). Sin código de producto todavía. F0.5 cerrado: cobertura con
+piso de 80 (confirmado por el dueño), guarda de secretos con sus controles positivos y
+`.github/workflows/ci.yml`. ADR-0004 (retroactiva de F0.5) aceptada y auditada el
+2026-11-24: APROBAR CON CONDICIONES, 0 bloqueantes; H1–H5 resueltos y la ADR enmendada; H6
+se aplica en F2 y H8 en F3. Push aprobado por el dueño el 2026-11-24: la rama en verde en
+GitHub y una frase plantada en rojo (C15). F0.6 en curso: README mínimo y los insumos de
+F1. Antes de cada push, `check-secrets.sh --range` y la lista privada, a mano (R9, §9).
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -184,7 +184,17 @@ bash guards/check-secrets.test.sh                 # controles positivos de la gu
 bash guards/check-secrets.sh                      # lo versionado, lo nuevo sin ignorar y el índice: 0 limpio, 1 hallazgo, 2 nada revisado
 bash guards/check-secrets.sh --range origin/feat/f0-base..HEAD   # cada commit que se va a publicar (antes del push; CI no lo corre)
 bash guards/check-line-endings.sh '*.sh' '*.json' '*.sql' 'database/examples/**' '**/golden/**'
-bash guards/check-forbidden-phrases.sh forbidden-phrases.txt apps database   # README.md se suma en F0.6
+bash guards/check-forbidden-phrases.sh forbidden-phrases.txt README.md apps database
+```
+
+Verificados el 2026-11-24 antes y después del primer push (R9 a mano y C15). La lista
+privada se probó con una de sus frases plantada en una copia del rango: salió con 1.
+
+```sh
+git ls-files -z | xargs -0 bash guards/check-forbidden-phrases.sh forbidden-phrases.local.txt   # lista privada sobre lo versionado
+git log -p --format='%an %ae%n%B' origin/feat/f0-base..HEAD > /tmp/rango.patch && bash guards/check-forbidden-phrases.sh forbidden-phrases.local.txt /tmp/rango.patch   # sobre cada diff, mensaje y autor que se publica
+gh run list --branch feat/f0-base --limit 3 --json databaseId,status,conclusion,headSha   # sin --workflow: falla mientras ci.yml no esté en main
+gh run watch <id> --exit-status   # 0 en verde, 1 en rojo
 ```
 
 ```powershell

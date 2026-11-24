@@ -82,16 +82,19 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   mutantes del verificador, todos en rojo. F0.4 cerrado el 2026-11-24 con la confirmación
   del dueño: 76 pruebas; seis violaciones plantadas, cada una en rojo en su prueba, y
   ninguna base desechable sobrante. Sin auditoría de `adr-guard` (el dueño hizo el commit
-  sin ella). F0.5 hecho en local el 2026-11-24, sin cerrar: cobertura con piso de 80 en las
-  cuatro medidas (confirmado por el dueño), `guards/check-secrets.sh` con
-  16 casos plantados y cinco mutantes en rojo, y `.github/workflows/ci.yml` con los mismos
-  comandos que en local. El workflow no se ha corrido: la prueba del dueño necesita push.
-  ADR-0004, retroactiva, aceptada el 2026-11-24 con sus supuestos. Auditada el mismo día
-  (`docs/reviews/ADR-0004-audit-2026-11-24.md`): APROBAR CON CONDICIONES, 14 cláusulas
-  cumplidas, 0 regresiones, C15 sin verificar hasta el push. H1–H5 resueltos y la ADR
-  enmendada: la guarda pasa a 25 casos y revisa el índice, la forma YAML y cada commit
-  (`--range`). H6 queda para F2 (cobertura de `.tsx`) y H8 para F3 (binarios). Se cierra
-  con C15: la rama en verde en GitHub y un commit plantado en rojo.
+  sin ella). F0.5 cerrado el 2026-11-24, con el push aprobado por el dueño: cobertura con
+  piso de 80 en las cuatro medidas (confirmado por el dueño), `guards/check-secrets.sh` y
+  `.github/workflows/ci.yml` con los mismos comandos que en local. ADR-0004, retroactiva,
+  aceptada y auditada el mismo día (`docs/reviews/ADR-0004-audit-2026-11-24.md`): APROBAR
+  CON CONDICIONES. H1–H5 resueltos y la ADR enmendada (la guarda revisa el índice, la forma
+  YAML y cada commit con `--range`; 25 casos y 16 mutantes en rojo). H6 queda para F2
+  (cobertura de `.tsx`) y H8 para F3 (binarios). C15 verificado en GitHub: la corrida
+  45448819374 en verde (14 pasos, 76 pruebas, cobertura 92 / 92,3 / 100 / 91,3, la
+  contraseña como `***`, Compose sano sobre un volumen vacío) y la rama desechable
+  `test/c15-frase-plantada` en rojo en «Frases prohibidas» (corrida 45449147850), ya
+  borrada. Nota de esa corrida: el paso «Registro de PostgreSQL si algo falló» también sale
+  en rojo cuando Compose no llegó a correr; se arregla en F0.6.
+  F0.6 en curso el 2026-11-24.
 
 ### F1 · CRM simulado
 
@@ -200,11 +203,11 @@ Lo que una respuesta recomienda y no se aplica en ese paso queda aquí hasta apl
 |---|---|---|---|---|
 | R1 | Terraform: escribirlo y validarlo sin aplicarlo, o dejarlo fuera | La vacante pide infraestructura como código; no hay despliegue | El dueño | Abierta |
 | R2 | Elegir la licencia del repositorio | Sin licencia nadie puede reutilizar el código; pesa si se ofrece como producto | El dueño | Abierta |
-| R3 | Comparar «Circuit» con productos y paquetes existentes | Un nombre repetido resta en un enlace corto | Claude, en F0.6 | Abierta |
+| R3 | Comparar «Circuit» con productos y paquetes existentes | Un nombre repetido resta en un enlace corto | Claude, en F0.6 | Cerrada el 2026-11-24: es una palabra común. La app de rutas que se llamaba Circuit ahora es Spoke; el nombre más cercano en IA con CRM es Circuitry.ai; el paquete `circuit` de npm está tomado (librería de enlace de datos), sin efecto porque el repositorio es `private` y no se publica en npm. Sirve para el portafolio; si Circuit se ofrece como producto, el nombre se revisa con una búsqueda de marca (el dueño) |
 | R4 | Confirmar en el navegador que la vacante sigue abierta | No se pudo comprobar por consola | El dueño | Abierta |
 | R5 | Elegir el canal del mensaje (plataforma de la vacante o LinkedIn) | Define el formato del GIF y de las tres líneas | El dueño, antes de F6 | Abierta |
 | R6 | Script de respaldo (`pg_dump` dentro del contenedor, no por la tubería de PowerShell) con una restauración probada | Hoy no hay datos que respaldar; el ritual de `safe-database` lo exige desde el primer dato | Claude, antes de la semilla de F1.5 | Abierta |
-| R7 | CI levanta la base con el mismo `compose.yaml` y una contraseña generada en la corrida | Una sola definición de la base; las pruebas de Compose y de migración corren igual que en local | Claude, en F0.5 | En `ci.yml`; se cierra con la primera corrida en verde |
+| R7 | CI levanta la base con el mismo `compose.yaml` y una contraseña generada en la corrida | Una sola definición de la base; las pruebas de Compose y de migración corren igual que en local | Claude, en F0.5 | Cerrada el 2026-11-24: la primera corrida salió en verde (45448819374) |
 | R8 | Generar `database/schema.sql` desde una base migrada y compararlo en una prueba | Hoy se escribe a mano porque solo hay dos esquemas vacíos; con tablas se desvía | Claude, en F1.1 | Abierta |
 | R9 | Hook de `pre-push` que corre `forbidden-phrases.local.txt` sobre lo versionado y `check-secrets.sh --range <remoto>..<local>` sobre cada commit que se publica | La lista privada no puede ir a CI, y CI corre después del push: detecta un secreto, no impide publicarlo (auditoría de ADR-0004, H1). Hoy depende de acordarse antes de cada push | El dueño. Hasta que exista, los dos comandos se corren a mano antes de cada push | Abierta |
 
