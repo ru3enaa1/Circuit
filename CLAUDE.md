@@ -39,8 +39,9 @@ de una empresa real.
 ## 2. Dónde estamos de verdad
 
 2026-11-23: reglas, plan por fases con subpasos, ADR-0001, ADR-0002 y guardas creados.
-Remoto: https://github.com/ru3enaa1/Circuit. Sin código todavía. Siguiente: F0.1 y F0.2
-(ver `DEVELOPMENT_PLAN.md`), una vez el dueño acuerde los subpasos.
+Remoto: https://github.com/ru3enaa1/Circuit. F0 en curso en `feat/f0-base`: F0.1 cerrado
+(primer commit en `main`). Sin código todavía. Siguiente: F0.2, una vez el dueño acuerde
+los módulos.
 
 ## 3. Reglas de producto que gobiernan el código
 

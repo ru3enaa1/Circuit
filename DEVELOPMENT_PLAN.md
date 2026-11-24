@@ -71,7 +71,7 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
 - **Trampas:** CRLF en Windows en archivos comparados byte a byte; códigos de salida
   tapados por tuberías (`guards/run-checked.sh`); Docker Desktop apagado; mezcla de ESM y
   CommonJS en TypeScript; versión del proveedor de cobertura distinta de la de Vitest.
-- **Estado:** pendiente.
+- **Estado:** en curso en `feat/f0-base`. F0.1 cerrado el 2026-11-23.
 
 ### F1 · CRM simulado
 
