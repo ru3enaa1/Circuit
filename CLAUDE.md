@@ -19,7 +19,8 @@ de una empresa real.
 - **Nada sale ni se escribe en el CRM sin aprobación humana** (estación 6). La estación 5 solo
   propone.
 - **Permiso mínimo en el CRM, no en el prompt.** La llave del agente no borra, no exporta y
-  no ve otra empresa; lo rechaza la API del CRM simulado.
+  no ve otra cuenta; lo rechaza la API del CRM simulado, y la base lo impone debajo
+  (ADR-0005).
 - **Toda escritura al CRM queda en bitácora** con quién la propuso y quién la aprobó.
 - **El mapa se dibuja con eventos guardados**, nunca con una animación suelta.
 - **Sin fuente, no hay respuesta** en la estación 4.
@@ -47,9 +48,14 @@ en `127.0.0.1`, con Drizzle y la migración inicial (esquemas `circuit` y `crm`,
 cobertura con piso de 80, la guarda de secretos, `.github/workflows/ci.yml` y el hook de
 `pre-push` (§9). Sin código de producto todavía. ADR-0003 (opción 4) aceptada; ADR-0004
 auditada (APROBAR CON CONDICIONES): H6 se aplica en F2 y H8 en F3.
-**F1 · CRM simulado abierta en `feat/f1-crm`**, que sale de `main`. F1.1 (esquema y
-migración) empieza con su ADR de `/coderachnid:adr-guard plan`; no hay código de F1 sin
-esa ADR aceptada. Los push los pide el dueño; el hook no se salta con `--no-verify`.
+**F1 · CRM simulado abierta en `feat/f1-crm`**, que sale de `main`. **F1.1 hecha el
+2026-11-24**, con commit en la rama a pedido del dueño, que pidió seguir con F1.2. ADR-0005 aceptada (el dueño delegó sus
+siete preguntas y pidió seguir sin auditoría). Ocho tablas en `crm` con RLS por cuenta;
+roles `crm_service` y `circuit_service` sin login; bitácora por trigger, sin valores; llaves
+solo como SHA-256 y solo por `crm.resolve_api_key`. Migraciones `0001` (generada) y `0002`
+(a mano); `database/schema.sql` sale de un `pg_dump` (R8). 144 pruebas, cobertura 98,43 /
+92,3 / 100 / 98,21; doce mutantes en rojo. La base de desarrollo ya está migrada. Sigue
+F1.2 (API de lectura). Los push los pide el dueño; el hook no se salta con `--no-verify`.
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -70,6 +76,9 @@ el CRM aparte).
   de Anthropic solo entra en `model`.
 - `apps/crm`: el CRM simulado, un proceso aparte. Circuit no importa su código; solo le
   habla por HTTP con la llave del agente, y su usuario de base no ve el esquema del CRM.
+  El CRM es dueño de sus tablas (`apps/crm/src/db/schema.ts`); lo que drizzle-kit no
+  expresa (roles, permisos, RLS, trigger, búsqueda de llaves) está en
+  `database/migrations/0002_crm_security.sql` (ADR-0005).
 - `apps/board`: el tablero, servido por circuit (llega en F2).
 
 Lo impone `apps/circuit/test/architecture/`: el mapa de dependencias (`module-map.ts`) y una
@@ -138,6 +147,30 @@ Se registran con el formato de pitfall-log: regla, síntoma, causa, chequeo y fe
   la migración «sale bien». Chequeo: `database/test/migration-files.test.ts`.
 - **`npm test` necesita la base levantada** (2026-11-24). Sin ella, la prueba de base
   desechable falla con el comando para levantarla; no se salta.
+- **Los roles son del servidor, no de la base** (2026-11-24). Síntoma: dos migraciones a la
+  vez fallan al crear el mismo rol con `unique_violation` (no `duplicate_object`), o con
+  «tuple concurrently updated» si lo alteran. Regla: crear con una guarda que atrape los dos
+  códigos y comprobar los atributos sin `ALTER ROLE`. Chequeo: `migrations-db.test.ts`; la
+  carrera solo ocurre donde los roles aún no existen (ADR-0005, «Aceptación»).
+- **`search_path = ''` no basta en una función `SECURITY DEFINER`** (2026-11-24). Causa: con
+  la ruta vacía, `pg_temp` se busca primero para tablas y tipos. Regla:
+  `SET search_path = pg_catalog, pg_temp`. Chequeo: `crm-structure-db.test.ts` (D12).
+- **Las reglas de migraciones leen también los comentarios** (2026-11-24, a propósito desde
+  F0.4). Síntoma: `migration-files.test.ts` en rojo por un comentario. Regla: en un `.sql` de
+  `database/migrations/` no se escriben, ni en comentarios, las órdenes de borrado ni las
+  palabras sueltas `LOGIN` y `PASSWORD`. Chequeo: `migration-files.test.ts`.
+- **Nunca `drizzle-kit push`** (2026-11-24). Causa: drizzle-kit no conoce los permisos, las
+  políticas ni el trigger de `0002` y los borraría. No hay script `db:push`; los cambios van
+  por `db:generate` y una migración.
+- **`pg_dump` 18 cambia en cada corrida** (2026-11-24). Causa: pone una clave `\restrict` al
+  azar y el dueño de `.env`. Regla: `--restrict-key=circuit` y `--no-owner`. Chequeo:
+  `schema-dump-db.test.ts`.
+
+**Herramientas:**
+- **`vitest --update` se come el filtro** (2026-11-24). Síntoma: `vitest run --update x`
+  corre todos los archivos. Causa: `-u, --update [type]` acepta un valor y toma `x` como tal.
+  Regla: el filtro va antes y el valor explícito (`--update=all`). Chequeo:
+  `npm run db:dump-schema` dice «Test Files 1».
 
 ## 9. Comandos
 
@@ -211,7 +244,15 @@ npm audit --audit-level=low   # 0 sin vulnerabilidades conocidas (no se probó c
 npm run test:coverage         # pruebas con cobertura: bajo el piso de 80 sale con 1
 ```
 
-Arrancar la app se agrega cuando exista un servidor (F1).
+Verificados el 2026-11-24 en PowerShell (F1.1), con doce mutantes plantados en las
+migraciones y una columna plantada en `database/schema.sql`, cada uno en rojo:
+
+```powershell
+npx vitest run --project database crm             # el esquema crm: estructura (D1–D13) y reglas como conducta
+npm run db:dump-schema                            # regenera database/schema.sql desde una base desechable recién migrada (R8)
+```
+
+Arrancar la app se agrega cuando exista un servidor (F1.2).
 
 ## 10. Dónde está todo lo demás
 

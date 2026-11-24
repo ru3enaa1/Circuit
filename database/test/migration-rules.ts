@@ -15,6 +15,16 @@ export function findDestructiveStatements(sql: string): readonly string[] {
   return Array.from(sql.matchAll(DESTRUCTIVE_STATEMENT), (match) => match[0]);
 }
 
+// A role that can log in, or a password, never comes from a migration: migrations are
+// public, and the users that connect get their passwords from .env (ADR-0005 D14). NOLOGIN
+// and catalog columns such as rolcanlogin do not match, because the word must stand alone.
+// Comments are scanned too, for the same reason as above.
+const CREDENTIAL_CLAUSE = /\b(?:LOGIN|PASSWORD)\b/gi;
+
+export function findCredentialClauses(sql: string): readonly string[] {
+  return Array.from(sql.matchAll(CREDENTIAL_CLAUSE), (match) => match[0]);
+}
+
 export interface JournalEntry {
   readonly idx: number;
   readonly tag: string;

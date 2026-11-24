@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { MIGRATIONS_DIR, REPO_ROOT } from '../config.js';
-import { checkJournal, findDestructiveStatements, readMigrationFolder } from './migration-rules.js';
+import { checkJournal, findCredentialClauses, findDestructiveStatements, readMigrationFolder } from './migration-rules.js';
 
 // The rules from migration-rules.ts, run on the real migration folder. No database needed.
 
@@ -28,5 +28,10 @@ describe('database/migrations', () => {
   it.each(folder.sqlFiles)('%s only moves forward', (file) => {
     const sql = readFileSync(join(MIGRATIONS_PATH, file), 'utf8');
     expect(findDestructiveStatements(sql)).toEqual([]);
+  });
+
+  it.each(folder.sqlFiles)('%s creates no login and holds no password', (file) => {
+    const sql = readFileSync(join(MIGRATIONS_PATH, file), 'utf8');
+    expect(findCredentialClauses(sql)).toEqual([]);
   });
 });

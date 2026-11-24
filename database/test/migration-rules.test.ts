@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { checkJournal, findDestructiveStatements, parseJournal, type JournalEntry } from './migration-rules.js';
+import {
+  checkJournal,
+  findCredentialClauses,
+  findDestructiveStatements,
+  parseJournal,
+  type JournalEntry,
+} from './migration-rules.js';
 
 // Positive and negative controls for the rules: each check must catch its planted violation
 // and must not fire on the harmless statement that looks like it.
@@ -34,6 +40,28 @@ describe('findDestructiveStatements', () => {
 
   it('reports every statement it finds', () => {
     expect(findDestructiveStatements('DROP TABLE a; TRUNCATE b;')).toEqual(['DROP TABLE', 'TRUNCATE']);
+  });
+});
+
+describe('findCredentialClauses', () => {
+  it.each([
+    'CREATE ROLE crm_app LOGIN;',
+    'create role crm_app with login;',
+    "ALTER ROLE crm_service PASSWORD 'x';",
+    "CREATE ROLE crm_app WITH LOGIN PASSWORD 'x';",
+    'ALTER ROLE crm_service\n  LOGIN;',
+    '-- the password lives in .env',
+  ])('flags %j', (sql) => {
+    expect(findCredentialClauses(sql).length).toBeGreaterThan(0);
+  });
+
+  it.each([
+    'CREATE ROLE crm_service NOLOGIN;',
+    'SELECT rolcanlogin FROM pg_catalog.pg_roles;',
+    'CREATE TABLE crm.logins_seen (id bigint);',
+    'ALTER TABLE crm.api_keys ADD COLUMN password_hash bytea;',
+  ])('does not flag %j', (sql) => {
+    expect(findCredentialClauses(sql)).toEqual([]);
   });
 });
 

@@ -109,21 +109,33 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
 
 - **Lo desbloquea:** F0 integrada y los insumos de F0.6 entregados.
 - **Entrega:** servicio aparte con empresas, contactos, notas, tareas y etapas; API
-  validada con zod; llaves con alcance por empresa y por permiso; bitácora de escrituras
+  validada con zod; llaves con alcance por cuenta y por permiso; bitácora de escrituras
   (quién propuso, quién aprobó); datos sintéticos del escenario cargados desde una semilla.
 - **Subpasos:** F1.1 esquema y migración (antes: `/coderachnid:adr-guard plan`) · F1.2 API
   de lectura · F1.3 API de escritura con bitácora · F1.4 llaves con alcance · F1.5 semilla
   del escenario. En F1.4 se piden los insumos de F2: el material del programa que citará la
   estación 4.
 - **Terminado cuando:** pruebas negativas demuestran que la llave del agente no borra, no
-  exporta y no ve otra empresa, y que fallan por la razón correcta (código 403 con el
-  motivo, no un 404 casual).
-- **Seguridad:** autenticación por llave guardada como hash; aislamiento entre empresas en
-  cada consulta; validación de toda entrada; nada personal en los registros.
+  exporta y no ve otra cuenta, y que fallan por la razón correcta (código 403 con el
+  motivo, no un 404 casual). La cuenta es la escuela; la empresa es la del prospecto
+  (ADR-0005).
+- **Seguridad:** autenticación por llave guardada como hash; aislamiento entre cuentas en
+  cada consulta, impuesto también por la base (RLS); validación de toda entrada; nada
+  personal en los registros.
 - **Trampas:** pruebas de permisos que pasan porque el recurso no existe; semillas que se
   ejecutan dos veces; migraciones que no se probaron desde una base vacía.
-- **Estado:** abierta el 2026-11-24 en `feat/f1-crm`, que sale de `main` (`4b79aa3`). F1.1
-  empieza con su ADR de `/coderachnid:adr-guard plan`.
+- **Estado:** abierta el 2026-11-24 en `feat/f1-crm`, que sale de `main` (`4b79aa3`).
+  F1.1 hecha el 2026-11-24; el dueño pidió los commits y seguir con F1.2 (su prueba:
+  `docker compose up -d --wait db; npm run db:migrate; npm run check; echo $LASTEXITCODE`,
+  que debe dar 0). ADR-0005 aceptada ese día: el dueño delegó en Claude sus siete
+  preguntas y pidió seguir sin la auditoría de `adr-guard`; las respuestas y cinco enmiendas
+  están en la ADR. Entrega: ocho tablas en `crm` (`apps/crm/src/db/schema.ts`), migración
+  `0001` generada y `0002_crm_security.sql` a mano, `database/schema.sql` generado (R8) y
+  la regla de credenciales en las migraciones. 144 pruebas (68 nuevas), cobertura 98,43 /
+  92,3 / 100 / 98,21, `npm run check` en 0. Doce mutantes plantados en las migraciones y una
+  columna plantada en `schema.sql`, todos en rojo; la carrera de roles de D14, ejercida una
+  vez en un PostgreSQL desechable. La base de desarrollo, migrada después de un respaldo.
+  Línea base: `docs/reviews/ADR-0005-baseline.md`.
 
 ### F2 · Circuito y mapa
 
@@ -218,8 +230,9 @@ Lo que una respuesta recomienda y no se aplica en ese paso queda aquí hasta apl
 | R5 | Elegir el canal del mensaje (plataforma de la vacante o LinkedIn) | Define el formato del GIF y de las tres líneas | El dueño, antes de F6 | Abierta |
 | R6 | Script de respaldo (`pg_dump` dentro del contenedor, no por la tubería de PowerShell) con una restauración probada | Hoy no hay datos que respaldar; el ritual de `safe-database` lo exige desde el primer dato | Claude, antes de la semilla de F1.5 | Abierta |
 | R7 | CI levanta la base con el mismo `compose.yaml` y una contraseña generada en la corrida | Una sola definición de la base; las pruebas de Compose y de migración corren igual que en local | Claude, en F0.5 | Cerrada el 2026-11-24: la primera corrida salió en verde (45448819374) |
-| R8 | Generar `database/schema.sql` desde una base migrada y compararlo en una prueba | Hoy se escribe a mano porque solo hay dos esquemas vacíos; con tablas se desvía | Claude, en F1.1 | Abierta |
+| R8 | Generar `database/schema.sql` desde una base migrada y compararlo en una prueba | Hoy se escribe a mano porque solo hay dos esquemas vacíos; con tablas se desvía | Claude, en F1.1 | Cerrada el 2026-11-24: `npm run db:dump-schema` lo regenera y `database/test/schema-dump-db.test.ts` falla si difiere (una columna plantada la puso en rojo) |
 | R9 | Hook de `pre-push` que corre `forbidden-phrases.local.txt` sobre lo versionado y `check-secrets.sh --range <remoto>..<local>` sobre cada commit que se publica | La lista privada no puede ir a CI, y CI corre después del push: detecta un secreto, no impide publicarlo (auditoría de ADR-0004, H1). Hoy depende de acordarse antes de cada push | El dueño. Hasta que exista, los dos comandos se corren a mano antes de cada push | Cerrada el 2026-11-24: `guards/hooks/pre-push`, activado con `git config core.hooksPath guards/hooks`, con la condición del dueño: nunca pregunta y para el push solo con un hallazgo o si no pudo revisar. Sus controles (`guards/pre-push.test.sh`, 10 casos, 7 mutantes en rojo) corren en CI |
+| R10 | `apps/crm` declara sus dependencias (`drizzle-orm`, `pg`) en su `package.json` | Hoy `apps/crm/src/db/schema.ts` importa `drizzle-orm` desde la raíz, donde es solo de desarrollo; el servidor del CRM, que en F6 corre en Compose, no puede depender de eso. F1.1 no podía tocar dependencias (ADR-0005 D17) | Claude, en F1.2, con la versión verificada ese día | Abierta |
 
 ## 6. Mapa de documentos
 
