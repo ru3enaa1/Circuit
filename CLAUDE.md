@@ -38,21 +38,18 @@ de una empresa real.
 
 ## 2. Dónde estamos de verdad
 
-2026-11-24: ADR-0003 aceptada (opción 4: monolito modular con el CRM aparte).
-Remoto: https://github.com/ru3enaa1/Circuit. F0 en curso en `feat/f0-base`: F0.1 cerrado;
-F0.2 cerrado (npm workspaces con `apps/circuit` y `apps/crm`, TypeScript estricto, Vitest
-con un proyecto por app). F0.3 cerrado (los cinco módulos de circuit, vacíos, y la prueba
-de arquitectura con controles positivos). F0.4 cerrado (PostgreSQL 18.7 en Compose, solo en
-`127.0.0.1`; Drizzle; la migración inicial con los esquemas `circuit` y `crm`, y sus pruebas
-contra una base desechable). Sin código de producto todavía. F0.5 cerrado: cobertura con
-piso de 80 (confirmado por el dueño), guarda de secretos con sus controles positivos y
-`.github/workflows/ci.yml`. ADR-0004 (retroactiva de F0.5) aceptada y auditada el
-2026-11-24: APROBAR CON CONDICIONES, 0 bloqueantes; H1–H5 resueltos y la ADR enmendada; H6
-se aplica en F2 y H8 en F3. Push aprobado por el dueño el 2026-11-24: la rama en verde en
-GitHub y una frase plantada en rojo (C15). F0.6 hecho: README mínimo e insumos de F1
-entregados. R9 hecho: el hook de `pre-push` corre la guarda de secretos por commit y la
-lista privada antes de cada push (§9). F0 espera el sí del dueño para integrarse a `main`.
-Los push los pide el dueño; el hook no se salta con `--no-verify`.
+2026-11-24: **F0 cerrada e integrada a `main`** con el sí del dueño (fast-forward a
+`4b79aa3`, sin commit de merge; CI en verde en la rama, corrida 45459976606, y en `main`,
+45460157418). Remoto: https://github.com/ru3enaa1/Circuit. Lo que hay: npm workspaces con
+`apps/circuit` y `apps/crm`, TypeScript estricto y Vitest con un proyecto por app; los cinco
+módulos de circuit, vacíos, con la prueba de arquitectura; PostgreSQL 18.7 en Compose, solo
+en `127.0.0.1`, con Drizzle y la migración inicial (esquemas `circuit` y `crm`, vacíos);
+cobertura con piso de 80, la guarda de secretos, `.github/workflows/ci.yml` y el hook de
+`pre-push` (§9). Sin código de producto todavía. ADR-0003 (opción 4) aceptada; ADR-0004
+auditada (APROBAR CON CONDICIONES): H6 se aplica en F2 y H8 en F3.
+**F1 · CRM simulado abierta en `feat/f1-crm`**, que sale de `main`. F1.1 (esquema y
+migración) empieza con su ADR de `/coderachnid:adr-guard plan`; no hay código de F1 sin
+esa ADR aceptada. Los push los pide el dueño; el hook no se salta con `--no-verify`.
 
 ## 3. Reglas de producto que gobiernan el código
 

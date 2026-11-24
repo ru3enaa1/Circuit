@@ -76,7 +76,13 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   `npm ci` en CI y en Docker. El 2026-11-24 el lockfile sí los traía. La imagen de
   PostgreSQL 18 guarda los datos en otra ruta, y Drizzle se salta sin avisar un `.sql` que
   no está en el journal (ver `CLAUDE.md`, sección 8).
-- **Estado:** en curso en `feat/f0-base`. F0.1 cerrado el 2026-11-23. F0.2 cerrado el
+- **Estado:** **cerrada e integrada a `main` el 2026-11-24**, con el sí del dueño: rama
+  `feat/f0-base`, 76 pruebas, cobertura 92 / 92,3 / 100 / 91,3, `npm run check` en 0 en
+  local; veredicto: terminada. `main` avanzó por fast-forward a `4b79aa3` (el mismo SHA que
+  CI verificó, sin commit de merge): CI en verde en la rama (corrida 45459976606, donde
+  GitHub aceptó el `ci.yml` de F0.6 y «Registro de PostgreSQL» salió `skipped`) y en `main`
+  (45460157418). La historia de los subpasos sigue.
+  F0.1 cerrado el 2026-11-23. F0.2 cerrado el
   2026-11-24, con la ADR-0003 aceptada (opción 4). F0.3 cerrado el 2026-11-24 con la
   confirmación del dueño: 33 pruebas, cuatro violaciones plantadas en el árbol real y dos
   mutantes del verificador, todos en rojo. F0.4 cerrado el 2026-11-24 con la confirmación
@@ -97,8 +103,7 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   F0.6 hecho el 2026-11-24: README con solo lo que existe, seguido por Claude en un clon
   limpio (todo en 0, 76 pruebas); el dueño pidió seguir sin correr él esa prueba. Los
   insumos de F1 quedaron entregados (el dueño, 2026-11-24): escenario y nombres en la
-  propuesta privada. R9 hecho: el hook de `pre-push`. F0 queda lista para integrarse a
-  `main`, que espera la aprobación del dueño.
+  propuesta privada. R9 hecho: el hook de `pre-push`.
 
 ### F1 · CRM simulado
 
@@ -117,7 +122,8 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   cada consulta; validación de toda entrada; nada personal en los registros.
 - **Trampas:** pruebas de permisos que pasan porque el recurso no existe; semillas que se
   ejecutan dos veces; migraciones que no se probaron desde una base vacía.
-- **Estado:** pendiente.
+- **Estado:** abierta el 2026-11-24 en `feat/f1-crm`, que sale de `main` (`4b79aa3`). F1.1
+  empieza con su ADR de `/coderachnid:adr-guard plan`.
 
 ### F2 · Circuito y mapa
 
