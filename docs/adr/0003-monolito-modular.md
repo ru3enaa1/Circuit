@@ -1,7 +1,7 @@
 # ADR-0003 · Monolito modular para Circuit, con el CRM simulado aparte
 
 - **Fecha:** 2026-11-24
-- **Estado:** propuesta (la decide el dueño)
+- **Estado:** aceptada (el dueño, 2026-11-24: opción 4)
 
 ## Contexto
 
@@ -35,9 +35,11 @@ Hay dos fuerzas en tensión:
    módulos. El CRM queda fuera porque representa un sistema externo. Son dos procesos y una
    base, con un esquema y un usuario por servicio.
 
-## Decisión propuesta
+## Decisión
 
-Opción 4.
+Opción 4, aceptada por el dueño el 2026-11-24. Las carpetas se crean en la fase que las
+usa: `apps/circuit` y `apps/crm` en F0.2, los módulos de circuit con la prueba de
+arquitectura en F0.3, `scenarios/` en F1 y `apps/board` en F2, junto con React y Vite.
 
 ```
 apps/
