@@ -41,8 +41,12 @@ jobs:
         run: bash guards/check-secrets.test.sh
       - name: Guarda de secretos
         run: bash guards/check-secrets.sh
+      # The hook itself runs only on the author's machine (R9); CI proves it still stops
+      # what it must and lets the rest through.
+      - name: Hook de pre-push, controles positivos
+        run: bash guards/pre-push.test.sh
       - name: Finales de línea de los archivos comparados byte a byte
-        run: bash guards/check-line-endings.sh '*.sh' '*.json' '*.sql' 'database/examples/**' '**/golden/**'
+        run: bash guards/check-line-endings.sh '*.sh' '*.json' '*.sql' 'guards/hooks/*' 'database/examples/**' '**/golden/**'
       - name: Frases prohibidas
         # The README is the first text a reader sees, so it is checked like the apps (F0.6).
         run: bash guards/check-forbidden-phrases.sh forbidden-phrases.txt README.md apps database

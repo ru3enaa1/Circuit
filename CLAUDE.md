@@ -49,8 +49,10 @@ piso de 80 (confirmado por el dueño), guarda de secretos con sus controles posi
 `.github/workflows/ci.yml`. ADR-0004 (retroactiva de F0.5) aceptada y auditada el
 2026-11-24: APROBAR CON CONDICIONES, 0 bloqueantes; H1–H5 resueltos y la ADR enmendada; H6
 se aplica en F2 y H8 en F3. Push aprobado por el dueño el 2026-11-24: la rama en verde en
-GitHub y una frase plantada en rojo (C15). F0.6 en curso: README mínimo y los insumos de
-F1. Antes de cada push, `check-secrets.sh --range` y la lista privada, a mano (R9, §9).
+GitHub y una frase plantada en rojo (C15). F0.6 hecho: README mínimo e insumos de F1
+entregados. R9 hecho: el hook de `pre-push` corre la guarda de secretos por commit y la
+lista privada antes de cada push (§9). F0 espera el sí del dueño para integrarse a `main`.
+Los push los pide el dueño; el hook no se salta con `--no-verify`.
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -183,11 +185,21 @@ con 1. Son los pasos de CI, más el `--range` que va antes de cada push (R9):
 bash guards/check-secrets.test.sh                 # controles positivos de la guarda: 0 si los 25 casos pasan (unos 40 s en Windows)
 bash guards/check-secrets.sh                      # lo versionado, lo nuevo sin ignorar y el índice: 0 limpio, 1 hallazgo, 2 nada revisado
 bash guards/check-secrets.sh --range origin/feat/f0-base..HEAD   # cada commit que se va a publicar (antes del push; CI no lo corre)
-bash guards/check-line-endings.sh '*.sh' '*.json' '*.sql' 'database/examples/**' '**/golden/**'
+bash guards/check-line-endings.sh '*.sh' '*.json' '*.sql' 'guards/hooks/*' 'database/examples/**' '**/golden/**'
 bash guards/check-forbidden-phrases.sh forbidden-phrases.txt README.md apps database
 ```
 
-Verificados el 2026-11-24 antes y después del primer push (R9 a mano y C15). La lista
+Verificados el 2026-11-24, el hook de `pre-push` (R9) contra 10 empujes reales a un remoto
+desechable y 7 mutantes de sí mismo, todos en rojo. Corre solo en cada `git push`; nunca
+pregunta nada y para el push solo con un hallazgo (1) o si no pudo revisar (2):
+
+```sh
+git config core.hooksPath guards/hooks   # lo activa en este clon (desactivar: git config --unset core.hooksPath)
+bash guards/pre-push.test.sh             # sus controles positivos: 0 si los 10 casos pasan (unos 25 s en Windows)
+```
+
+Sin el hook, o para revisar a mano, verificados el 2026-11-24 antes y después del primer
+push (R9 a mano y C15). La lista
 privada se probó con una de sus frases plantada en una copia del rango: salió con 1.
 
 ```sh

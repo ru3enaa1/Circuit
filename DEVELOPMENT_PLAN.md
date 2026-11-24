@@ -94,7 +94,11 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   `test/c15-frase-plantada` en rojo en «Frases prohibidas» (corrida 45449147850), ya
   borrada. Nota de esa corrida: el paso «Registro de PostgreSQL si algo falló» también sale
   en rojo cuando Compose no llegó a correr; se arregla en F0.6.
-  F0.6 en curso el 2026-11-24.
+  F0.6 hecho el 2026-11-24: README con solo lo que existe, seguido por Claude en un clon
+  limpio (todo en 0, 76 pruebas); el dueño pidió seguir sin correr él esa prueba. Los
+  insumos de F1 quedaron entregados (el dueño, 2026-11-24): escenario y nombres en la
+  propuesta privada. R9 hecho: el hook de `pre-push`. F0 queda lista para integrarse a
+  `main`, que espera la aprobación del dueño.
 
 ### F1 · CRM simulado
 
@@ -209,7 +213,7 @@ Lo que una respuesta recomienda y no se aplica en ese paso queda aquí hasta apl
 | R6 | Script de respaldo (`pg_dump` dentro del contenedor, no por la tubería de PowerShell) con una restauración probada | Hoy no hay datos que respaldar; el ritual de `safe-database` lo exige desde el primer dato | Claude, antes de la semilla de F1.5 | Abierta |
 | R7 | CI levanta la base con el mismo `compose.yaml` y una contraseña generada en la corrida | Una sola definición de la base; las pruebas de Compose y de migración corren igual que en local | Claude, en F0.5 | Cerrada el 2026-11-24: la primera corrida salió en verde (45448819374) |
 | R8 | Generar `database/schema.sql` desde una base migrada y compararlo en una prueba | Hoy se escribe a mano porque solo hay dos esquemas vacíos; con tablas se desvía | Claude, en F1.1 | Abierta |
-| R9 | Hook de `pre-push` que corre `forbidden-phrases.local.txt` sobre lo versionado y `check-secrets.sh --range <remoto>..<local>` sobre cada commit que se publica | La lista privada no puede ir a CI, y CI corre después del push: detecta un secreto, no impide publicarlo (auditoría de ADR-0004, H1). Hoy depende de acordarse antes de cada push | El dueño. Hasta que exista, los dos comandos se corren a mano antes de cada push | Abierta |
+| R9 | Hook de `pre-push` que corre `forbidden-phrases.local.txt` sobre lo versionado y `check-secrets.sh --range <remoto>..<local>` sobre cada commit que se publica | La lista privada no puede ir a CI, y CI corre después del push: detecta un secreto, no impide publicarlo (auditoría de ADR-0004, H1). Hoy depende de acordarse antes de cada push | El dueño. Hasta que exista, los dos comandos se corren a mano antes de cada push | Cerrada el 2026-11-24: `guards/hooks/pre-push`, activado con `git config core.hooksPath guards/hooks`, con la condición del dueño: nunca pregunta y para el push solo con un hallazgo o si no pudo revisar. Sus controles (`guards/pre-push.test.sh`, 10 casos, 7 mutantes en rojo) corren en CI |
 
 ## 6. Mapa de documentos
 

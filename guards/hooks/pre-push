@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# pre-push hook (R9): checks what is about to leave this machine, before it is public.
+#
+# Activate once per clone:  git config core.hooksPath guards/hooks
+# Deactivate:               git config --unset core.hooksPath
+#
+# Why: CI runs after the push, so it detects a secret but cannot stop it from being
+# published; and the private phrase list can never go to CI, because publishing it would
+# reveal the names it protects (ADR-0004 audit, H1; DEVELOPMENT_PLAN, R9).
+#
+# For every ref being pushed, with the existing guards:
+#   1. check-secrets.sh --range on each commit that no ref of that remote has yet, so a key
+#      added in one commit and removed in the next is still caught;
+#   2. the private list over the tree of the pushed commit, and over the diff, message and
+#      author of each of those new commits.
+# Deleting a remote ref publishes nothing and is not checked.
+#
+# It never asks anything and prints one line per ref when clean. It stops a push only for
+# a finding (exit 1) or when it cannot check (exit 2, e.g. the private list is missing);
+# Git cancels the push on any non-zero exit. Fix the commit instead of using --no-verify.
+set -u
+
+remote="${1:-origin}"
+LIST="forbidden-phrases.local.txt"
+
+root="$(git rev-parse --show-toplevel)" \
+  || { echo "pre-push: not inside a repository; nothing was checked"; exit 2; }
+cd "$root" || { echo "pre-push: cannot enter $root; nothing was checked"; exit 2; }
+[ -f "$LIST" ] || { echo "pre-push: missing $LIST; nothing was checked, the push is stopped"; exit 2; }
+
+tmp="$(mktemp -d)" || { echo "pre-push: cannot create a temporary folder"; exit 2; }
+trap 'rm -rf "$tmp"' EXIT
+
+# Git sends one line per ref: <local ref> <local sha> <remote ref> <remote sha>. All of it
+# is read first, so no guard below can swallow the rest of the list from stdin.
+mapfile -t updates
+
+worst=0
+# record <exit code>: a guard's verdict; 2 (could not check) outranks 1 (found).
+record() { [ "$1" -gt "$worst" ] && worst="$1"; return 0; }
+
+# run_guard <label> <command...>: runs a guard, hides its "clean:" line, keeps its code.
+run_guard() {
+  local label="$1"; shift
+  "$@" < /dev/null 2>&1 | grep -v '^clean:' | sed "s|$tmp/tree/||; s|^|pre-push: $label: |"
+  record "${PIPESTATUS[0]}"
+}
+
+# check_ref <local sha>: both checks for one pushed ref.
+check_ref() {
+  local sha="$1" commits=() commit
+  # Exactly what this push publishes: the commits no ref of this remote has.
+  mapfile -t commits < <(git rev-list "$sha" --not --remotes="$remote")
+  for commit in "${commits[@]}"; do
+    # <commit>^! is that commit alone, root commits and merges included.
+    run_guard secrets bash guards/check-secrets.sh --range "$commit^!"
+  done
+  # The tree as the remote will have it, taken from the commit, not from the working copy.
+  rm -rf "$tmp/tree" && mkdir "$tmp/tree" && git archive "$sha" | tar -x -C "$tmp/tree" \
+    || { echo "pre-push: cannot read the tree of $sha"; record 2; return; }
+  run_guard "private list, tree" bash guards/check-forbidden-phrases.sh "$LIST" "$tmp/tree"
+  [ "${#commits[@]}" -gt 0 ] || return 0
+  git log -p --format='%an %ae%n%B' "$sha" --not --remotes="$remote" > "$tmp/new.patch"
+  run_guard "private list, new commits" bash guards/check-forbidden-phrases.sh "$LIST" "$tmp/new.patch"
+}
+
+for update in "${updates[@]}"; do
+  read -r local_ref local_sha remote_ref _ <<< "$update"
+  [[ "$local_sha" =~ ^0+$ ]] && continue   # a deletion publishes nothing
+  check_ref "$local_sha"
+  [ "$worst" -eq 0 ] && echo "pre-push: clean, $local_ref -> $remote_ref"
+done
+
+case "$worst" in
+  0) exit 0 ;;
+  1) echo "pre-push: findings above; the push is stopped. Fix those commits (a pushed key must be rotated)"; exit 1 ;;
+  *) echo "pre-push: could not check (see above); the push is stopped"; exit 2 ;;
+esac
