@@ -47,8 +47,10 @@ de arquitectura con controles positivos). F0.4 cerrado (PostgreSQL 18.7 en Compo
 contra una base desechable). Sin código de producto todavía. F0.5 hecho en local: cobertura
 con piso de 80 (confirmado por el dueño), guarda de secretos con sus controles positivos y `.github/workflows/ci.yml`;
 falta su prueba en GitHub, que necesita un push con el sí del dueño. ADR-0004 (retroactiva
-de F0.5) aceptada el 2026-11-24, con su línea base en `docs/reviews/`; la auditoría va en una
-sesión nueva, antes del push.
+de F0.5) aceptada y auditada el 2026-11-24: APROBAR CON CONDICIONES, 0 bloqueantes. H1–H5
+resueltos el mismo día (la guarda de secretos revisa el índice, la forma YAML y, con
+`--range`, cada commit) y la ADR enmendada; H6 se aplica en F2 y H8 en F3. Antes del push:
+`check-secrets.sh --range` sobre lo que se publica y la lista privada (R9, a mano).
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -154,7 +156,7 @@ prueba de control invertida:
 npm ci              # instala exactamente lo del lockfile
 npm run typecheck   # tipos de la raíz y de cada app: 0 limpio, 1 error
 npm test            # Vitest, un proyecto por app
-npm run check       # tipos y pruebas con cobertura: lo que corre CI, sin las guardas
+npm run check       # tipos y pruebas con cobertura (CI corre además las guardas, la instalación, la auditoría, la base y las migraciones)
 $env:CIRCUIT_INVERT_CONTROL='1'; npm test; echo $LASTEXITCODE; Remove-Item Env:CIRCUIT_INVERT_CONTROL   # control positivo: debe dar 1
 Set-Content apps\circuit\src\modules\circuit\planted.ts "import '@anthropic-ai/sdk';"; npm test; echo $LASTEXITCODE; Remove-Item apps\circuit\src\modules\circuit\planted.ts   # arquitectura: debe dar 1
 ```
@@ -172,13 +174,15 @@ npx vitest run --project database                 # solo las pruebas de la base 
 docker compose stop db                            # detiene la base y conserva el volumen
 ```
 
-Verificados el 2026-11-24 (F0.5). La guarda de secretos, contra 16 casos plantados y cinco
-mutantes de sí misma, todos en rojo; la cobertura, contra un archivo sin pruebas plantado en
-`apps/circuit/src`, que la bajó a 65,62 % y la hizo salir con 1. Son los pasos de CI:
+Verificados el 2026-11-24 (F0.5, con las enmiendas de la auditoría). La guarda de secretos,
+contra 25 casos plantados y 16 mutantes de sí misma, todos en rojo; la cobertura, contra un
+archivo sin pruebas plantado en `apps/circuit/src`, que la bajó a 65,62 % y la hizo salir
+con 1. Son los pasos de CI, más el `--range` que va antes de cada push (R9):
 
 ```sh
-bash guards/check-secrets.test.sh                 # controles positivos de la guarda: 0 si los 16 casos pasan
-bash guards/check-secrets.sh                      # lo versionado y lo nuevo sin ignorar: 0 limpio, 1 hallazgo, 2 nada revisado
+bash guards/check-secrets.test.sh                 # controles positivos de la guarda: 0 si los 25 casos pasan (unos 40 s en Windows)
+bash guards/check-secrets.sh                      # lo versionado, lo nuevo sin ignorar y el índice: 0 limpio, 1 hallazgo, 2 nada revisado
+bash guards/check-secrets.sh --range origin/feat/f0-base..HEAD   # cada commit que se va a publicar (antes del push; CI no lo corre)
 bash guards/check-line-endings.sh '*.sh' '*.json' '*.sql' 'database/examples/**' '**/golden/**'
 bash guards/check-forbidden-phrases.sh forbidden-phrases.txt apps database   # README.md se suma en F0.6
 ```

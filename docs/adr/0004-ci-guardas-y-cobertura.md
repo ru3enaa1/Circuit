@@ -1,7 +1,8 @@
 # ADR-0004 · La rama se integra solo con la construcción local completa en verde en GitHub Actions
 
 - **Fecha:** 2026-11-24
-- **Estado:** aceptada (el dueño, 2026-11-24, con los supuestos de las preguntas abiertas)
+- **Estado:** aceptada (el dueño, 2026-11-24, con los supuestos de las preguntas abiertas).
+  Enmendada el mismo día tras su auditoría (ver «Enmiendas», al final)
 - **Tarea:** F0.5 de `DEVELOPMENT_PLAN.md`: «GitHub Actions: tipos, pruebas con cobertura,
   frases prohibidas sobre el README y las apps, finales de línea y patrones de secretos».
   Terminado cuando «la rama en verde; una frase plantada la pone en rojo».
@@ -23,8 +24,10 @@ Además, la mayor parte del código la escriben agentes, así que «pasa en mi m
 alcanza como prueba.
 
 Una sola decisión, con tres partes que juntas forman la puerta de integración: qué corre CI
-y con qué permisos, qué piso de cobertura hace fallar las pruebas y qué guarda impide
-publicar un secreto. Por separado ninguna sirve como puerta. Por eso es una ADR y no tres.
+y con qué permisos, qué piso de cobertura hace fallar las pruebas y qué guarda detecta un
+secreto. CI corre después del push: detecta, no impide. Impedir que se publique es trabajo
+del hook de `pre-push` (R9), con la misma guarda sobre cada commit que se publica. Por
+separado ninguna sirve como puerta. Por eso es una ADR y no tres.
 
 ## Opciones consideradas
 
@@ -48,8 +51,9 @@ una máquina y una versión de Node fijas, y con los mismos comandos que CLAUDE.
 documenta para uso local. La base de datos se levanta con el mismo `compose.yaml` y una
 contraseña generada para esa corrida (recomendación R7). Las pruebas fallan bajo 80 % en
 cualquiera de las cuatro medidas de cobertura (confirmado por el dueño el 2026-11-24). Una
-guarda propia con `git grep` (`guards/check-secrets.sh`) revisa lo versionado y lo nuevo sin
-ignorar, y nunca imprime la línea que encuentra.
+guarda propia con `git grep` (`guards/check-secrets.sh`) revisa lo versionado, lo nuevo sin
+ignorar y el índice; con `--range`, cada commit de un rango. Nunca imprime la línea que
+encuentra.
 
 ## Cláusulas
 
@@ -69,7 +73,7 @@ En la tabla solo va lo que debe dar.
 | C9 | Cada comando de verificación de CI es uno de los que CLAUDE.md §9 documenta para uso local | Ninguna línea `FALTA:`. Se excluyen el paso del entorno (C5) y el registro que corre solo `if: failure()` | no |
 | C10 | En la cabeza, la construcción completa de CI sale con 0 en local | Cada comando, con su código de salida real, en 0 | sí |
 | C11 | `npm run test:coverage` sale con 1 si cualquiera de las cuatro medidas baja de 80, medidas sobre `apps/*/src/**/*.ts` y `database/*.ts` | 0 con las cuatro medidas en 80 o más; con el archivo plantado, 1 | no |
-| C12 | `guards/check-secrets.sh` revisa todo archivo versionado o nuevo sin ignorar, y sale con 0 si está limpio, 1 si encuentra algo y 2 si no revisó nada | El script de prueba en 0 con «all 16 check-secrets cases pass», la guarda en 0, y el mutante en 1 | sí |
+| C12 | `guards/check-secrets.sh` revisa todo archivo versionado o nuevo sin ignorar y lo que está en el índice; con `--range <rango>`, el árbol de cada commit del rango. Sale con 0 si está limpio, 1 si encuentra algo y 2 si no revisó nada | El script de prueba en 0 con «all 25 check-secrets cases pass», la guarda en 0, y cada mutante en 1 | sí |
 | C13 | `guards/check-secrets.sh` imprime solo archivo, línea y regla, nunca el texto de la línea (el registro de CI es público) | Sin el `cut`, el script de prueba sale con 1 y nombra «output repeats the secret» | sí |
 | C14 | La única dependencia nueva es `@vitest/coverage-v8`, en la misma versión exacta que `vitest` | El diff de `package.json` solo trae esa `devDependency` y los scripts `test:coverage` y `check`; las dos en 5.1.1 | no |
 | C15 | En GitHub, la rama sale en verde y un commit con una frase prohibida plantada sale en rojo (lo que pide el dueño para dar F0.5 por terminado) | `success` en la cabeza y `failure` en el commit plantado. Antes del push que decide el dueño: NO VERIFICABLE | no |
@@ -101,9 +105,9 @@ grep -niE '\$\{\{[[:space:]]*secrets\.|deploy|terraform|aws|gcloud|azure|kubectl
 grep -nE 'openssl rand|add-mask|GITHUB_ENV' .github/workflows/ci.yml
 grep -nE '^POSTGRES_PASSWORD=$' .env.example
 
-# C7
-grep -nE 'continue-on-error|\|\|[[:space:]]*true|set \+e' .github/workflows/*.yml; echo "salida $?"
-grep -nA2 '^defaults:' .github/workflows/ci.yml
+# C7: el primero debe dar salida 1; el segundo, una sola línea, «23:    shell: bash»
+grep -nE 'continue-on-error|\|\||set \+e' .github/workflows/*.yml; echo "salida $?"
+grep -nE '^[[:space:]]+shell:' .github/workflows/ci.yml
 
 # C8
 grep -nE '^[[:space:]]*(runs-on|node-version):' .github/workflows/ci.yml
@@ -147,9 +151,12 @@ Los controles positivos se plantan en un worktree desechable, nunca en el árbol
 - **C11:** un archivo de unas 30 líneas de código, sin pruebas, en `apps/circuit/src`.
   `npm run test:coverage` debe salir con 1.
 - **C12:** se cambia una regla de `SECRET_RULES` (por ejemplo, `sk-ant-` por `sk-anx-`).
-  `bash guards/check-secrets.test.sh` debe salir con 1 y nombrar ese caso.
-- **C13:** se quita `| cut -d: -f1,2` de `guards/check-secrets.sh`.
-  `bash guards/check-secrets.test.sh` debe salir con 1 con «output repeats the secret».
+  `bash guards/check-secrets.test.sh` debe salir con 1 y nombrar ese caso. Igual con cada
+  parte que agregó la enmienda 2: sin la pasada del índice, sin las reglas o los nombres
+  en `--range`, y la regla YAML leyendo todo archivo o sin anclar a la clave.
+- **C13:** se quita `| cut -d: -f1,2` de `guards/check-secrets.sh`, o `| cut -d: -f1,2,3`
+  en `--range`. `bash guards/check-secrets.test.sh` debe salir con 1 con «output repeats
+  the secret».
 
 C15 se corre después del push, que decide el dueño:
 
@@ -236,3 +243,26 @@ y la 4 se vuelven a mirar al abrir F3 y F2.
    baja el nivel para salir del paso. Responde el dueño.
 4. **El piso de cobertura solo sube.** SUPUESTO: el núcleo apunta a cerca de 90 cuando
    tenga código (F2), como dice `vitest.config.ts`. Responde el dueño en F2.
+
+## Enmiendas
+
+2026-11-24, tras la auditoría `docs/reviews/ADR-0004-audit-2026-11-24.md` (APROBAR CON
+CONDICIONES). El dueño delegó la decisión de mejorar antes de cerrar F0.5.
+
+1. **C7, el chequeo (H4).** Ahora busca cualquier `||`, no solo `|| true`, y exige una sola
+   línea `shell:`. El de antes no veía `|| :`, `|| echo …` ni un `shell: bash {0}` propio de
+   un paso, que quita `-e` y `pipefail`. Comprobado contra una copia plantada del workflow.
+2. **C12, la guarda (H1, H2, H3).** Tres cambios:
+   - **Índice (H3):** revisa también lo que está en el índice (`git grep --cached`). Una
+     versión agregada con `git add` puede llevar un secreto que el archivo ya no tiene.
+   - **`--range <rango>` (H1):** revisa el árbol de cada commit del rango. Una llave que
+     entra en un commit y sale en el siguiente no está en la cabeza, pero sí en la historia
+     que publica un push. Es la forma que usa R9.
+   - **Forma YAML (H2):** `postgres-password` reconoce la clave YAML seguida de `:` y un
+     valor, solo en `*.yml` y `*.yaml` y solo como clave al inicio de la línea. La forma que
+     propuso la auditoría (`[=:]` en todo archivo) daba un falso rojo en
+     `database/test/connection.test.ts:13`, una constante de TypeScript, y en el `${…:?…}`
+     de `compose.yaml:13`.
+
+   La batería pasa de 16 a 25 casos, y cada parte nueva tiene su mutante en rojo.
+3. **Contexto (H1).** La guarda de CI detecta; impedir es trabajo de R9.
