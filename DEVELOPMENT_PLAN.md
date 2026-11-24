@@ -74,8 +74,10 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   npm lanzado desde Git Bash (ver `CLAUDE.md`, sección 8); un lockfile hecho en Windows sin
   los binarios nativos de Linux (TypeScript 7, rolldown, lightningcss), que rompe `npm ci`
   en CI y en Docker. El 2026-11-24 el lockfile sí los traía.
-- **Estado:** en curso en `feat/f0-base`. F0.1 cerrado el 2026-11-23. F0.2 hecho el
-  2026-11-24 con la ADR-0003 aceptada (opción 4); espera la prueba del dueño.
+- **Estado:** en curso en `feat/f0-base`. F0.1 cerrado el 2026-11-23. F0.2 cerrado el
+  2026-11-24, con la ADR-0003 aceptada (opción 4). F0.3 cerrado el 2026-11-24 con la
+  confirmación del dueño: 33 pruebas, cuatro violaciones plantadas en el árbol real y dos
+  mutantes del verificador, todos en rojo.
 
 ### F1 · CRM simulado
 

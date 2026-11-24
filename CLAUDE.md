@@ -40,10 +40,10 @@ de una empresa real.
 
 2026-11-24: ADR-0003 aceptada (opción 4: monolito modular con el CRM aparte).
 Remoto: https://github.com/ru3enaa1/Circuit. F0 en curso en `feat/f0-base`: F0.1 cerrado;
-F0.2 hecho y sin commit, a la espera de la prueba del dueño: npm workspaces con
-`apps/circuit` y `apps/crm`, TypeScript estricto, Vitest con un proyecto por app y una
-prueba de control en cada una. Sin código de producto todavía. Siguiente: F0.3, la prueba
-de arquitectura.
+F0.2 cerrado (npm workspaces con `apps/circuit` y `apps/crm`, TypeScript estricto, Vitest
+con un proyecto por app). F0.3 cerrado (los cinco módulos de circuit, vacíos, y la prueba
+de arquitectura con controles positivos). Sin código de producto todavía. En curso: F0.4,
+PostgreSQL en Docker con Drizzle.
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -59,13 +59,16 @@ Decidida en F0: ADR-0001 (el código ordena el circuito) y ADR-0003 (monolito mo
 el CRM aparte).
 
 - `apps/circuit`: un proceso con módulos (`circuit`, `model`, `crm-client`, `approval`,
-  `scenario`). Cada módulo se usa solo por su `index.ts`. El núcleo (`circuit`) no importa
-  implementaciones de `model` ni el SDK de Anthropic.
+  `scenario`). Cada módulo se usa solo por su `index.ts`. El núcleo (`circuit`) declara sus
+  puertos y no importa ningún módulo ni paquete; los demás solo importan el núcleo. El SDK
+  de Anthropic solo entra en `model`.
 - `apps/crm`: el CRM simulado, un proceso aparte. Circuit no importa su código; solo le
   habla por HTTP con la llave del agente, y su usuario de base no ve el esquema del CRM.
 - `apps/board`: el tablero, servido por circuit (llega en F2).
 
-Las pruebas de arquitectura que lo imponen llegan en F0.3.
+Lo impone `apps/circuit/test/architecture/`: el mapa de dependencias (`module-map.ts`) y una
+prueba que revisa `src/` y `test/` contra él. Para agregar una dependencia hay que cambiar
+el mapa, y el cambio se ve en el diff.
 
 ## 5. Stack
 
@@ -127,6 +130,7 @@ npm run typecheck   # tipos de la raíz y de cada app: 0 limpio, 1 error
 npm test            # Vitest, un proyecto por app
 npm run check       # tipos y pruebas
 $env:CIRCUIT_INVERT_CONTROL='1'; npm test; echo $LASTEXITCODE; Remove-Item Env:CIRCUIT_INVERT_CONTROL   # control positivo: debe dar 1
+Set-Content apps\circuit\src\modules\circuit\planted.ts "import '@anthropic-ai/sdk';"; npm test; echo $LASTEXITCODE; Remove-Item apps\circuit\src\modules\circuit\planted.ts   # arquitectura: debe dar 1
 ```
 
 Arrancar la app se agrega cuando exista un servidor (F1).

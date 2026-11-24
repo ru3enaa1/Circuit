@@ -45,8 +45,8 @@ arquitectura en F0.3, `scenarios/` en F1 y `apps/board` en F2, junto con React y
 apps/
   circuit/          un solo proceso Fastify; también sirve el tablero compilado
     src/modules/
-      circuit/      núcleo: estaciones, ramas, eventos (genérico)
-      model/        interfaz del modelo, simulador y, en F3, el adaptador de Anthropic
+      circuit/      núcleo: estaciones, ramas, eventos y los puertos que necesita (genérico)
+      model/        implementa el puerto del modelo: el simulador y, en F3, el adaptador de Anthropic
       crm-client/   adaptador HTTP hacia el CRM, con la llave del agente
       approval/     estación 6: aprobar, corregir, rechazar
       scenario/     carga el paquete de escenario
@@ -61,6 +61,12 @@ los documentos y los commits van en español.
 
 Si más adelante se quiere separar un módulo, su `index.ts` ya es la costura: se mueve sin
 reescribir a quien lo usa.
+
+Las dependencias permitidas entre módulos viven en
+`apps/circuit/test/architecture/module-map.ts`, y la prueba de arquitectura las lee. El
+núcleo declara sus puertos (modelo, CRM, reloj) y no importa ningún módulo ni paquete; los
+demás módulos solo importan el núcleo. Esto se precisó en F0.3, el 2026-11-24, dentro del
+cerco de esta ADR.
 
 ## Cláusulas
 
