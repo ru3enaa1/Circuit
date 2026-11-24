@@ -1,0 +1,30 @@
+# Personal Claude Code settings for this machine (enabled plugins, output style)
+.claude/settings.local.json
+
+# Handoff between sessions, written by coderachnid's handoff skill and relay
+.coderachnid/
+
+# Documentos privados: estrategia y texto literal de la vacante de referencia. Nunca se publican
+docs/privado/
+
+# Secretos y configuración local
+.env
+.env.*
+!.env.example
+*.tfvars
+!*.tfvars.example
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# Bases de datos locales y respaldos (ver safe-database)
+database/dev/
+database/backups/
+
+# Dependencias y compilados
+node_modules/
+dist/
+coverage/
+
+# Frases prohibidas privadas (nombres que no se publican)
+forbidden-phrases.local.txt

@@ -1,0 +1,2 @@
+-- Circuit · esquema vigente de PostgreSQL.
+-- Vacío hasta F1: lo generan las migraciones de database/migrations (Drizzle).

@@ -1,0 +1,19 @@
+# Frases que Circuit nunca dice en texto visible (README, tablero, respuestas del agente).
+# Una por línea, sin distinguir mayúsculas. Crece con cada revisión.
+# El autor no inventa experiencia ni la demo promete lo que no prueba.
+5 años de experiencia
+5+ years
+years of production experience
+garantizado
+guaranteed
+100% preciso
+100% accurate
+# Referencias de tono: inspiran el diseño, nunca aparecen en el producto
+marvel
+avengers
+vengadores
+guardians of the galaxy
+guardianes de la galaxia
+# Lo que no existe no se anuncia (phased-plan: nada de «próximamente» para quien lo lee)
+próximamente
+coming soon
