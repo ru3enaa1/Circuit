@@ -40,8 +40,8 @@ de una empresa real.
 
 2026-11-23: reglas, plan por fases con subpasos, ADR-0001, ADR-0002 y guardas creados.
 Remoto: https://github.com/ru3enaa1/Circuit. F0 en curso en `feat/f0-base`: F0.1 cerrado
-(primer commit en `main`). Sin código todavía. Siguiente: F0.2, una vez el dueño acuerde
-los módulos.
+(primer commit en `main`). Sin código todavía. ADR-0003 (monolito modular con el CRM
+aparte) está en estado «propuesta». Siguiente: que el dueño la acepte o la cambie, y F0.2.
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -72,7 +72,8 @@ Las dependencias entran una a una, en la fase que las necesita, con la versión 
 - Los comentarios explican el porqué. Las constantes con nombre llevan su razón.
 - Funciones < 50 líneas, archivos < 400, anidación ≤ 4.
 - Nada se da por hecho si no compiló y no se probó.
-- Textos, documentos y commits en español; commits convencionales (`feat:`, `fix:`, `test:`, `docs:`, `chore:`).
+- Nombres en el código en inglés (el dueño, 2026-11-24).
+- Textos de interfaz, documentos y commits en español; commits convencionales (`feat:`, `fix:`, `test:`, `docs:`, `chore:`).
 - Una rama por fase (`feat/f0-base`, …); se integra a `main` solo con aprobación del dueño.
 
 ## 7. Base de datos
