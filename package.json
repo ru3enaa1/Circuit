@@ -11,13 +11,15 @@
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json && npm run typecheck --workspaces",
     "test": "vitest run",
-    "check": "npm run typecheck && npm test",
+    "test:coverage": "vitest run --coverage",
+    "check": "npm run typecheck && npm run test:coverage",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"
   },
   "devDependencies": {
     "@types/node": "24.19.2",
     "@types/pg": "8.23.1",
+    "@vitest/coverage-v8": "5.1.1",
     "drizzle-kit": "0.31.11",
     "drizzle-orm": "0.45.4",
     "pg": "8.23.1",

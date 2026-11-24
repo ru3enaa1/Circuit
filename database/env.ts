@@ -12,7 +12,8 @@ export type Env = Readonly<Record<string, string | undefined>>;
 
 /**
  * The environment for local tooling: the git-ignored `.env` at the repository root, with
- * the process environment taking precedence (CI sets variables directly and has no `.env`).
+ * the process environment taking precedence (CI copies `.env.example` and passes the password
+ * it generates for the run through the environment).
  * Nothing is written to `process.env`, so one caller cannot change what another one reads.
  * The parameters exist for the tests; callers use the defaults.
  */

@@ -1,0 +1,79 @@
+# The whole local build, on a clean Linux machine: guards, dependency audit, types, and the
+# tests with coverage against a real PostgreSQL started from the same compose.yaml.
+# Each command here is the one CLAUDE.md §9 documents for local use.
+name: CI
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+# Read-only token: this workflow builds and tests, it never writes to the repository.
+permissions:
+  contents: read
+
+# A newer push to the same branch makes the older run pointless.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    # Explicit bash adds -o pipefail, so a failing command before a pipe fails the step.
+    shell: bash
+
+jobs:
+  check:
+    name: Guardas, tipos y pruebas
+    # Pinned, not ubuntu-latest: the image changes under a moving label (CLAUDE.md, Reproducible).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      # Actions pinned to a full commit SHA: a tag can be moved to other code, a SHA cannot.
+      # Versions and SHAs checked against the tags on 2026-11-24.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # No later step pushes, so the token is not left in .git/config.
+          persist-credentials: false
+
+      # The guards need only git and bash: they run first and fail fast.
+      - name: Guarda de secretos, controles positivos
+        run: bash guards/check-secrets.test.sh
+      - name: Guarda de secretos
+        run: bash guards/check-secrets.sh
+      - name: Finales de línea de los archivos comparados byte a byte
+        run: bash guards/check-line-endings.sh '*.sh' '*.json' '*.sql' 'database/examples/**' '**/golden/**'
+      - name: Frases prohibidas
+        # README.md joins this list when it exists (F0.6).
+        run: bash guards/check-forbidden-phrases.sh forbidden-phrases.txt apps database
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          # The exact version verified locally (CLAUDE.md §5).
+          node-version: 24.20.0
+          cache: npm
+      - name: Dependencias exactas del lockfile
+        run: npm ci
+      - name: Auditoría de dependencias
+        run: npm audit --audit-level=low
+
+      # Non-secret values come from .env.example, as on a fresh clone. The password is made
+      # for this run only and reaches Compose, drizzle-kit and the tests through the
+      # environment, which takes precedence over .env (database/env.ts).
+      - name: Entorno local con una contraseña de un solo uso
+        run: |
+          cp .env.example .env
+          password="$(openssl rand -hex 24)"
+          echo "::add-mask::${password}"
+          echo "POSTGRES_PASSWORD=${password}" >> "$GITHUB_ENV"
+      - name: PostgreSQL desde compose.yaml
+        run: docker compose up -d --wait db
+      - name: Migraciones sobre la base de desarrollo
+        run: npm run db:migrate
+      - name: Tipos
+        run: npm run typecheck
+      - name: Pruebas con cobertura
+        run: npm run test:coverage
+      - name: Registro de PostgreSQL si algo falló
+        if: failure()
+        run: docker compose logs db

@@ -44,7 +44,9 @@ F0.2 cerrado (npm workspaces con `apps/circuit` y `apps/crm`, TypeScript estrict
 con un proyecto por app). F0.3 cerrado (los cinco módulos de circuit, vacíos, y la prueba
 de arquitectura con controles positivos). F0.4 cerrado (PostgreSQL 18.7 en Compose, solo en
 `127.0.0.1`; Drizzle; la migración inicial con los esquemas `circuit` y `crm`, y sus pruebas
-contra una base desechable). Sin código de producto todavía. En curso: F0.5, GitHub Actions.
+contra una base desechable). Sin código de producto todavía. F0.5 hecho en local: cobertura
+con piso de 80 (confirmado por el dueño), guarda de secretos con sus controles positivos y `.github/workflows/ci.yml`;
+falta su prueba en GitHub, que necesita un push con el sí del dueño.
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -80,12 +82,14 @@ Verificado en esta máquina el 2026-11-23: Node 24.20.0, npm 11.19.0, Docker 29.
 **Terraform y psql no están instalados**; PostgreSQL corre en Docker.
 Las dependencias entran una a una, en la fase que las necesita, con la versión verificada ese día.
 En uso, verificadas en el registro de npm el 2026-11-24: TypeScript 7.0.2, Vitest 5.1.1 (trae
-Vite 8.3.8) y @types/node 24.19.2 (la línea de Node 24, no la última); drizzle-orm 0.45.4 y
+Vite 8.3.8) con @vitest/coverage-v8 5.1.1 (su par exacto) y @types/node 24.19.2 (la línea de Node 24, no la última); drizzle-orm 0.45.4 y
 drizzle-kit 0.31.11 (la 1.0 sigue en RC), pg 8.23.1 y @types/pg 8.23.1. PostgreSQL 18.7
 (`postgres:18.7-trixie`, fijada por digest; la 19.0 acababa de salir). Versiones exactas
 (`save-exact` en `.npmrc`) y lockfile versionado. El `overrides` de `package.json` sube el
 esbuild que drizzle-kit arrastra por `@esbuild-kit/core-utils` (0.18.20, GHSA-67mh-4wv8-2f99)
 al 0.25.12 que ya usa; se quita cuando drizzle-kit suelte esa dependencia.
+CI (`.github/workflows/ci.yml`): `ubuntu-24.04`, Node 24.20.0, actions/checkout v7.0.1 y
+actions/setup-node v7.1.0 fijadas por SHA, comprobados contra sus etiquetas el 2026-11-24.
 
 ## 6. Convenciones de código
 
@@ -148,7 +152,7 @@ prueba de control invertida:
 npm ci              # instala exactamente lo del lockfile
 npm run typecheck   # tipos de la raíz y de cada app: 0 limpio, 1 error
 npm test            # Vitest, un proyecto por app
-npm run check       # tipos y pruebas
+npm run check       # tipos y pruebas con cobertura: lo que corre CI, sin las guardas
 $env:CIRCUIT_INVERT_CONTROL='1'; npm test; echo $LASTEXITCODE; Remove-Item Env:CIRCUIT_INVERT_CONTROL   # control positivo: debe dar 1
 Set-Content apps\circuit\src\modules\circuit\planted.ts "import '@anthropic-ai/sdk';"; npm test; echo $LASTEXITCODE; Remove-Item apps\circuit\src\modules\circuit\planted.ts   # arquitectura: debe dar 1
 ```
@@ -164,6 +168,22 @@ npm run db:migrate                                # aplica las migraciones pendi
 npm run db:generate -- --name <nombre>            # escribe una migración desde database/schema.ts
 npx vitest run --project database                 # solo las pruebas de la base y de Compose
 docker compose stop db                            # detiene la base y conserva el volumen
+```
+
+Verificados el 2026-11-24 (F0.5). La guarda de secretos, contra 16 casos plantados y cinco
+mutantes de sí misma, todos en rojo; la cobertura, contra un archivo sin pruebas plantado en
+`apps/circuit/src`, que la bajó a 65,62 % y la hizo salir con 1. Son los pasos de CI:
+
+```sh
+bash guards/check-secrets.test.sh                 # controles positivos de la guarda: 0 si los 16 casos pasan
+bash guards/check-secrets.sh                      # lo versionado y lo nuevo sin ignorar: 0 limpio, 1 hallazgo, 2 nada revisado
+bash guards/check-line-endings.sh '*.sh' '*.json' '*.sql' 'database/examples/**' '**/golden/**'
+bash guards/check-forbidden-phrases.sh forbidden-phrases.txt apps database   # README.md se suma en F0.6
+```
+
+```powershell
+npm audit --audit-level=low   # 0 sin vulnerabilidades conocidas (no se probó con una plantada)
+npm run test:coverage         # pruebas con cobertura: bajo el piso de 80 sale con 1
 ```
 
 Arrancar la app se agrega cuando exista un servidor (F1).

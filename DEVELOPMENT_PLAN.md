@@ -82,7 +82,10 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   mutantes del verificador, todos en rojo. F0.4 cerrado el 2026-11-24 con la confirmación
   del dueño: 76 pruebas; seis violaciones plantadas, cada una en rojo en su prueba, y
   ninguna base desechable sobrante. Sin auditoría de `adr-guard` (el dueño hizo el commit
-  sin ella).
+  sin ella). F0.5 hecho en local el 2026-11-24, sin cerrar: cobertura con piso de 80 en las
+  cuatro medidas (confirmado por el dueño), `guards/check-secrets.sh` con
+  16 casos plantados y cinco mutantes en rojo, y `.github/workflows/ci.yml` con los mismos
+  comandos que en local. El workflow no se ha corrido: la prueba del dueño necesita push.
 
 ### F1 · CRM simulado
 
@@ -195,8 +198,9 @@ Lo que una respuesta recomienda y no se aplica en ese paso queda aquí hasta apl
 | R4 | Confirmar en el navegador que la vacante sigue abierta | No se pudo comprobar por consola | El dueño | Abierta |
 | R5 | Elegir el canal del mensaje (plataforma de la vacante o LinkedIn) | Define el formato del GIF y de las tres líneas | El dueño, antes de F6 | Abierta |
 | R6 | Script de respaldo (`pg_dump` dentro del contenedor, no por la tubería de PowerShell) con una restauración probada | Hoy no hay datos que respaldar; el ritual de `safe-database` lo exige desde el primer dato | Claude, antes de la semilla de F1.5 | Abierta |
-| R7 | CI levanta la base con el mismo `compose.yaml` y una contraseña generada en la corrida | Una sola definición de la base; las pruebas de Compose y de migración corren igual que en local | Claude, en F0.5 | Abierta |
+| R7 | CI levanta la base con el mismo `compose.yaml` y una contraseña generada en la corrida | Una sola definición de la base; las pruebas de Compose y de migración corren igual que en local | Claude, en F0.5 | En `ci.yml`; se cierra con la primera corrida en verde |
 | R8 | Generar `database/schema.sql` desde una base migrada y compararlo en una prueba | Hoy se escribe a mano porque solo hay dos esquemas vacíos; con tablas se desvía | Claude, en F1.1 | Abierta |
+| R9 | Hook de `pre-push` que corre `forbidden-phrases.local.txt` y `check-secrets.sh` sobre lo versionado | La lista privada no puede ir a CI y hoy depende de acordarse antes de cada push | El dueño, antes del push de F0.5 | Abierta |
 
 ## 6. Mapa de documentos
 
