@@ -192,10 +192,10 @@ CREATE TABLE crm.audit_log (
     proposed_by text NOT NULL,
     approved_by text NOT NULL,
     approval_ref text,
-    CONSTRAINT audit_log_approval_ref_length CHECK (((char_length(approval_ref) >= 1) AND (char_length(approval_ref) <= 200))),
-    CONSTRAINT audit_log_approved_by_length CHECK (((char_length(approved_by) >= 1) AND (char_length(approved_by) <= 200))),
+    CONSTRAINT audit_log_approval_ref_format CHECK ((approval_ref ~ '^[a-z0-9-]{1,40}$'::text)),
+    CONSTRAINT audit_log_approved_by_format CHECK ((approved_by ~ '^[a-z0-9-]{1,40}$'::text)),
     CONSTRAINT audit_log_operation_valid CHECK ((operation = ANY (ARRAY['insert'::text, 'update'::text]))),
-    CONSTRAINT audit_log_proposed_by_length CHECK (((char_length(proposed_by) >= 1) AND (char_length(proposed_by) <= 200))),
+    CONSTRAINT audit_log_proposed_by_format CHECK ((proposed_by ~ '^[a-z0-9-]{1,40}$'::text)),
     CONSTRAINT audit_log_table_name_valid CHECK ((table_name = ANY (ARRAY['companies'::text, 'contacts'::text, 'notes'::text, 'tasks'::text])))
 );
 

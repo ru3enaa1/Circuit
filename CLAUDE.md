@@ -19,8 +19,8 @@ de una empresa real.
 - **Nada sale ni se escribe en el CRM sin aprobación humana** (estación 6). La estación 5 solo
   propone.
 - **Permiso mínimo en el CRM, no en el prompt.** La llave del agente no borra, no exporta y
-  no ve otra cuenta; lo rechaza la API del CRM simulado, y la base lo impone debajo
-  (ADR-0005).
+  no ve otra cuenta; lo rechaza la API del CRM simulado, y borrar y ver otra cuenta también
+  los impide la base (ADR-0005).
 - **Toda escritura al CRM queda en bitácora** con quién la propuso y quién la aprobó.
 - **El mapa se dibuja con eventos guardados**, nunca con una animación suelta.
 - **Sin fuente, no hay respuesta** en la estación 4.
@@ -48,14 +48,20 @@ en `127.0.0.1`, con Drizzle y la migración inicial (esquemas `circuit` y `crm`,
 cobertura con piso de 80, la guarda de secretos, `.github/workflows/ci.yml` y el hook de
 `pre-push` (§9). Sin código de producto todavía. ADR-0003 (opción 4) aceptada; ADR-0004
 auditada (APROBAR CON CONDICIONES): H6 se aplica en F2 y H8 en F3.
-**F1 · CRM simulado abierta en `feat/f1-crm`**, que sale de `main`. **F1.1 hecha el
-2026-11-24**, con commit en la rama a pedido del dueño, que pidió seguir con F1.2. ADR-0005 aceptada (el dueño delegó sus
-siete preguntas y pidió seguir sin auditoría). Ocho tablas en `crm` con RLS por cuenta;
-roles `crm_service` y `circuit_service` sin login; bitácora por trigger, sin valores; llaves
-solo como SHA-256 y solo por `crm.resolve_api_key`. Migraciones `0001` (generada) y `0002`
-(a mano); `database/schema.sql` sale de un `pg_dump` (R8). 144 pruebas, cobertura 98,43 /
-92,3 / 100 / 98,21; doce mutantes en rojo. La base de desarrollo ya está migrada. Sigue
-F1.2 (API de lectura). Los push los pide el dueño; el hook no se salta con `--no-verify`.
+**F1 · CRM simulado abierta en `feat/f1-crm`**, que sale de `main`. **F1.1 hecha y
+empujada el 2026-11-24** (CI en verde en `d40b3c3`, corrida 45473516868). ADR-0005
+aceptada (el dueño delegó sus siete preguntas) y **auditada**: APROBAR CON CONDICIONES
+(`docs/reviews/ADR-0005-audit-2026-11-24.md`). El dueño pidió arreglar lo que se pudiera, y
+las enmiendas A6–A9 de la ADR cierran las condiciones: la guarda de roles con prueba, la
+carrera de roles en un paso de CI sobre un servidor nuevo, RLS sin cuenta y sin `WHERE`,
+autores opacos en la bitácora (`0003`) y el hash de cada migración fijado. Ocho tablas en
+`crm` con RLS por cuenta; roles `crm_service` y `circuit_service` sin login; bitácora por
+trigger, sin valores; llaves solo como SHA-256 y solo por `crm.resolve_api_key`.
+Migraciones `0001` y `0003` (generadas) y `0002` (a mano); `database/schema.sql` sale de
+un `pg_dump` (R8). 164 pruebas, cobertura 98,46 / 92,3 / 100 / 98,24; los mutantes de la
+ADR y los de la auditoría, en rojo. La base de desarrollo está migrada hasta `0003`. Sigue
+F1.2 (API de lectura), cuya ADR-0006 recoge H3, H8, H10 y H11 de la auditoría. Los push
+los pide el dueño; el hook no se salta con `--no-verify`.
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -117,6 +123,8 @@ actions/setup-node v7.1.0 fijadas por SHA, comprobados contra sus etiquetas el 2
 
 - Respaldo → migrar → probar → verificar. Las pruebas usan bases desechables, nunca la original.
 - Migraciones solo hacia adelante, en `database/migrations/`. Las filas de prueba se borran por id.
+- Una migración que ya está en `database/test/migration-hashes.ts` no se edita nunca; se
+  corrige con una nueva. Cada migración nueva agrega su SHA-256 a esa lista en el mismo commit.
 - `database/dev/` y `database/backups/` no entran a git.
 
 ## 8. Trampas
@@ -126,12 +134,14 @@ Se registran con el formato de pitfall-log: regla, síntoma, causa, chequeo y fe
 **Entorno:**
 - Windows con Git Bash: los guiones de `guards/` corren con `bash`; los archivos comparados
   byte a byte van en LF (`.gitattributes`).
-- **npm se corre en PowerShell, no en Git Bash** (2026-11-24). Síntoma: `npm test` o `npx`
-  fallan con `""node"" no se reconoce como un comando interno o externo`. Causa: el
-  `cmd.exe` que abren los atajos de npm no ve `C:\Program Files\nodejs` en el PATH cuando
-  lo lanza Git Bash. Se vio en el Bash de Claude Code; no se ha confirmado en otra terminal
-  de Git Bash. Chequeo: desde bash, `cmd //c "where node"` debe encontrar node antes de
-  usar npm.
+- **npm y Vitest se corren en PowerShell, no en Git Bash** (2026-11-24, ampliada con la
+  auditoría de ADR-0005, H14). Síntoma: `npm test` o `npx` fallan con `""node"" no se
+  reconoce como un comando interno o externo`, y Node lanzado desde bash da `spawnSync
+  docker ENOENT` en `compose.test.ts` y `schema-dump-db.test.ts`. Causa: bash encuentra
+  `node` y `docker`, pero el PATH que reciben los procesos de Windows que lanza (cmd, node)
+  no trae sus carpetas. Se vio en el Bash de Claude Code; no se ha confirmado en otra
+  terminal de Git Bash. Chequeo: desde bash, `cmd //c "echo %PATH%" | tr ';' '\n' | grep -i
+  'nodejs\|docker'` debe listar las dos carpetas; donde no lista ninguna, solo PowerShell.
 - **Docker Desktop está instalado por usuario** (2026-11-24). Síntoma: `failed to connect
   to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine`. Causa: Docker Desktop
   apagado; el ejecutable está en `%LOCALAPPDATA%\Programs\DockerDesktop\Docker Desktop.exe`,
@@ -150,8 +160,25 @@ Se registran con el formato de pitfall-log: regla, síntoma, causa, chequeo y fe
 - **Los roles son del servidor, no de la base** (2026-11-24). Síntoma: dos migraciones a la
   vez fallan al crear el mismo rol con `unique_violation` (no `duplicate_object`), o con
   «tuple concurrently updated» si lo alteran. Regla: crear con una guarda que atrape los dos
-  códigos y comprobar los atributos sin `ALTER ROLE`. Chequeo: `migrations-db.test.ts`; la
-  carrera solo ocurre donde los roles aún no existen (ADR-0005, «Aceptación»).
+  códigos y comprobar los atributos sin `ALTER ROLE`. Chequeo: la carrera solo ocurre donde
+  los roles aún no existen, así que la ejerce el paso «Carrera de roles en un servidor nuevo»
+  de CI, antes de `db:migrate`, con `CIRCUIT_FRESH_ROLES=1` (ADR-0005, A6).
+- **`drizzle-kit migrate` esconde el error de SQL** (2026-11-24, auditoría de ADR-0005, H5).
+  Síntoma: `npm run db:migrate` sale con 1 y solo muestra «applying migrations...». Pasa con
+  cualquier error (se reprodujo con un esquema que ya existía) y con la guarda de roles de
+  `0002`. Causa: drizzle-kit 0.31.11 no imprime el error de PostgreSQL. La base queda como
+  estaba, porque todo corre en una transacción. Chequeo: el error sí queda en el registro
+  del servidor, `docker compose logs db --since 5m | Select-String ERROR` (CI lo muestra en
+  su paso de registro).
+- **`pool.end()` de pg no espera a que se cierren los sockets** (2026-11-24). Síntoma: una
+  corrida con todas las pruebas en verde sale con 1 por un error no manejado `57P01
+  terminating connection due to administrator command`; pasó 2 veces en 10. Causa: pg-pool
+  3.14 resuelve `end()` en cuanto pide cerrar cada cliente, y el `DROP DATABASE … WITH
+  (FORCE)` que sigue mata un backend que todavía se cierra. Regla: antes de borrar la base,
+  esperar el evento `remove` de cada cliente (`closedClients` en `disposable-db.ts`).
+  Chequeo: 20 corridas seguidas de `npx vitest run --project database`, ninguna con «Unhandled
+  Errors». Ojo: ese error de pg imprime la conexión entera, contraseña incluida; en CI la
+  tapa `add-mask`.
 - **`search_path = ''` no basta en una función `SECURITY DEFINER`** (2026-11-24). Causa: con
   la ruta vacía, `pg_temp` se busca primero para tablas y tipos. Regla:
   `SET search_path = pg_catalog, pg_temp`. Chequeo: `crm-structure-db.test.ts` (D12).
@@ -250,6 +277,17 @@ migraciones y una columna plantada en `database/schema.sql`, cada uno en rojo:
 ```powershell
 npx vitest run --project database crm             # el esquema crm: estructura (D1–D13) y reglas como conducta
 npm run db:dump-schema                            # regenera database/schema.sql desde una base desechable recién migrada (R8)
+```
+
+Verificados el 2026-11-24 en PowerShell (arreglos de la auditoría de ADR-0005), con 13
+mutantes en las migraciones y M21 en tres servidores nuevos, cada uno en rojo en su prueba.
+El paso de la carrera corre así en CI, en un servidor sin los roles. Con
+`$env:CIRCUIT_FRESH_ROLES='1'` sobre tu base de desarrollo sale con 1 a propósito, porque
+allí los roles ya existen; para ejercerla en local, ver ADR-0005, A6:
+
+```powershell
+npx vitest run --project database migrations-db -t "two disposable databases"   # la carrera de roles de D14 (el paso de CI, antes de db:migrate)
+npx vitest run --project database migration-files                                # el hash de cada migración, contra database/test/migration-hashes.ts
 ```
 
 Arrancar la app se agrega cuando exista un servidor (F1.2).

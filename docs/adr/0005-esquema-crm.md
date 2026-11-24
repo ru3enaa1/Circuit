@@ -4,7 +4,9 @@
 - **Estado:** aceptada el 2026-11-24. El dueño delegó en Claude las siete preguntas («toma
   estas decisiones con enfoque al mejor resultado final») y pidió seguir sin la auditoría de
   `adr-guard`. Las respuestas y las enmiendas que salieron al implementarla están en
-  «Aceptación», al final
+  «Aceptación», al final. Auditada después, a pedido del dueño, el mismo día: APROBAR CON
+  CONDICIONES (`docs/reviews/ADR-0005-audit-2026-11-24.md`). Las enmiendas A6–A9, ya en las
+  cláusulas, cierran sus condiciones (ver «Auditoría y enmiendas A6–A9»)
 - **Tarea:** F1.1 de `DEVELOPMENT_PLAN.md`: «esquema y migración» del CRM simulado
   (cuentas, empresas, contactos, notas, tareas, etapas, bitácora y llaves). F1 está
   terminada cuando «la llave del agente no borra, no exporta y no ve otra empresa» y las
@@ -80,18 +82,18 @@ Cada chequeo se corre tal como está en «Chequeos, tal como se corren». «Como
 | D1 | `crm` tiene exactamente las ocho tablas de la decisión, con las columnas de una lista fija; la lista coincide con `apps/crm/src/db/schema.ts` | `crm-structure-db.test.ts`: «crm tiene las tablas y columnas de la lista» y «la base migrada coincide con schema.ts» | no |
 | D2 | Los únicos datos personales del esquema son `contacts.full_name` y `contacts.email`. No hay teléfono, dirección ni documento | La misma lista fija de D1, revisada columna por columna | sí |
 | D3 | Toda tabla de `crm`, salvo `accounts`, tiene `account_id bigint NOT NULL`. Toda llave foránea entre tablas de `crm` que no apunta a `accounts` es compuesta, `(account_id, …)` | `crm-structure-db.test.ts`: «cada llave foránea lleva la cuenta», leyendo `pg_constraint`; `crm-rules-db.test.ts`: una nota de la cuenta A que apunta a un contacto de B falla con 23503 | sí |
-| D4 | Las ocho tablas tienen RLS. Como `crm_service`, solo se ven y se escriben filas de la cuenta de `crm.account_id`; sin esa variable, o con la variable vacía, se ven 0 filas y toda inserción falla | Estructura: `relrowsecurity` en cada tabla de `crm`. Conducta: con A fijada se cuentan solo las filas de A; sin cuenta, 0; insertar con la cuenta de B teniendo A fijada falla con 42501 | sí |
+| D4 | Las ocho tablas tienen RLS. Como `crm_service`, solo se ven y se escriben filas de la cuenta de `crm.account_id`; sin esa variable, o con la variable vacía, se ven 0 filas y toda inserción falla | Estructura: `relrowsecurity` en cada tabla de `crm`. Conducta: con A fijada se cuentan solo las filas de A; sin cuenta, 0; insertar con la cuenta de B teniendo A fijada falla con 42501. Insertar sin cuenta o con la cuenta vacía, y un `UPDATE` sin `WHERE` que movería las filas a B, también fallan con 42501, y cada 42501 de D4 comprueba que el mensaje es el de una política (A7) | sí |
 | D5 | `crm_service` no tiene `DELETE`, `TRUNCATE`, `REFERENCES`, `TRIGGER` ni `MAINTAIN` sobre ninguna tabla, ni permisos por columna, ni permisos sobre las secuencias. Solo lee `accounts`, `pipeline_stages` y `audit_log`, y no tiene ningún permiso sobre `api_keys`. Ninguna política deja quitar filas | `crm-structure-db.test.ts`: la matriz de las ocho tablas por los ocho permisos (`has_any_column_privilege` para los cuatro que admiten columnas), comparada con una matriz fija, y las secuencias sin permisos; `crm-rules-db.test.ts`: un `DELETE` y un vaciado reales fallan con 42501 | sí |
 | D6 | Borrar es archivar: `companies`, `contacts`, `notes` y `tasks` tienen `archived_at timestamptz NULL` | La lista fija de D1 | no |
-| D7 | Cada `INSERT` o `UPDATE` sobre `companies`, `contacts`, `notes` y `tasks` escribe una fila en `audit_log`, en la misma transacción. Esa fila guarda la tabla, el id, la operación, los nombres de las columnas cambiadas, `api_key_id`, `proposed_by`, `approved_by` y `approval_ref`, y nunca un valor | `crm-rules-db.test.ts`: cambiar el correo de un contacto deja una fila con `changed_columns = {email}`, y el texto de esa fila no contiene ni el correo viejo ni el nuevo | sí |
+| D7 | Cada `INSERT` o `UPDATE` sobre `companies`, `contacts`, `notes` y `tasks` escribe una fila en `audit_log`, en la misma transacción. Esa fila guarda la tabla, el id, la operación, los nombres de las columnas cambiadas, `api_key_id`, `proposed_by`, `approved_by` y `approval_ref`, y nunca un valor. Esos tres últimos son identificadores opacos (`AUDIT_AUTHOR_PATTERN`): nunca un nombre ni un correo (A8) | `crm-rules-db.test.ts`: cambiar el correo de un contacto deja una fila con `changed_columns = {email}`, y el texto de esa fila no contiene ni el correo viejo ni el nuevo. Un nombre en `proposed_by`, un correo en `approved_by`, y una frase o más de 40 caracteres en `approval_ref` fallan con 23514 en su restricción (A8) | sí |
 | D8 | Una escritura en esas cuatro tablas sin `crm.proposed_by` o sin `crm.approved_by` falla con SQLSTATE `P0001` y el mensaje «crm: escritura sin autor», y no deja ni la fila ni la bitácora | `crm-rules-db.test.ts`: se comprueban el código, el mensaje y que los conteos no cambian | sí |
 | D9 | `audit_log` solo crece. `crm_service` no puede hacer `UPDATE` ni `DELETE` en ella, y la escribe solo a través del trigger | `crm-rules-db.test.ts`: como `crm_service`, `UPDATE` y `DELETE` en `audit_log` fallan con 42501, y un `INSERT` directo también | sí |
 | D10 | Una llave se guarda solo como su SHA-256: `key_hash bytea` único, con `octet_length = 32`. Ninguna columna guarda la llave. `crm_service` resuelve una llave solo con `crm.resolve_api_key(bytea)`, que devuelve el id, la cuenta (id y `slug`) y los permisos de una llave no revocada | `crm-rules-db.test.ts`: un hash de 31 bytes falla con 23514; como `crm_service`, `SELECT` en `api_keys` falla con 42501; la función devuelve la llave vigente y nada para la revocada | sí |
 | D11 | Los permisos de una llave son un conjunto cerrado, `read`, `write`, `delete` y `export`, y nunca vacío | `crm-rules-db.test.ts`: `{admin}` y `{}` fallan con 23514 | sí |
 | D12 | Toda función de `crm` fija `search_path = pg_catalog, pg_temp`, nombra cada objeto de `crm` con su esquema y no deja `EXECUTE` a `PUBLIC`; `crm_service` ejecuta solo `context_account_id` y `resolve_api_key` | `crm-structure-db.test.ts`: consulta a `pg_proc` (`prosecdef`, `proconfig`) y `has_function_privilege` para `public` y para `crm_service`, comparada con una lista fija | sí |
 | D13 | ADR-0003 M4 en los dos sentidos: `circuit_service` no tiene ningún permiso en `crm`, ni `crm_service` en `circuit` | `crm-rules-db.test.ts`: como `circuit_service`, `SELECT` en `crm.contacts` falla con 42501; `has_schema_privilege` es falso en los dos sentidos | sí |
-| D14 | Los roles los crea la migración, `NOLOGIN` y de forma idempotente, también con dos bases migrando a la vez en el mismo servidor. Si un rol ya existe con login, atributos de administrador o membresías, la migración falla en vez de usarlo. Ninguna migración tiene `LOGIN` ni `PASSWORD` | `migrations-db.test.ts`: dos bases desechables migradas a la vez (`Promise.all`) y los roles sin atributos de más; `migration-files.test.ts`: ninguna migración tiene esas dos palabras (la regla y sus controles, en `migration-rules.test.ts`) | sí |
-| D15 | Las migraciones siguen yendo solo hacia adelante. `0000_init.sql` no cambia. Todo se aplica a una base vacía, y una segunda corrida no aplica nada | `migration-files.test.ts` y `migrations-db.test.ts` (los de F0.4, ampliados y no debilitados); `git diff --exit-code 2eb4c74 -- database/migrations/0000_init.sql` | sí |
+| D14 | Los roles los crea la migración, `NOLOGIN` y de forma idempotente, también con dos bases migrando a la vez en el mismo servidor. Si un rol ya existe con login, atributos de administrador o membresías, la migración falla en vez de usarlo. Ninguna migración tiene `LOGIN` ni `PASSWORD` | `migrations-db.test.ts`: dos bases desechables migradas a la vez (`Promise.all`) y los roles sin atributos ni membresías de más. En CI, ese par corre antes de `db:migrate`, sobre un servidor que nunca tuvo los roles, con `CIRCUIT_FRESH_ROLES=1`, que lo pone en rojo si ya existían (A6). La guarda de `0002`, tal como está escrita, falla con P0001 y su mensaje con `crm_service` en `LOGIN`, con una membresía y con `circuit_service` en `BYPASSRLS`, en una transacción que se deshace (A6). `migration-files.test.ts`: ninguna migración tiene esas dos palabras (la regla y sus controles, en `migration-rules.test.ts`) | sí |
+| D15 | Las migraciones siguen yendo solo hacia adelante. `0000_init.sql` no cambia, ni ninguna migración ya fijada en `database/test/migration-hashes.ts`. Todo se aplica a una base vacía, y una segunda corrida no aplica nada | `migration-files.test.ts` y `migrations-db.test.ts` (los de F0.4, ampliados y no debilitados). `migration-files.test.ts` compara el SHA-256 de cada migración del journal con esa lista, que solo crece (A9); `git diff --exit-code 2eb4c74 -- database/migrations/0000_init.sql` | sí |
 | D16 | `database/schema.sql` es el `pg_dump --schema-only --no-owner --restrict-key=circuit` de una base desechable recién migrada, con los permisos y las políticas. Una prueba falla si difiere, y nombra el comando que lo regenera (`npm run db:dump-schema`) | `schema-dump-db.test.ts`; control: una columna plantada en el archivo la pone en rojo, con el comando en el mensaje | no |
 | D17 | F1.1 no agrega dependencias. Fastify y zod entran en F1.2 | `git diff --exit-code 2eb4c74 -- package.json package-lock.json` (sin cambios en `dependencies` ni en el lockfile; `scripts` sí puede cambiar) | no |
 
@@ -116,6 +118,20 @@ git diff 2eb4c74 -- package-lock.json | wc -l
 C14 ya no es un `grep` a mano: la regla vive en `database/test/migration-rules.ts`
 (`findCredentialClauses`), con sus controles, y corre en CI sobre cada migración.
 
+La carrera de D14 (A6) solo se ejerce en un servidor que nunca tuvo los roles. CI la corre
+antes de `db:migrate`. En local, contra un PostgreSQL desechable (la imagen de
+`compose.yaml`, sin volumen, en otro puerto y con una contraseña de un solo uso), nunca
+contra la base de desarrollo. Así se corrió el 2026-11-24:
+
+```powershell
+$pw = [guid]::NewGuid().ToString('N')
+docker run -d --rm --name circuit-race-check -p 127.0.0.1:55432:5432 -e POSTGRES_USER=circuit_admin -e "POSTGRES_PASSWORD=$pw" -e POSTGRES_DB=circuit postgres:18.7-trixie@sha256:c699303802144847d238196173655dbbecf7a96aeca1565f2b02eb671a1f0b6b
+do { Start-Sleep 1; docker exec circuit-race-check pg_isready -U circuit_admin -h 127.0.0.1 } until ($LASTEXITCODE -eq 0)
+$env:DB_PORT='55432'; $env:POSTGRES_PASSWORD=$pw; $env:CIRCUIT_FRESH_ROLES='1'
+npx vitest run --project database migrations-db -t "two disposable databases"; echo $LASTEXITCODE   # 0; una segunda vez en el mismo servidor, 1
+Remove-Item Env:DB_PORT, Env:POSTGRES_PASSWORD, Env:CIRCUIT_FRESH_ROLES; docker stop circuit-race-check
+```
+
 ### Mutantes
 
 Cada uno, plantado en la migración real y restaurado después (comprobado por hash), debe
@@ -127,6 +143,14 @@ idempotencia (D14). Se agregaron cuatro: la llave foránea de `notes` sin la cue
 el contexto sin `nullif` (D4), los permisos sin la lista cerrada (D11) y un `UPDATE` que
 registra todas las columnas (D7).
 
+Con A6–A9 entran los que la auditoría vio escaparse, cada uno en rojo en su prueba: una
+política de inserción que acepta la cuenta vacía (M01, D4); `WITH CHECK (true)` en el
+`UPDATE` de `companies` (M20, D4); quitar `INSERT` del permiso de `companies` (M23, D4: el
+mensaje de RLS lo distingue de un permiso que falta); la guarda de roles cambiada por `NULL`
+(M02) o sin la membresía (M19), los dos de D14; una línea agregada a `0000_init.sql` (M16,
+D15: solo la ve el hash); la restricción de `approved_by` cambiada por `IS NOT NULL` (M22,
+D7); y, solo en el paso de CI, los roles sin la rama `unique_violation` (M21, D14).
+
 ## Cerco
 
 - **Puede cambiar:** `apps/crm/src/db/schema.ts` (nuevo); `database/schema.ts`, `config.ts`
@@ -137,7 +161,8 @@ registra todas las columnas (D7).
   CLAUDE.md §9 y el estado del plan.
 - **No debe cambiar:** `0000_init.sql` ni su entrada en el journal; las dependencias y el
   lockfile; `compose.yaml`; `.github/workflows/ci.yml` (las pruebas nuevas corren dentro de
-  `npm run test:coverage`); `apps/circuit`; `guards/`; ninguna prueba existente se debilita.
+  `npm run test:coverage`), salvo el paso de la carrera que agrega A6; `apps/circuit`;
+  `guards/`; ninguna prueba existente se debilita.
 - **Fuera de alcance:** el servidor HTTP y zod (F1.2). La función que fija el contexto por
   transacción, y que `proposed_by` salga de la llave y no del cliente (F1.2 y F1.3). El
   formato de la llave, el código que la genera y los 403 con motivo (F1.4). La semilla y el
@@ -249,3 +274,61 @@ verde (68 nuevas, todas en el proyecto `database`), cobertura 98,43 / 92,3 / 100
 «Mutantes» en rojo, cada uno en su prueba, y la columna plantada de D16 en rojo. La carrera
 de D14 se ejerció en un PostgreSQL 18.7 desechable sin los roles: con la guarda, las dos
 bases migran a la vez; sin la rama `unique_violation`, una falla al crear `crm_service`.
+
+### Auditoría y enmiendas A6–A9 (2026-11-24)
+
+La auditoría de `adr-guard`, en una sesión aparte, dio APROBAR CON CONDICIONES: 0
+bloqueantes, 1 mayor, 5 menores y 8 notas (`docs/reviews/ADR-0005-audit-2026-11-24.md`).
+El código cumplía las 17 cláusulas; lo que fallaba eran chequeos que no mordían. El dueño
+pidió arreglar y mejorar lo que se pudiera. Claude aplicó la recomendación de la auditoría
+en cada decisión que era barata y reversible, y dejó las demás para la fase que las
+necesita. El dueño puede revertir cualquiera de ellas.
+
+- **A6 · D14 muerde (H1).** (b) `migrations-db.test.ts` corre la guarda de `0002`, leída del
+  archivo, con cada rol de servicio cambiado dentro de una transacción que siempre se
+  deshace, y comprueba al final que los roles siguen limpios. (a) La opción que recomendó la
+  auditoría: el paso «Carrera de roles en un servidor nuevo» de `ci.yml`, antes de
+  `db:migrate`, con `CIRCUIT_FRESH_ROLES=1`. Es el único cambio en `ci.yml`. Cumple C7 y C9
+  de ADR-0004, porque su comando está en CLAUDE.md §9. Probado en servidores PostgreSQL 18.7
+  nuevos: el código real pasa 3 de 3; en el mismo servidor, con los roles ya creados, falla
+  con el aviso; M21 falla 3 de 3 con `pg_authid_rolname_index`.
+- **A7 · D4 completa (H2).** Tres casos más (insertar sin cuenta, con la cuenta vacía y un
+  `UPDATE` sin `WHERE`), y cada 42501 de D4 comprueba el mensaje de RLS. M01, M20 y M23 en
+  rojo.
+- **A8 · Autores opacos (H4).** Se decidió ahora y no en F1.3, porque la base no tiene
+  filas. `0003_audit_author_format.sql` (generada) cambia las tres comprobaciones de largo
+  por `AUDIT_AUTHOR_PATTERN`, que es `SLUG_PATTERN` y también limita a 40 caracteres.
+  `approval_ref` entra también, porque una frase libre podría llevar un nombre. `seed`,
+  `agente`, `mentor` y los ids de aprobación ya cumplen. M22 en rojo.
+- **A9 · D15 automática (H6).** `database/test/migration-hashes.ts` fija el SHA-256 de
+  cada migración, el mismo que drizzle guarda en `drizzle.__drizzle_migrations`: los de
+  `0000` a `0002` coinciden con los de la base de desarrollo. M16 en rojo.
+
+Quedan, cada uno con su dueño:
+
+- **H3, de F1.2:** las funciones `SECURITY DEFINER` son del superusuario de `.env`. Entra en
+  ADR-0006, junto con el usuario con login: un rol `NOLOGIN` sin superusuario, dueño de las
+  tablas y funciones de `crm`, comprobado en `pg_proc.proowner` y `pg_class.relowner`.
+  Claude recomienda que sí; lo decide el dueño con esa ADR.
+- **H7, rechazada salvo que el dueño diga otra cosa:** elegir `id` con `OVERRIDING SYSTEM
+  VALUE` o reescribir `created_at`. Los permisos por columna contradicen D5, y el riesgo
+  necesita un servicio comprometido, que esta ADR deja fuera. A cambio, F1.3 nunca manda
+  `id` ni `created_at`, y su prueba lo comprueba.
+- **H8, H10 y H11, de ADR-0006:** los documentos de estado en «Puede cambiar»; una prueba de
+  que los únicos miembros de `crm_service` son los esperados; D4 y D5 repetidas conectando
+  como el usuario con login, sin `SET ROLE`.
+- **H12, de F1.4:** llaves de al menos 128 bits al azar. **H13, de F1.5:** la semilla firma
+  con `seed`, como dice la respuesta 7.
+- **H5, H9 y H14, hechas:** dos trampas en CLAUDE.md §8 y la frase de §1. H5 es más amplia
+  que lo visto: `drizzle-kit migrate` esconde cualquier error de SQL, y el registro de
+  PostgreSQL lo muestra. H14 tiene la misma causa que la trampa de npm, así que quedaron en
+  una.
+
+También apareció una carrera vieja en `disposable-db.ts`: `pool.end()` no espera a que se
+cierren los sockets, y `DROP … WITH (FORCE)` cortaba un backend que todavía se cerraba (2
+corridas en 10 salían con 1). Está arreglada (0 en 20) y anotada en CLAUDE.md §8. Además se
+plantaron los seis mutantes de «Mutantes» que la auditoría no había vuelto a plantar, y
+los seis dieron rojo.
+
+Verificado el 2026-11-24: 164 pruebas en verde, cobertura 98,46 / 92,3 / 100 / 98,24,
+`npm run check` en 0. La base de desarrollo se respaldó y se migró hasta `0003`.

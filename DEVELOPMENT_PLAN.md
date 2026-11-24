@@ -135,7 +135,18 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   92,3 / 100 / 98,21, `npm run check` en 0. Doce mutantes plantados en las migraciones y una
   columna plantada en `schema.sql`, todos en rojo; la carrera de roles de D14, ejercida una
   vez en un PostgreSQL desechable. La base de desarrollo, migrada después de un respaldo.
-  Línea base: `docs/reviews/ADR-0005-baseline.md`.
+  Línea base: `docs/reviews/ADR-0005-baseline.md`. Empujada el 2026-11-24 (CI en verde en
+  `d40b3c3`). Ese mismo día el dueño pidió la auditoría: APROBAR CON CONDICIONES
+  (`docs/reviews/ADR-0005-audit-2026-11-24.md`). Las enmiendas A6–A9 de la ADR cierran sus
+  condiciones: la guarda y la carrera de roles muerden (esta última en un paso de CI), D4
+  cubre la inserción sin cuenta y el `UPDATE` sin `WHERE`, la migración `0003` deja solo
+  autores opacos en la bitácora, y una lista fija el hash de cada migración. También se
+  arregló una carrera de `disposable-db.ts` que ponía en rojo 2 corridas de cada 10. Quedan
+  164 pruebas, cobertura 98,46 / 92,3 / 100 / 98,24, y la base de desarrollo migrada hasta
+  `0003`. **Para F1.2 (ADR-0006):** H3 (un dueño sin superusuario para tablas y funciones),
+  H8, H10 (los miembros de `crm_service`) y H11 (D4 y D5 conectando como el usuario con
+  login). **Para F1.3:** no mandar nunca `id` ni `created_at` (H7). **Para F1.4:** llaves
+  de 128 bits o más al azar (H12).
 
 ### F2 · Circuito y mapa
 

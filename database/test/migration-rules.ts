@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -80,6 +81,42 @@ export function checkJournal(
         return entry.idx !== position || (previous !== undefined && entry.when <= previous.when);
       })
       .map((entry) => entry.tag),
+  };
+}
+
+/** Migration tag → SHA-256 in hex. */
+export type MigrationHashes = Readonly<Record<string, string>>;
+
+export interface HashMismatch {
+  /** Pinned migrations whose file changed: a migration that may already be applied was edited. */
+  readonly edited: readonly string[];
+  /** Journal entries without a pinned hash: a new migration must add its line. */
+  readonly unpinned: readonly string[];
+  /** Pinned hashes without a journal entry: a migration was renamed or removed. */
+  readonly orphaned: readonly string[];
+}
+
+/**
+ * Drizzle records this same hash (the SHA-256 of the file read as UTF-8) in
+ * drizzle.__drizzle_migrations, but never compares it again: an edited migration would leave
+ * every database that already ran it different from a new one, without a word (audit H6).
+ */
+export function hashMigrations(dir: string, entries: readonly JournalEntry[]): MigrationHashes {
+  return Object.fromEntries(
+    entries.map((entry) => [
+      entry.tag,
+      createHash('sha256').update(readFileSync(join(dir, `${entry.tag}.sql`), 'utf8')).digest('hex'),
+    ]),
+  );
+}
+
+export function checkMigrationHashes(pinned: MigrationHashes, actual: MigrationHashes): HashMismatch {
+  const pinnedTags = Object.keys(pinned);
+  const actualTags = Object.keys(actual);
+  return {
+    edited: pinnedTags.filter((tag) => Object.hasOwn(actual, tag) && actual[tag] !== pinned[tag]),
+    unpinned: actualTags.filter((tag) => !Object.hasOwn(pinned, tag)),
+    orphaned: pinnedTags.filter((tag) => !Object.hasOwn(actual, tag)),
   };
 }
 

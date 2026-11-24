@@ -1,9 +1,15 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import {
   checkJournal,
+  checkMigrationHashes,
   findCredentialClauses,
   findDestructiveStatements,
+  hashMigrations,
   parseJournal,
   type JournalEntry,
 } from './migration-rules.js';
@@ -92,6 +98,41 @@ describe('checkJournal', () => {
   it('catches a gap in the sequence', () => {
     const gap = [entries[0]!, { idx: 2, tag: '0001_contacts', when: 2000 }];
     expect(checkJournal(gap, files).outOfOrder).toEqual(['0001_contacts']);
+  });
+});
+
+describe('checkMigrationHashes', () => {
+  const pinned = { '0000_init': 'aaa', '0001_contacts': 'bbb' };
+
+  it('accepts files that match their pinned hashes', () => {
+    expect(checkMigrationHashes(pinned, { ...pinned })).toEqual({ edited: [], unpinned: [], orphaned: [] });
+  });
+
+  it('catches an edited migration', () => {
+    expect(checkMigrationHashes(pinned, { ...pinned, '0000_init': 'ccc' }).edited).toEqual(['0000_init']);
+  });
+
+  it('catches a new migration without its pinned hash', () => {
+    expect(checkMigrationHashes(pinned, { ...pinned, '0002_new': 'ddd' }).unpinned).toEqual(['0002_new']);
+  });
+
+  it('catches a pinned migration that is gone', () => {
+    expect(checkMigrationHashes(pinned, { '0000_init': 'aaa' }).orphaned).toEqual(['0001_contacts']);
+  });
+});
+
+describe('hashMigrations', () => {
+  it('gives the SHA-256 of each file in the journal', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'circuit-hash-'));
+    try {
+      writeFileSync(join(dir, '0000_abc.sql'), 'abc');
+      // FIPS 180-2, appendix B.1: the digest of "abc".
+      expect(hashMigrations(dir, [{ idx: 0, tag: '0000_abc', when: 1000 }])).toEqual({
+        '0000_abc': 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

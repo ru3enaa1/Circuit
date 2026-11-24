@@ -48,6 +48,26 @@ export async function runMigrations(pool: pg.Pool): Promise<void> {
   });
 }
 
+/**
+ * Returns a function that resolves once every client the pool opened has closed its socket.
+ * pool.end() resolves as soon as it has asked each idle client to close, not once they have
+ * closed (pg-pool 3.14, `_remove`). A DROP ... WITH (FORCE) sent then could terminate a
+ * backend that is still closing, and its client would raise an unhandled 57P01 that turns
+ * a green run red: 2 runs in 10 on 2026-11-24. 'remove' fires after the socket has closed.
+ */
+function closedClients(pool: pg.Pool): () => Promise<void> {
+  let open = 0;
+  const waiting: (() => void)[] = [];
+  pool.on('connect', () => {
+    open += 1;
+  });
+  pool.on('remove', () => {
+    open -= 1;
+    if (open === 0) for (const resolve of waiting.splice(0)) resolve();
+  });
+  return () => (open === 0 ? Promise.resolve() : new Promise<void>((resolve) => waiting.push(resolve)));
+}
+
 export interface DisposableDatabase {
   readonly name: string;
   /** Connects as the admin from .env, which owns every object the migrations create. */
@@ -71,9 +91,11 @@ export async function createDisposableDatabase(): Promise<DisposableDatabase> {
   }
   // A pool does not connect until its first query, so building it here is safe.
   const pool = new pg.Pool({ ...connection, database: name, max: 2 });
+  const allClosed = closedClients(pool);
 
   async function drop(): Promise<void> {
     await pool.end();
+    await allClosed();
     try {
       await admin.query(`DROP DATABASE IF EXISTS ${testDatabase(name)} WITH (FORCE)`);
       const left = await admin.query('SELECT 1 FROM pg_database WHERE datname = $1', [name]);

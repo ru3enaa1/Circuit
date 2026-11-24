@@ -73,6 +73,14 @@ jobs:
       - name: PostgreSQL desde compose.yaml
         id: db
         run: docker compose up -d --wait db
+      # ADR-0005 D14 (audit H1 a): this server has never had the service roles, so here, and
+      # only here, two databases really race to create them; db:migrate below makes them.
+      # CIRCUIT_FRESH_ROLES makes the test fail if the roles already exist, instead of
+      # passing without a race.
+      - name: Carrera de roles en un servidor nuevo
+        env:
+          CIRCUIT_FRESH_ROLES: '1'
+        run: npx vitest run --project database migrations-db -t "two disposable databases"
       - name: Migraciones sobre la base de desarrollo
         run: npm run db:migrate
       - name: Tipos

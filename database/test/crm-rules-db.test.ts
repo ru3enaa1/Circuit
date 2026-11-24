@@ -29,6 +29,9 @@ const SQLSTATE = {
 } as const;
 
 const WITHOUT_AUTHOR = 'crm: escritura sin autor';
+// 42501 alone would also pass for a missing privilege; this part of the message only comes
+// from a policy check (audit H2).
+const RLS_REJECTION = /row-level security policy/;
 
 /** Tables crm_service can read; api_keys is not one of them (D10). */
 const READABLE_TABLES = ['accounts', 'pipeline_stages', 'companies', 'contacts', 'notes', 'tasks', 'audit_log'];
@@ -80,6 +83,11 @@ async function accountIdsIn(client: pg.PoolClient, table: string): Promise<strin
   return result.rows.map((row) => row.account);
 }
 
+function expectRlsRejection(error: pg.DatabaseError): void {
+  expect(error.code).toBe(SQLSTATE.insufficientPrivilege);
+  expect(error.message).toMatch(RLS_REJECTION);
+}
+
 async function countOf(client: pg.PoolClient, table: 'contacts' | 'audit_log'): Promise<number> {
   const result = await client.query<{ n: string }>(`SELECT count(*) AS n FROM crm.${table}`);
   return Number(result.rows[0]?.n);
@@ -127,7 +135,21 @@ describe('D4 · crm_service writes only its own account', () => {
       fixture.b.id,
       'Intrusa',
     ]);
-    expect(error.code).toBe(SQLSTATE.insufficientPrivilege);
+    expectRlsRejection(error);
+  });
+
+  it.each([
+    ['unset', undefined],
+    ['empty', ''],
+  ] as const)('rejects any insert while the account is %s', async (_case, accountId) => {
+    // Signed and with a key, so only the missing account can stop it.
+    const signed: CrmContext = { apiKeyId: fixture.a.apiKeyId, proposedBy: 'agente', approvedBy: 'mentor' };
+    const context = accountId === undefined ? signed : { ...signed, accountId };
+    const error = await errorOf({ role: crm, context }, 'INSERT INTO crm.companies (account_id, name) VALUES ($1, $2)', [
+      fixture.a.id,
+      'Sin cuenta',
+    ]);
+    expectRlsRejection(error);
   });
 
   it('rejects moving a row of account a into account b', async () => {
@@ -135,7 +157,14 @@ describe('D4 · crm_service writes only its own account', () => {
       fixture.b.id,
       fixture.a.companyId,
     ]);
-    expect(error.code).toBe(SQLSTATE.insufficientPrivilege);
+    expectRlsRejection(error);
+  });
+
+  // With a WHERE, PostgreSQL also checks the new row against the read policy, which would hide
+  // a WITH CHECK that lets anything through. Without one, only WITH CHECK stands (audit H2).
+  it('rejects an update without WHERE that would move the visible rows into account b', async () => {
+    const error = await errorOf({ role: crm, context: ownContext() }, 'UPDATE crm.companies SET account_id = $1', [fixture.b.id]);
+    expectRlsRejection(error);
   });
 
   it("an update aimed at account b's row changes nothing", async () => {
@@ -242,6 +271,23 @@ describe('D8 · a write without an author fails and leaves nothing', () => {
     expect(outcome.error.message).toBe(WITHOUT_AUTHOR);
     expect(outcome.after).toEqual(outcome.before);
     expect(outcome.name).toBe(`Contacto de ${fixture.a.slug}`);
+  });
+});
+
+describe('D7 · authors are opaque ids, never a name or an address (audit H4)', () => {
+  it.each([
+    ['proposed_by with a name', 'proposedBy', 'Nombre Apellido', 'audit_log_proposed_by_format'],
+    ['approved_by with an address', 'approvedBy', 'revisora@cuenta-a.test', 'audit_log_approved_by_format'],
+    ['approval_ref with a sentence', 'approvalRef', 'aprobada por la revisora', 'audit_log_approval_ref_format'],
+    ['approval_ref over 40 characters', 'approvalRef', 'a'.repeat(41), 'audit_log_approval_ref_format'],
+  ] as const)('%s fails with 23514', async (_case, key, value, constraint) => {
+    const error = await errorOf(
+      { role: crm, context: { ...ownContext(), [key]: value } },
+      "UPDATE crm.contacts SET full_name = 'Con autor' WHERE id = $1",
+      [fixture.a.contactId],
+    );
+    expect(error.code).toBe(SQLSTATE.checkViolation);
+    expect(error.constraint).toBe(constraint);
   });
 });
 

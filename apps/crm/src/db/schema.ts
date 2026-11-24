@@ -30,6 +30,12 @@ export const NOTE_BODY_MAX_LENGTH = 4000;
 export const EMAIL_MAX_LENGTH = 254;
 /** Account slugs and stage keys end up in URLs and in code: lowercase ASCII, digits, hyphens. */
 export const SLUG_PATTERN = '^[a-z0-9-]{1,40}$';
+/**
+ * Who proposed or approved a write, and the approval it came from, are opaque ids such as
+ * `agente`, `mentor` or `aprobacion-12`, never a name or an address: nothing is deleted from
+ * audit_log, so a personal datum there could never be erased (ADR-0005 D2, audit H4).
+ */
+export const AUDIT_AUTHOR_PATTERN = SLUG_PATTERN;
 /** Keys are stored only as their SHA-256 digest (ADR-0005 D10). */
 export const API_KEY_HASH_BYTES = 32;
 /** Closed set (D11). The agent's key gets read and write only; F1.4 proves the other two fail. */
@@ -274,8 +280,9 @@ export const auditLog = crm.table(
     index('audit_log_account_id_table_name_row_id_idx').on(t.accountId, t.tableName, t.rowId),
     check('audit_log_table_name_valid', oneOf('table_name', AUDITED_TABLES)),
     check('audit_log_operation_valid', oneOf('operation', AUDIT_OPERATIONS)),
-    check('audit_log_proposed_by_length', lengthBetween('proposed_by', SHORT_TEXT_MAX_LENGTH)),
-    check('audit_log_approved_by_length', lengthBetween('approved_by', SHORT_TEXT_MAX_LENGTH)),
-    check('audit_log_approval_ref_length', lengthBetween('approval_ref', SHORT_TEXT_MAX_LENGTH)),
+    // The pattern also caps the length, so it replaces the length checks of 0001.
+    check('audit_log_proposed_by_format', sql.raw(`proposed_by ~ '${AUDIT_AUTHOR_PATTERN}'`)),
+    check('audit_log_approved_by_format', sql.raw(`approved_by ~ '${AUDIT_AUTHOR_PATTERN}'`)),
+    check('audit_log_approval_ref_format', sql.raw(`approval_ref ~ '${AUDIT_AUTHOR_PATTERN}'`)),
   ],
 );
