@@ -70,8 +70,12 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   base escucha solo en `127.0.0.1`; dependencias fijadas con lockfile y `npm audit` en CI.
 - **Trampas:** CRLF en Windows en archivos comparados byte a byte; códigos de salida
   tapados por tuberías (`guards/run-checked.sh`); Docker Desktop apagado; mezcla de ESM y
-  CommonJS en TypeScript; versión del proveedor de cobertura distinta de la de Vitest.
-- **Estado:** en curso en `feat/f0-base`. F0.1 cerrado el 2026-11-23.
+  CommonJS en TypeScript; versión del proveedor de cobertura distinta de la de Vitest;
+  npm lanzado desde Git Bash (ver `CLAUDE.md`, sección 8); un lockfile hecho en Windows sin
+  los binarios nativos de Linux (TypeScript 7, rolldown, lightningcss), que rompe `npm ci`
+  en CI y en Docker. El 2026-11-24 el lockfile sí los traía.
+- **Estado:** en curso en `feat/f0-base`. F0.1 cerrado el 2026-11-23. F0.2 hecho el
+  2026-11-24 con la ADR-0003 aceptada (opción 4); espera la prueba del dueño.
 
 ### F1 · CRM simulado
 

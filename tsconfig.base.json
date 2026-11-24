@@ -1,0 +1,32 @@
+{
+  // Shared by every app. Each app extends it and only adds what is its own.
+  // Every option is explicit: TypeScript 7 changed several defaults (strict, types, module),
+  // and the project must not depend on which ones.
+  "compilerOptions": {
+    // Node 24 runs ES2024 natively; nothing is downleveled.
+    "target": "es2024",
+    "lib": ["es2024"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "types": ["node"],
+
+    "strict": true,
+    // An index into an array or record may be missing; the type says so.
+    "noUncheckedIndexedAccess": true,
+    // `{ a?: string }` does not accept `{ a: undefined }`: absent and empty stay different.
+    "exactOptionalPropertyTypes": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "forceConsistentCasingInFileNames": true,
+    // Third-party declaration files are not ours to fix; our own code is fully checked.
+    "skipLibCheck": true,
+
+    // Type checking only. How each app runs (build or type stripping) is decided with the
+    // first server, in F1.
+    "noEmit": true
+  }
+}

@@ -38,10 +38,12 @@ de una empresa real.
 
 ## 2. Dónde estamos de verdad
 
-2026-11-23: reglas, plan por fases con subpasos, ADR-0001, ADR-0002 y guardas creados.
-Remoto: https://github.com/ru3enaa1/Circuit. F0 en curso en `feat/f0-base`: F0.1 cerrado
-(primer commit en `main`). Sin código todavía. ADR-0003 (monolito modular con el CRM
-aparte) está en estado «propuesta». Siguiente: que el dueño la acepte o la cambie, y F0.2.
+2026-11-24: ADR-0003 aceptada (opción 4: monolito modular con el CRM aparte).
+Remoto: https://github.com/ru3enaa1/Circuit. F0 en curso en `feat/f0-base`: F0.1 cerrado;
+F0.2 hecho y sin commit, a la espera de la prueba del dueño: npm workspaces con
+`apps/circuit` y `apps/crm`, TypeScript estricto, Vitest con un proyecto por app y una
+prueba de control en cada una. Sin código de producto todavía. Siguiente: F0.3, la prueba
+de arquitectura.
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -53,9 +55,17 @@ aparte) está en estado «propuesta». Siguiente: que el dueño la acepte o la c
 
 ## 4. Arquitectura
 
-Decidida en F0 (ver `docs/adr/0001-*`): núcleo del circuito, adaptadores (modelo, CRM),
-servicio del CRM simulado aparte y tablero. El núcleo no importa adaptadores concretos; la
-prueba de arquitectura que lo impone se crea en F0.
+Decidida en F0: ADR-0001 (el código ordena el circuito) y ADR-0003 (monolito modular con
+el CRM aparte).
+
+- `apps/circuit`: un proceso con módulos (`circuit`, `model`, `crm-client`, `approval`,
+  `scenario`). Cada módulo se usa solo por su `index.ts`. El núcleo (`circuit`) no importa
+  implementaciones de `model` ni el SDK de Anthropic.
+- `apps/crm`: el CRM simulado, un proceso aparte. Circuit no importa su código; solo le
+  habla por HTTP con la llave del agente, y su usuario de base no ve el esquema del CRM.
+- `apps/board`: el tablero, servido por circuit (llega en F2).
+
+Las pruebas de arquitectura que lo imponen llegan en F0.3.
 
 ## 5. Stack
 
@@ -65,6 +75,9 @@ solo validado, nunca aplicado.
 Verificado en esta máquina el 2026-11-23: Node 24.20.0, npm 11.19.0, Docker 29.9.3.
 **Terraform y psql no están instalados**; PostgreSQL corre en Docker.
 Las dependencias entran una a una, en la fase que las necesita, con la versión verificada ese día.
+En uso, verificadas en el registro de npm el 2026-11-24: TypeScript 7.0.2, Vitest 5.1.1 (trae
+Vite 8.3.8) y @types/node 24.19.2 (la línea de Node 24, no la última). Versiones exactas
+(`save-exact` en `.npmrc`) y lockfile versionado.
 
 ## 6. Convenciones de código
 
@@ -89,6 +102,12 @@ Se registran con el formato de pitfall-log: regla, síntoma, causa, chequeo y fe
 **Entorno:**
 - Windows con Git Bash: los guiones de `guards/` corren con `bash`; los archivos comparados
   byte a byte van en LF (`.gitattributes`).
+- **npm se corre en PowerShell, no en Git Bash** (2026-11-24). Síntoma: `npm test` o `npx`
+  fallan con `""node"" no se reconoce como un comando interno o externo`. Causa: el
+  `cmd.exe` que abren los atajos de npm no ve `C:\Program Files\nodejs` en el PATH cuando
+  lo lanza Git Bash. Se vio en el Bash de Claude Code; no se ha confirmado en otra terminal
+  de Git Bash. Chequeo: desde bash, `cmd //c "where node"` debe encontrar node antes de
+  usar npm.
 
 ## 9. Comandos
 
@@ -99,7 +118,18 @@ bash guards/check-forbidden-phrases.sh forbidden-phrases.txt README.md   # 0 lim
 bash guards/run-checked.sh -- <comando>                                   # código de salida real
 ```
 
-Construir, probar y arrancar la app: se agregan en F0, cuando existan y se hayan corrido.
+Verificados el 2026-11-24 en PowerShell, contra un error de tipos plantado en cada app y la
+prueba de control invertida:
+
+```powershell
+npm ci              # instala exactamente lo del lockfile
+npm run typecheck   # tipos de la raíz y de cada app: 0 limpio, 1 error
+npm test            # Vitest, un proyecto por app
+npm run check       # tipos y pruebas
+$env:CIRCUIT_INVERT_CONTROL='1'; npm test; echo $LASTEXITCODE; Remove-Item Env:CIRCUIT_INVERT_CONTROL   # control positivo: debe dar 1
+```
+
+Arrancar la app se agrega cuando exista un servidor (F1).
 
 ## 10. Dónde está todo lo demás
 

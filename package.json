@@ -1,0 +1,21 @@
+{
+  "name": "circuit",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json && npm run typecheck --workspaces",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm test"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "typescript": "7.0.2",
+    "vitest": "5.1.1"
+  }
+}

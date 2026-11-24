@@ -1,0 +1,5 @@
+{
+  // Root files only (the test runner config). Each app type-checks with its own tsconfig.
+  "extends": "./tsconfig.base.json",
+  "include": ["vitest.config.ts"]
+}

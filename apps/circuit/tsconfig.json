@@ -1,0 +1,6 @@
+{
+  "extends": "../../tsconfig.base.json",
+  // src is listed before it exists so the first source file is type-checked without
+  // anyone remembering to add it here.
+  "include": ["src", "test"]
+}
