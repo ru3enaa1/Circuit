@@ -12,13 +12,19 @@ import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '../server/limits.ts';
 const ID_PATTERN = /^[1-9][0-9]{0,15}$/;
 /** The floor contacts_email_shape enforces; \s is a superset of POSIX [:space:]. */
 const EMAIL_SHAPE = /^[^@\s]+@[^@\s]+$/;
+/**
+ * PostgreSQL refuses U+0000 in text with SQLSTATE 22021, and neither \s nor trim() covers it:
+ * a NUL that passed here came back as a 500 (ADR-0006 A6).
+ */
+const NUL = '\u0000';
+const withoutNul = (value: string): boolean => !value.includes(NUL);
 
 // Sixteen digits can pass 2^53; such an id would be rounded into another one, so it is refused.
 const id = z.string().regex(ID_PATTERN).transform(Number).refine(Number.isSafeInteger);
 const slug = z.string().regex(new RegExp(SLUG_PATTERN));
 const limit = z.string().regex(/^[1-9][0-9]{0,2}$/).transform(Number).pipe(z.number().max(MAX_PAGE_SIZE));
 // Stored lowercase (contacts_email_lowercase), so a search is lowercased before it compares.
-const email = z.string().trim().toLowerCase().max(EMAIL_MAX_LENGTH).regex(EMAIL_SHAPE);
+const email = z.string().trim().toLowerCase().max(EMAIL_MAX_LENGTH).regex(EMAIL_SHAPE).refine(withoutNul);
 
 export const accountParams = z.strictObject({ slug });
 export const contactParams = z.strictObject({ slug, contactId: id });

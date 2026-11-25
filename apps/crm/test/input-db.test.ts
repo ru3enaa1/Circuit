@@ -86,6 +86,15 @@ describe('D14 · the search body', () => {
     expectInvalid(await post(payload), 'email', sent);
   });
 
+  // PostgreSQL refuses U+0000 in text (SQLSTATE 22021), and \s does not cover it: it used to
+  // reach the database and come back as 500 (baseline of ADR-0007, F-1; ADR-0006 A6).
+  it.each([
+    ['inside the address', 'conta\u0000cto@cuenta-a.test'],
+    ['at its end, where trim does not reach', 'contacto@cuenta-a.test\u0000'],
+  ])('a NUL %s is 400 «email», not 500', async (_case, email) => {
+    expectInvalid(await post(JSON.stringify({ email })), 'email', 'cuenta-a.test');
+  });
+
   it.each([
     ['an unknown field', '{"email":"contacto@cuenta-a.test","campo_desconocido":1}', 'campo_desconocido'],
     ['an array', '["contacto@cuenta-a.test"]', 'contacto@cuenta-a.test'],
