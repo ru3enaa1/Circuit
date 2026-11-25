@@ -192,8 +192,9 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   recomendaciones), con su línea base sobre `6e8f445` (417 pruebas, todo en 0). H4 (D18)
   hecha primero, sin cambio de conducta: `read-scope.ts` pasa a `scope.ts`. Después, en su propio
   commit, D1–D3 y D14: la forma de la llave, el generador, el hash y las llaves de prueba con
-  esa forma (433 pruebas, `npm run check` en 0). Falta el emisor, exportar, la prueba de los
-  tres «no» y la regla de la guarda. Se pidió al dueño
+  esa forma (433 pruebas, `npm run check` en 0). Luego, en su commit, el emisor `npm run
+  db:keys` (D4–D9, D19; 463 pruebas). Falta exportar, la prueba de los tres «no», la regla de
+  la guarda y el README. Se pidió al dueño
   el insumo de F2: el material del programa que citará la estación 4.
 
 ### F2 · Circuito y mapa

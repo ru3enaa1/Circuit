@@ -282,6 +282,18 @@ revocan como administrador con un `UPDATE`. Una llave que ya se mostró no se pu
   tomaban una conexión). `npm run check` en 0, 433 pruebas, cobertura 95,77 / 87,66 / 98 /
   97,06. M1–M4 en rojo y restaurados por hash, más dos propios: M2b (la forma sin la última
   letra canónica) y M3b (el hash en Latin-1).
+- **El emisor, D4–D9 y D19, en su commit.** `database/keys.ts` y el script `db:keys`:
+  `runKeysCommand(args, env, deps)`, con la conexión, la fábrica de llaves y la salida
+  inyectables. `parseArgs` estricto; cada orden lleva exactamente sus opciones, y las órdenes
+  van en un `Map` para que `constructor` no pase por una. Los permisos se guardan en el orden
+  de `API_KEY_PERMISSIONS`. El emisor comprueba `API_KEY_SHAPE` antes de insertar. `list`
+  imprime las columnas que nombra su `SELECT`, tal como llegan, así que un hash seleccionado se
+  vería (M11). D6 suma un caso: un `COMMIT` que falla no deja llave en la salida ni fila.
+  Pruebas en `apps/crm/test/`, porque D3 y D7 leen con el servidor real: `keys-command.test.ts`
+  (D5, 20), `keys-db.test.ts` (D3, D4, D6–D8, 8) y `keys-process.test.ts` (D19, 2). Estas no
+  se vieron en rojo antes del código; lo prueban M5–M11, todos en rojo por su cláusula y
+  restaurados por hash. `npm run check` en 0, 463 pruebas, cobertura 95,53 / 86,79 / 97,2 /
+  97,39.
 
 ## Preguntas abiertas
 
