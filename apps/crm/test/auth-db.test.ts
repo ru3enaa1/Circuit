@@ -1,6 +1,7 @@
 import type { LightMyRequestResponse } from 'fastify';
 import { describe, expect, it } from 'vitest';
 
+import { testApiKey } from '../../../database/test/crm-fixture.ts';
 import { bearer, bodyOf, errorCodeOf, useCrmUnderTest } from './crm-under-test.ts';
 
 // ADR-0006 D8, D9 and D16, through the real server on a disposable database as crm_app.
@@ -30,7 +31,7 @@ describe('D8 · the key', () => {
   });
 
   it('an unknown key and a revoked one get the same 401 llave_invalida, byte for byte', async () => {
-    const unknown = await get('/accounts/cuenta-a/stages', bearer('test-key-unknown'));
+    const unknown = await get('/accounts/cuenta-a/stages', bearer(testApiKey('desconocida')));
     const revoked = await get('/accounts/cuenta-a/stages', bearer(crm().fixture.revokedApiKey));
     expect(unknown.statusCode).toBe(401);
     expect(errorCodeOf(unknown)).toBe('llave_invalida');

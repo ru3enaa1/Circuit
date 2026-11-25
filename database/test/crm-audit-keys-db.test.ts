@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { AUDITED_TABLES } from '../../apps/crm/src/db/schema.ts';
 import { SERVICE_ROLES } from '../config.ts';
-import { inTransaction, seedFixture, sha256, sqlErrorOf, type CrmContext, type Fixture } from './crm-fixture.ts';
+import { inTransaction, seedFixture, sha256, sqlErrorOf, testApiKey, type CrmContext, type Fixture } from './crm-fixture.ts';
 import { countOf, errorOf as errorIn, ownContext as ownContextOf, SQLSTATE } from './crm-rules.ts';
 import { createDisposableDatabase, DATABASE_HOOK_TIMEOUT_MS, runMigrations, type DisposableDatabase } from './disposable-db.ts';
 
@@ -186,7 +186,7 @@ describe('D10 · keys are kept as SHA-256 and read only through resolve_api_key'
       return {
         live: await lookup(fixture.b.apiKey),
         revoked: await lookup(fixture.revokedApiKey),
-        unknown: await lookup('test-key-unknown'),
+        unknown: await lookup(testApiKey('desconocida')),
       };
     });
     expect(resolved).toEqual({

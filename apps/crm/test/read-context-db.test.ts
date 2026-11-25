@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { sqlErrorOf } from '../../../database/test/crm-fixture.ts';
+import { sqlErrorOf, testApiKey } from '../../../database/test/crm-fixture.ts';
 import { withReadScope } from '../src/db/scope.ts';
 import { bearer, useCrmUnderTest } from './crm-under-test.ts';
 
@@ -48,7 +48,7 @@ describe('D10 · one READ ONLY transaction per request', () => {
   });
 
   it('a refused request rolls back and gives its connection back', async () => {
-    const headers = bearer('test-key-unknown');
+    const headers = bearer(testApiKey('desconocida'));
     const statuses: number[] = [];
     for (let attempt = 0; attempt < 3; attempt += 1) {
       statuses.push((await crm().app.inject({ method: 'GET', url: '/accounts/cuenta-a/stages', headers })).statusCode);

@@ -1,6 +1,7 @@
 import type { LightMyRequestResponse } from 'fastify';
 import { describe, expect, it } from 'vitest';
 
+import { testApiKey } from '../../../database/test/crm-fixture.ts';
 import { MAX_BODY_BYTES } from '../src/server/limits.ts';
 import { bearer, bodyOf, errorCodeOf, useCrmUnderTest } from './crm-under-test.ts';
 
@@ -147,7 +148,7 @@ describe('D14 · the key comes before the input', () => {
   });
 
   it('with an unknown key, an invalid input is 401 llave_invalida', async () => {
-    const unknown = bearer('test-key-unknown');
+    const unknown = bearer(testApiKey('desconocida'));
     const responses = await Promise.all([get('contacts/abc', unknown), post('{"email": rota', { ...unknown, 'content-type': 'application/json' })]);
     expect(responses.map((response) => errorCodeOf(response))).toEqual(['llave_invalida', 'llave_invalida']);
   });

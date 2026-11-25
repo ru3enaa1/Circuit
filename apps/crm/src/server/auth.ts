@@ -1,8 +1,7 @@
 import type { FastifyRequest } from 'fastify';
 
-import type { Credentials } from '../keys.ts';
+import { API_KEY_SHAPE, type Credentials } from '../keys.ts';
 import { ApiError } from './errors.ts';
-import { MAX_KEY_LENGTH } from './limits.ts';
 
 // ADR-0006 D8: the only way to authenticate is `Authorization: Bearer <key>` (RFC 6750 §2.1).
 // No cookie, no query parameter and no other header is read (D16). This module only reads
@@ -10,8 +9,6 @@ import { MAX_KEY_LENGTH } from './limits.ts';
 
 /** RFC 7235 §2.1: the scheme is case-insensitive, and one or more spaces follow it. */
 const BEARER = /^bearer(?: +(.*))?$/i;
-/** RFC 6750 §2.1, b64token: what a bearer token may contain. */
-const TOKEN = /^[A-Za-z0-9\-._~+/]+=*$/;
 
 /** missing: no key at all (401 sin_llave). malformed: a key that cannot exist (401 llave_invalida). */
 export type PresentedKey = { readonly token: string } | 'missing' | 'malformed';
@@ -20,7 +17,10 @@ export function presentedKey(header: string | undefined): PresentedKey {
   const match = header === undefined ? null : BEARER.exec(header);
   const token = match?.[1];
   if (token === undefined || token === '') return 'missing';
-  if (token.length > MAX_KEY_LENGTH || !TOKEN.test(token)) return 'malformed';
+  // ADR-0008 D2: only the shape of D1 is looked up; anything else gets the 401 of an unknown
+  // key without taking a connection. The shape fits inside RFC 6750's b64token, so the grammar
+  // of the header does not change, and its fixed length bounds what is hashed.
+  if (!API_KEY_SHAPE.test(token)) return 'malformed';
   return { token };
 }
 

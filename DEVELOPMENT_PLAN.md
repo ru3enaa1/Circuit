@@ -190,7 +190,10 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   (una llave sin `read` ve lo que escribe, mientras ninguna llave real deje de tener `read`).
   **F1.4, abierta el 2026-11-25:** ADR-0008 aceptada ese día (el dueño aceptó sus nueve
   recomendaciones), con su línea base sobre `6e8f445` (417 pruebas, todo en 0). H4 (D18)
-  hecha primero, sin cambio de conducta: `read-scope.ts` pasa a `scope.ts`. Se pidió al dueño
+  hecha primero, sin cambio de conducta: `read-scope.ts` pasa a `scope.ts`. Después, en su propio
+  commit, D1–D3 y D14: la forma de la llave, el generador, el hash y las llaves de prueba con
+  esa forma (433 pruebas, `npm run check` en 0). Falta el emisor, exportar, la prueba de los
+  tres «no» y la regla de la guarda. Se pidió al dueño
   el insumo de F2: el material del programa que citará la estación 4.
 
 ### F2 · Circuito y mapa

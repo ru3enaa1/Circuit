@@ -269,6 +269,19 @@ revocan como administrador con un `UPDATE`. Una llave que ya se mostró no se pu
   en `keys.ts` después, con D1–D3. Verificado antes del commit: `npm run check` en 0, 417
   pruebas, cobertura 95,75 / 87,77 / 97,97 / 97,04, y los 31 archivos con los mismos conteos
   que la línea base.
+- **D1–D3 y D14, en un commit propio.** `keys.ts` suma `API_KEY_SHAPE`, `generateApiKey`
+  (`randomBytes(32)`) y `hashApiKey`; `presentedKey` pide la forma y `MAX_KEY_LENGTH` sale;
+  `scope.ts` resuelve con `hashApiKey`. `API_KEY_SHAPE` es más estricta que «43 caracteres de
+  base64url»: 43 caracteres llevan 258 bits, así que la última letra de 32 bytes es una de 16
+  (`[AEIMQUYcgkosw048]`), y la forma la exige para que una llave tenga una sola escritura.
+  D2 suma ese caso. Las llaves de prueba salen de `testApiKey(nombre)` de `crm-fixture.ts`:
+  `crmk_` y el base64url del SHA-256 del nombre, codificado ahí y no con la función del
+  servidor. Las de `test-key-cualquiera` de `logging-db.test.ts` también cambian: sin la
+  forma, sus 500 serían 401. Pruebas nuevas: `keys.test.ts` (6) y `key-format-db.test.ts`
+  (10), las dos primero en rojo (el generador no existía; los nueve casos mal formados
+  tomaban una conexión). `npm run check` en 0, 433 pruebas, cobertura 95,77 / 87,66 / 98 /
+  97,06. M1–M4 en rojo y restaurados por hash, más dos propios: M2b (la forma sin la última
+  letra canónica) y M3b (el hash en Latin-1).
 
 ## Preguntas abiertas
 

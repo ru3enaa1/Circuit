@@ -1,9 +1,7 @@
-import { createHash } from 'node:crypto';
-
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type pg from 'pg';
 
-import { KEY_AUTHOR_PREFIX, type Credentials } from '../keys.ts';
+import { hashApiKey, KEY_AUTHOR_PREFIX, type Credentials } from '../keys.ts';
 import { ApiError, type Permission } from '../server/errors.ts';
 
 // The transaction every request runs in, one per request on its own connection. It resolves
@@ -62,7 +60,7 @@ function toId(value: string): number {
 }
 
 async function resolveKey(client: pg.PoolClient, token: string): Promise<ResolvedKey | undefined> {
-  const hash = createHash('sha256').update(token).digest();
+  const hash = hashApiKey(token);
   const result = await client.query<{ api_key_id: string; account_id: string; account_slug: string; permissions: string[] }>(
     'SELECT api_key_id, account_id, account_slug, permissions FROM crm.resolve_api_key($1)',
     [hash],

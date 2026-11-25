@@ -79,6 +79,17 @@ export function sha256(text: string): Buffer {
   return createHash('sha256').update(text).digest();
 }
 
+/**
+ * ADR-0008 D14: a key with the shape of D1, derived from fixed bytes (the 32 of the SHA-256 of
+ * `name`) in base64url without padding, the encoding the generator gives its random bytes. Built
+ * here rather than with the server's own function, so a test does not take its shape from the
+ * code it checks. No test key is written literally, and every one passes the shape gate and
+ * reaches the database: an unknown key is refused by the lookup, not by its form.
+ */
+export function testApiKey(name: string): string {
+  return `crmk_${sha256(name).toString('base64url')}`;
+}
+
 export interface FixtureAccount {
   readonly id: string;
   readonly slug: string;
@@ -105,7 +116,7 @@ async function insertId(client: pg.PoolClient, text: string, values: readonly un
 }
 
 async function seedAccount(client: pg.PoolClient, slug: string): Promise<FixtureAccount> {
-  const apiKey = `test-key-${slug}`;
+  const apiKey = testApiKey(`agente-${slug}`);
   const email = `contacto@${slug}.test`;
   const id = await insertId(client, 'INSERT INTO crm.accounts (slug, name) VALUES ($1, $2) RETURNING id', [
     slug,
@@ -138,7 +149,7 @@ async function seedAccount(client: pg.PoolClient, slug: string): Promise<Fixture
 async function seedBase(client: pg.PoolClient): Promise<Fixture> {
   const a = await seedAccount(client, 'cuenta-a');
   const b = await seedAccount(client, 'cuenta-b');
-  const revokedApiKey = 'test-key-revoked';
+  const revokedApiKey = testApiKey('revocada');
   await client.query(
     "INSERT INTO crm.api_keys (account_id, label, key_hash, permissions, revoked_at) VALUES ($1, 'revocada', $2, '{read}', now())",
     [a.id, sha256(revokedApiKey)],
@@ -176,15 +187,15 @@ export interface ReadExtras {
 export type ReadFixture = Fixture & { readonly extras: ReadExtras };
 
 async function seedReadExtras(client: pg.PoolClient, a: FixtureAccount): Promise<ReadExtras> {
-  const writeOnlyKey = 'test-key-write-only';
+  const writeOnlyKey = testApiKey('escritura');
   await client.query("INSERT INTO crm.api_keys (account_id, label, key_hash, permissions) VALUES ($1, 'escritura', $2, '{write}')", [
     a.id,
     sha256(writeOnlyKey),
   ]);
   const one = (text: string, values: readonly unknown[]) => insertId(client, `${text} RETURNING id`, [a.id, ...values]);
-  const readOnlyKey = 'test-key-read-only';
+  const readOnlyKey = testApiKey('lectura');
   await one("INSERT INTO crm.api_keys (account_id, label, key_hash, permissions) VALUES ($1, 'lectura', $2, '{read}')", [sha256(readOnlyKey)]);
-  const deleteKey = 'test-key-read-write-delete';
+  const deleteKey = testApiKey('completa');
   const deleteKeyId = await one(
     "INSERT INTO crm.api_keys (account_id, label, key_hash, permissions) VALUES ($1, 'completa', $2, '{read,write,delete}')",
     [sha256(deleteKey)],

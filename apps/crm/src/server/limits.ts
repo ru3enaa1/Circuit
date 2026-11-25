@@ -19,9 +19,3 @@ export const CONNECT_TIMEOUT_MS = 5_000;
 /** Lists come newest first, by id, and `before` asks for the next page (ADR-0006 D14). */
 export const DEFAULT_PAGE_SIZE = 50;
 export const MAX_PAGE_SIZE = 100;
-
-/**
- * The format of a key arrives in F1.4 (H12). Until then any RFC 6750 token up to this length
- * is hashed and looked up; a longer one is refused without touching the database.
- */
-export const MAX_KEY_LENGTH = 512;

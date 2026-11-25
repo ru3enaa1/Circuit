@@ -106,9 +106,12 @@ deje de tener `read` (ADR-0007 A2).
 **F1.4 (llaves con alcance), abierta el 2026-11-25:** ADR-0008 **aceptada** ese día (el
 dueño aceptó sus nueve recomendaciones), con su línea base
 (`docs/reviews/ADR-0008-baseline.md`, sobre `6e8f445`: 417 pruebas, todo en 0). **H4 (D18)
-hecha en un commit propio, sin empujar:** `read-scope.ts` → `scope.ts` y
-`apps/crm/src/keys.ts`, con 417 pruebas y los mismos conteos por archivo. Decide llaves `crmk_` de 256
-bits, el emisor `npm run db:keys` (emitir, listar, revocar) como administrador, toda llave
+hecha en un commit propio (`7b60367`), sin empujar:** `read-scope.ts` → `scope.ts` y
+`apps/crm/src/keys.ts`, con 417 pruebas y los mismos conteos por archivo. **D1–D3 y D14
+hechas, sin empujar:** la forma `crmk_` (`API_KEY_SHAPE`, con la última letra canónica), el
+generador y `hashApiKey` en `keys.ts`; `presentedKey` rechaza otra forma sin tomar conexión;
+toda llave de prueba sale de `testApiKey` (`crm-fixture.ts`). 433 pruebas, `npm run check`
+en 0, M1–M4 en rojo. Decide llaves `crmk_` de 256 bits, el emisor `npm run db:keys` (emitir, listar, revocar) como administrador, toda llave
 emitida con `read` (H2 hecha regla), `GET /accounts/:slug/export` con `export`, la regla de
 la guarda de secretos y H4 (`read-scope.ts` → `scope.ts`). Pedido al dueño, como insumo de
 F2: el material del programa que citará la estación 4.

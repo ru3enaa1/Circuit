@@ -3,6 +3,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
 import { describe, expect, it, vi } from 'vitest';
 
+import { testApiKey } from '../../../database/test/crm-fixture.ts';
 import { readCrmConfig } from '../src/config.ts';
 import { createCrmPool } from '../src/db/pool.ts';
 import type { Connector } from '../src/db/scope.ts';
@@ -90,13 +91,13 @@ describe('D15 · one line per request, without the request', () => {
   });
 
   it('a refused key and an unknown route log their status, the second without a route', async () => {
-    const refused = await linesOf(() => crm().app.inject({ method: 'GET', url: '/accounts/cuenta-a/stages', headers: bearer('test-key-unknown') }));
+    const refused = await linesOf(() => crm().app.inject({ method: 'GET', url: '/accounts/cuenta-a/stages', headers: bearer(testApiKey('desconocida')) }));
     const unknown = await linesOf(() => crm().app.inject({ method: 'GET', url: '/rutas/que-no-existen' }));
     expect([...refused, ...unknown].map((line) => [line['route'], line['status']])).toEqual([
       ['/accounts/:slug/stages', 401],
       [null, 404],
     ]);
-    expect(JSON.stringify(refused)).not.toContain('test-key-unknown');
+    expect(JSON.stringify(refused)).not.toContain(testApiKey('desconocida'));
   });
 
   // Fastify answers these from frameworkErrors, where no hook runs (audit of ADR-0006, H2).
@@ -121,7 +122,7 @@ describe('D15 · an error is logged by its code only', () => {
   it('a database error leaves its SQLSTATE, and the 500 says nothing else', async () => {
     const logs: LogLine[] = [];
     const app = failingServer(plantedDatabaseError(), logs);
-    const response = await app.inject({ method: 'GET', url: '/accounts/cuenta-a/stages', headers: bearer('test-key-cualquiera') });
+    const response = await app.inject({ method: 'GET', url: '/accounts/cuenta-a/stages', headers: bearer(testApiKey('cualquiera')) });
     await app.close();
     expect(response.statusCode).toBe(500);
     expect(bodyOf(response)).toEqual({ error: { code: 'error_interno', message: 'Error interno.' } });
@@ -141,7 +142,7 @@ describe('D15 · an error is logged by its code only', () => {
     expect((wrapped as DrizzleQueryError).message).toContain(PLANTED_EMAIL);
     const logs: LogLine[] = [];
     const app = failingServer(wrapped, logs);
-    const response = await app.inject({ method: 'GET', url: '/accounts/cuenta-a/stages', headers: bearer('test-key-cualquiera') });
+    const response = await app.inject({ method: 'GET', url: '/accounts/cuenta-a/stages', headers: bearer(testApiKey('cualquiera')) });
     await app.close();
     expect(response.statusCode).toBe(500);
     expect(bodyOf(response)).toEqual({ error: { code: 'error_interno', message: 'Error interno.' } });
@@ -161,7 +162,7 @@ describe('D15 · an error is logged by its code only', () => {
     const logs: LogLine[] = [];
     const refused = Object.assign(new Error(`connect ECONNREFUSED 127.0.0.1:5432 ${PLANTED_EMAIL}`), { code: 'ECONNREFUSED' });
     const app = failingServer(refused, logs);
-    const response = await app.inject({ method: 'GET', url: '/accounts/cuenta-a/stages', headers: bearer('test-key-cualquiera') });
+    const response = await app.inject({ method: 'GET', url: '/accounts/cuenta-a/stages', headers: bearer(testApiKey('cualquiera')) });
     await app.close();
     expect(response.statusCode).toBe(500);
     expect(logs[0]).toEqual({ event: 'internal_error', sqlstate: null, code: 'ECONNREFUSED' });
