@@ -4,6 +4,8 @@
 - **Estado:** aceptada el 2026-11-25. El dueño aceptó las nueve recomendaciones de
   «Preguntas abiertas» tal como están escritas. Auditada ese día: APROBAR CON CONDICIONES
   (`docs/reviews/ADR-0007-audit-2026-11-25.md`), con las enmiendas A1–A4 al final.
+- **Enmendada por:** ADR-0008 D10, aceptada el 2026-11-25. La lista de rutas de D1 pasa a
+  ser la de esa cláusula: estas trece y `GET /accounts/:slug/export`.
 - **Tarea:** F1.3 de `DEVELOPMENT_PLAN.md`, «API de escritura con bitácora» del CRM simulado.
   Suma lo que dejaron para esta fase ADR-0005 (H7: nunca mandar `id` ni `created_at`; que
   `proposed_by` salga de la llave y no del cliente), ADR-0006 (la lectura de la bitácora) y

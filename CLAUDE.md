@@ -116,7 +116,9 @@ en 0, M1–M4 en rojo (`d24ed3a`). **El emisor (D4–D9, D19), en su commit, sin
 en 0, M5–M11 en rojo (`eeb8ce6`). **Exportar y los tres «no» (D10–D13), en su commit, sin empujar:**
 `GET /accounts/:slug/export` con `export` (`routes/export.ts`) y `agent-key-db.test.ts`;
 477 pruebas, `npm run check` en 0, M12–M14 en rojo (`501445b`). **La regla `crm-api-key`
-de la guarda (D15), en su commit, sin empujar:** 28 casos en `check-secrets.test.sh`, M15 en rojo. Decide llaves `crmk_` de 256 bits, el emisor `npm run db:keys` (emitir, listar, revocar) como administrador, toda llave
+de la guarda (D15), en su commit, sin empujar:** 28 casos en `check-secrets.test.sh`, M15 en rojo
+(`acd5e2b`). **El README (emitir, listar y revocar), §4 y §9 de este archivo y la línea
+«Enmendada por» de ADR-0007, en su commit, sin empujar.** Decide llaves `crmk_` de 256 bits, el emisor `npm run db:keys` (emitir, listar, revocar) como administrador, toda llave
 emitida con `read` (H2 hecha regla), `GET /accounts/:slug/export` con `export`, la regla de
 la guarda de secretos y H4 (`read-scope.ts` → `scope.ts`). Pedido al dueño, como insumo de
 F2: el material del programa que citará la estación 4.
@@ -145,12 +147,15 @@ el CRM aparte).
   `database/migrations/0002_crm_security.sql` (ADR-0005), y el dueño sin login de todo
   `crm`, `crm_owner`, en `0004_crm_owner.sql` (ADR-0006). Su servidor (ADR-0006):
   `src/config.ts` (solo del entorno), `src/server/` (Fastify, errores, llave, límites),
-  `src/routes/` (las lecturas en `reads.ts`, las escrituras y la bitácora en `writes.ts`, y
-  su zod en `input.ts`), `src/db/` (la transacción de cada petición en `scope.ts`, las
-  consultas en `reads.ts` y las escrituras en `writes.ts`) y `src/main.ts`. Se conecta como
-  `crm_app`, miembro solo de `crm_service`, nunca como el administrador. Toda escritura
-  nueva pasa por `withWriteScope` (ADR-0007 D4): sin él, la base la rechaza por falta de
-  cuenta o de autor.
+  `src/routes/` (las lecturas en `reads.ts`, la exportación en `export.ts`, las escrituras y
+  la bitácora en `writes.ts`, y su zod en `input.ts`), `src/db/` (la transacción de cada
+  petición en `scope.ts`, las consultas en `reads.ts` y las escrituras en `writes.ts`),
+  `src/keys.ts` (la forma, el generador y el hash de la llave, que comparten el servidor y el
+  emisor) y `src/main.ts`. Se conecta como `crm_app`, miembro solo de `crm_service`, nunca
+  como el administrador. Toda escritura nueva pasa por `withWriteScope` (ADR-0007 D4): sin
+  él, la base la rechaza por falta de cuenta o de autor. Las llaves no las toca la API: las
+  emite, lista y revoca `database/keys.ts` (`npm run db:keys`) como el administrador de
+  `.env` (ADR-0008 D9).
 - `apps/board`: el tablero, servido por circuit (llega en F2).
 
 Lo impone `apps/circuit/test/architecture/`: el mapa de dependencias (`module-map.ts`) y una
@@ -467,6 +472,25 @@ npx vitest run --project '@circuit/crm' write-refs   # A3: la precedencia del PA
 ```sh
 git diff --exit-code 5bdbf68 -- database/migrations database/test/migration-hashes.ts database/schema.sql apps/crm/src/db/schema.ts   # D14: 0
 git diff --exit-code 5bdbf68 -- package-lock.json   # D15: 0
+```
+
+Verificados el 2026-11-25 en PowerShell (F1.4, ADR-0008), con M1–M15 de la ADR, cada uno en
+rojo en su prueba y restaurado por hash. Contra la base de desarrollo, que aún no tiene
+cuentas, solo se corrieron el uso y `list`:
+
+```powershell
+npx vitest run --project '@circuit/crm' keys export agent-key key-format routes   # F1.4: 8 archivos, 63 pruebas (forma, emisor, exportar, los tres «no» y las rutas)
+npm run db:keys                                       # sin orden: 1 y el uso, sin conectarse
+npm run db:keys -- list --account <cuenta>            # id, etiqueta, permisos y fechas, nunca el hash; hoy 1 y «No existe la cuenta»
+npm run db:keys -- issue --account <cuenta> --label <etiqueta> --permissions read,write   # la llave, una sola vez; toda llave lleva read
+npm run db:keys -- revoke --id <id>                   # definitivo: desde la petición siguiente, 401
+```
+
+```sh
+bash guards/check-secrets.test.sh                     # D15: 0 si los 28 casos pasan, la llave crmk_ entre ellos
+git diff --exit-code 6e8f445 -- database/migrations database/test/migration-hashes.ts database/schema.sql apps/crm/src/db/schema.ts package-lock.json   # D16: 0
+git grep -n "test-key-" -- apps/crm/test database/test | wc -l   # D14: 0
+git grep -n "read-scope" -- '*.ts' | wc -l                       # D18: 0
 ```
 
 ## 10. Dónde está todo lo demás

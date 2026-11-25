@@ -4,9 +4,9 @@ Pieza de portafolio en construcción. La meta: un agente de texto que atiende so
 entrantes y trabaja dentro de un CRM, con un tablero donde cada solicitud recorre siete
 estaciones y una persona aprueba lo que el modelo no debe decidir.
 
-**Estado: fase F1, el CRM simulado.** Existen su esquema de base de datos y su API de
-lectura y de escritura, que corre en local; todavía no hay datos de ejemplo, agente ni
-tablero. Lo que sigue está en el
+**Estado: fase F1, el CRM simulado.** Existen su esquema de base de datos, su API de
+lectura y de escritura, que corre en local, y el comando que emite y revoca sus llaves;
+todavía no hay datos de ejemplo, agente ni tablero. Lo que sigue está en el
 [plan de desarrollo](DEVELOPMENT_PLAN.md).
 
 ## Qué hay hoy
@@ -30,13 +30,21 @@ tablero. Lo que sigue está en el
   proponente la llave que la manda, y la base deja la fila de bitácora en la misma
   transacción. Archivar pide el permiso de borrado, que la llave del agente no tiene: 403
   con el motivo. No hay ninguna ruta que borre.
+- Las llaves del CRM ([ADR-0008](docs/adr/0008-llaves-crm.md)): cada una es `crmk_` y 256
+  bits al azar, se muestra una sola vez y la base guarda solo su SHA-256. Las emite, lista y
+  revoca un comando local que corre como administrador (`npm run db:keys`); la API no tiene
+  ninguna ruta de llaves. Una llave con otra forma recibe 401 sin llegar a la base. Exportar
+  los contactos de una cuenta pide el permiso `export`: la llave del agente (leer y escribir)
+  recibe 403 al exportar, al archivar y en otra cuenta, y una prueba lo comprueba con una
+  llave emitida por el comando real.
 - Una prueba de arquitectura: el núcleo no importa ningún otro módulo ni el SDK de
   Anthropic, y cada módulo se usa solo por su `index.ts`
   ([ADR-0001](docs/adr/0001-codigo-ordena-el-circuito.md),
   [ADR-0003](docs/adr/0003-monolito-modular.md)).
 - PostgreSQL 18.7 en Docker Compose, publicado solo en `127.0.0.1`, con las migraciones
   probadas contra bases desechables.
-- Guardas de secretos, de frases prohibidas y de finales de línea, y GitHub Actions con los
+- Guardas de secretos (reconocen también la forma de una llave del CRM), de frases
+  prohibidas y de finales de línea, y GitHub Actions con los
   mismos comandos que en local, cobertura mínima de 80 incluida
   ([ADR-0004](docs/adr/0004-ci-guardas-y-cobertura.md)).
 
@@ -71,8 +79,35 @@ npm run check
 `npm run db:users` crea el usuario `crm_app` con la contraseña de `CRM_DB_PASSWORD`.
 
 `npm run crm:start` levanta el CRM en `http://127.0.0.1:4010`: `/health` responde 200, y una
-ruta sin llave, 401. Todavía no hay cuentas ni llaves que usar; llegan con la semilla (F1.5).
+ruta sin llave, 401. Todavía no hay cuentas, así que tampoco llaves que usar: las cuentas
+llegan con la semilla (F1.5), y las llaves se emiten como dice la sección siguiente.
 `docker compose stop db` detiene la base y conserva sus datos.
+
+## Llaves del CRM
+
+Las maneja `npm run db:keys`, como el administrador de `.env` y en una transacción por
+orden. En Windows, en PowerShell, como el resto de npm.
+
+```sh
+npm run db:keys -- issue --account <cuenta> --label <etiqueta> --permissions read,write
+npm run db:keys -- list --account <cuenta>
+npm run db:keys -- revoke --id <id>
+```
+
+- `issue` imprime el id y la llave una sola vez, después de guardarla. La base guarda solo
+  su SHA-256, así que una llave perdida no se recupera: se revoca y se emite otra.
+- Los permisos son `read`, `write`, `delete` y `export`, sin repetidos, y toda llave lleva
+  `read`; `read,write` es la del agente. La cuenta y la etiqueta van en minúsculas, cifras y
+  guiones, hasta 40 caracteres, para que una etiqueta no lleve el nombre de una persona.
+- `list` muestra de cada llave su id, etiqueta, permisos y fechas de creación y de
+  revocación, nunca su hash.
+- `revoke` es definitivo: desde la petición siguiente, esa llave recibe 401, igual que una
+  que no existe.
+- Sale con 0 si hizo lo pedido y con 1 y el motivo si no; sin orden, con el uso. Un error de
+  la base se nombra por su SQLSTATE, sin la llave ni la conexión.
+
+La base de desarrollo todavía no tiene cuentas, así que hoy el comando sale con 1 y «No
+existe la cuenta …». Las pruebas lo ejercen entero sobre bases desechables.
 
 Las guardas, en Git Bash:
 

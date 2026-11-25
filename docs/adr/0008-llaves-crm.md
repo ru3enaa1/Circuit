@@ -314,6 +314,11 @@ revocan como administrador con un `UPDATE`. Una llave que ya se mostró no se pu
   caracteres), salida 0. M15 en rojo, más tres propios (sin el borde de atrás, sin el de
   adelante y sin `-` en la clase), cada uno por su caso y restaurados por hash. La guarda da 0
   sobre el árbol y sobre los 5 commits sin empujar (`--range`); `pre-push.test.sh`, 10 en 0.
+- **Los documentos de estado, en su commit.** `README.md` dice cómo emitir, listar y revocar, y
+  que la base de desarrollo aún no tiene cuentas, así que hoy el comando sale con 1; sobre
+  ella solo se corrieron el uso y `list`. CLAUDE.md §4 nombra `keys.ts`, `export.ts` y el
+  emisor, y §9 los comandos de F1.4 (el filtro de pruebas: 8 archivos y 63 pruebas en 0).
+  ADR-0007 lleva «Enmendada por: ADR-0008 D10».
 
 ## Preguntas abiertas
 

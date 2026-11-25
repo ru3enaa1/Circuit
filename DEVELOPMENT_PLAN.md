@@ -194,7 +194,7 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   commit, D1–D3 y D14: la forma de la llave, el generador, el hash y las llaves de prueba con
   esa forma (433 pruebas, `npm run check` en 0). Luego, en su commit, el emisor `npm run
   db:keys` (D4–D9, D19; 463 pruebas). Después, en su commit, exportar y la prueba de los tres
-  «no» (D10–D13; 477 pruebas). Luego, en su commit, la regla `crm-api-key` de la guarda (D15). Falta el README. Se pidió al dueño
+  «no» (D10–D13; 477 pruebas). Luego, en su commit, la regla `crm-api-key` de la guarda (D15). Luego, en su commit, el README (emitir, listar y revocar). Se pidió al dueño
   el insumo de F2: el material del programa que citará la estación 4.
 
 ### F2 · Circuito y mapa
