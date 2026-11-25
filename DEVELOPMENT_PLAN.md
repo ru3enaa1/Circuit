@@ -182,11 +182,15 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   (corrida 45650884008). **Auditada:** APROBAR CON CONDICIONES
   (`docs/reviews/ADR-0007-audit-2026-11-25.md`): 1 mayor, de la suite (siete `beforeAll`
   pasaron los 10 s de Vitest en una vuelta). El 2026-11-25 el dueño pidió arreglar lo que
-  pidiera, y las enmiendas A1–A4 de la ADR cierran las condiciones, sin commit todavía. Cada
+  pidiera, y las enmiendas A1–A4 de la ADR cierran las condiciones, empujadas el 2026-11-25
+  (CI en verde en `6e8f445`, corrida 45659052830). Cada
   hook con base lleva `DATABASE_HOOK_TIMEOUT_MS`, con una prueba que lo exige. El cerco y la
   precedencia del `PATCH` quedan escritos, con dos pruebas nuevas. 417 pruebas; 10 vueltas
-  seguidas de `npm run check` en 0. **Para F1.4:** el dueño decide H2 (una llave sin
-  `read` ve lo que escribe; hoy, opción a).
+  seguidas de `npm run check` en 0. **H2:** el dueño eligió la opción (a) el 2026-11-25
+  (una llave sin `read` ve lo que escribe, mientras ninguna llave real deje de tener `read`).
+  **F1.4, abierta el 2026-11-25:** ADR-0008 aceptada ese día (el dueño aceptó sus nueve
+  recomendaciones), con su línea base sobre `6e8f445` (417 pruebas, todo en 0). Se pidió al dueño
+  el insumo de F2: el material del programa que citará la estación 4.
 
 ### F2 · Circuito y mapa
 

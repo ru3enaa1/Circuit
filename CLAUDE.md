@@ -95,12 +95,21 @@ fija `proposed_by = key-<id>` y la aprobación del cuerpo. La llave del agente r
 / 87,77 / 97,97 / 97,04; los mutantes M1–M14 de ADR-0007, en rojo. Fuera del cerco, sin
 cambio de conducta: `credentialsOf` pasó de `routes/reads.ts` a `server/auth.ts`.
 El 2026-11-25 el dueño pidió arreglar lo que pidiera la auditoría. Las enmiendas A1–A4 de la
-ADR cierran las condiciones, **sin commit**. Cada hook con base lleva
+ADR cierran las condiciones, empujadas el 2026-11-25 (CI en verde en `6e8f445`, corrida
+45659052830). Cada hook con base lleva
 `DATABASE_HOOK_TIMEOUT_MS` (H1), y lo comprueba `hook-budget.test.ts`, porque `--hookTimeout`
 no llega a los proyectos (§8). El cerco y la precedencia del `PATCH` quedan escritos, con dos
-pruebas nuevas. H2 (una llave sin `read` ve lo que escribe) queda escrita como la opción (a),
-**pendiente del dueño en F1.4**. Quedan 417 pruebas, con la misma cobertura; 10 vueltas
-seguidas de `npm run check` en 0; M15, M16 y M16b, en rojo.
+pruebas nuevas. Quedan 417 pruebas, con la misma cobertura; 10 vueltas
+seguidas de `npm run check` en 0; M15, M16 y M16b, en rojo. **H2** (una llave sin `read` ve
+lo que escribe): el dueño eligió la opción (a) el 2026-11-25, mientras ninguna llave real
+deje de tener `read` (ADR-0007 A2).
+**F1.4 (llaves con alcance), abierta el 2026-11-25:** ADR-0008 **aceptada** ese día (el
+dueño aceptó sus nueve recomendaciones), con su línea base
+(`docs/reviews/ADR-0008-baseline.md`, sobre `6e8f445`: 417 pruebas, todo en 0). Decide llaves `crmk_` de 256
+bits, el emisor `npm run db:keys` (emitir, listar, revocar) como administrador, toda llave
+emitida con `read` (H2 hecha regla), `GET /accounts/:slug/export` con `export`, la regla de
+la guarda de secretos y H4 (`read-scope.ts` → `scope.ts`). Pedido al dueño, como insumo de
+F2: el material del programa que citará la estación 4.
 
 ## 3. Reglas de producto que gobiernan el código
 

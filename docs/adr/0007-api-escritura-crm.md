@@ -332,10 +332,11 @@ informe, con la decisión final pendiente del dueño. El dueño puede revertir c
   `companyId`, si una etapa o una empresa existe en ella. Choca con la razón de ADR-0006
   (pregunta 5), que adelantó `read` para que una llave de solo escritura no leyera. Hoy no
   hace daño: la única llave sin `read` es una del fixture, la del agente tiene `read`, y
-  cada escritura deja su fila en la bitácora. **Pendiente del dueño, en F1.4,** con el
-  formato de las llaves: seguir con (a) o pasar a (b), en la que, sin `read`, una escritura
-  responde solo `{ id }` (o 204). Con (b), el 409 y el 400 seguirían diciendo algo, porque
-  son la barrera.
+  cada escritura deja su fila en la bitácora. La alternativa era (b): sin `read`, una
+  escritura respondería solo `{ id }` (o 204), y el 409 y el 400 seguirían diciendo algo,
+  porque son la barrera. **Decidida por el dueño el 2026-11-25, al abrir F1.4: (a)**, la
+  recomendación del informe, mientras ninguna llave real deje de tener `read`. ADR-0008
+  (aceptada el 2026-11-25) vuelve regla esa condición: toda llave que emite el emisor lleva `read` (D5).
 - **A3 · Precedencia del `PATCH` (H5, enmienda 3).** Está en «Notas de implementación», y
   D10 la nombra. Dos pruebas nuevas en `write-refs-db.test.ts`: un contacto que no existe,
   con la etapa de B, da 400 «stageId» (la precedencia); y la llave de A que mueve el
