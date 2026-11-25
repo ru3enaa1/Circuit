@@ -62,15 +62,21 @@ un `pg_dump` (R8). 164 pruebas, cobertura 98,46 / 92,3 / 100 / 98,24; los mutant
 ADR y los de la auditoría, en rojo. Los arreglos, empujados el 2026-11-24 (CI en verde en
 `f7542cc`, corrida 45503832664, con la carrera de roles en un servidor nuevo).
 **F1.2 (API de lectura) hecha y empujada el 2026-11-24 (CI en verde en `bf7a52f`,
-corrida 45521454430); sin auditar.** ADR-0006
+corrida 45521454430), y auditada:** APROBAR CON CONDICIONES
+(`docs/reviews/ADR-0006-audit-2026-11-24.md`). El 2026-11-25 el dueño pidió arreglar lo que
+pedía arreglo, y las enmiendas A1–A5 de la ADR cierran las condiciones (sin empujar todavía):
+sin llave, una URL que el enrutador no puede leer da 401 y deja su línea de registro; un
+puerto ocupado se nombra por `CRM_PORT`; y `db:users` rechaza `WITH ADMIN OPTION`. Quedan
+301 pruebas, con cobertura 94,67 / 85,16 / 97,11 / 96,18, y los mutantes M15–M18, en rojo.
+ADR-0006
 aceptada ese día (el dueño aceptó sus siete recomendaciones), con su línea base
 (`docs/reviews/ADR-0006-baseline.md`). Fastify y zod en `apps/crm`, corridos por Node sin
 compilar (`npm run crm:start`, solo en `127.0.0.1`); siete rutas de lectura con llave
 Bearer, 403 de cuenta y de permiso, una transacción `READ ONLY` por petición y un registro
 sin datos personales. `0004` deja todo `crm` en manos de `crm_owner`, sin login (H3);
 `npm run db:users` crea `crm_app` con un verificador SCRAM (H10), y las reglas de ADR-0005
-se repiten como `crm_app` (H11). 291 pruebas, cobertura 94,48 / 85,14 / 96,03 / 96,02; los
-mutantes M1–M13, más M11b y M14, en rojo. La base de desarrollo, respaldada y migrada
+se repiten como `crm_app` (H11). Al empujarla: 291 pruebas, cobertura 94,48 / 85,14 /
+96,03 / 96,02; los mutantes M1–M13, más M11b y M14, en rojo. La base de desarrollo, respaldada y migrada
 hasta `0004`, con `crm_app` creado. Los push los pide el dueño; el hook no se salta con
 `--no-verify`.
 
@@ -239,6 +245,14 @@ Se registran con el formato de pitfall-log: regla, síntoma, causa, chequeo y fe
   archivos a la vez y la cobertura, un Node nuevo tarda más en escuchar. Regla: esas pruebas
   llevan `PROCESS_TEST_TIMEOUT_MS`, por encima de la espera de arranque. Chequeo: `npm run
   check` en 0.
+- **`frameworkErrors` de Fastify no corre ningún hook** (2026-11-25, auditoría de ADR-0006,
+  H1 y H2). Síntoma: sin llave, una URL con un `%` mal codificado o con un parámetro de más
+  de 100 caracteres daba 400 y no 401, y no dejaba línea de registro. Causa: Fastify 5.12
+  responde esas peticiones desde `frameworkErrors`, antes del enrutador, sin `onRequest` ni
+  `onResponse` y con `reply.elapsedTime` en 0. Regla: lo que vale para toda petición (la
+  llave primero, la línea de registro) se repite en `answerUnroutable` de `server.ts`.
+  Chequeo: «the key comes before a URL the router cannot read» de `input-db.test.ts` y la
+  prueba de la URL ilegible de `logging-db.test.ts`.
 - **Fastify 5.12 deprecó `disableRequestLogging`** (2026-11-24). Con `logger: false` no hace
   falta: no hay registrador que escriba esas líneas. Chequeo: las pruebas no muestran
   `FSTDEP023`.

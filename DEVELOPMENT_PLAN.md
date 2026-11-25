@@ -156,6 +156,13 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   (H10), y las reglas de ADR-0005 se repiten como `crm_app` (H11); R10 cerrada. 291
   pruebas, cobertura 94,48 / 85,14 / 96,03 / 96,02; los mutantes M1–M13, más M11b y M14, en
   rojo. La base de desarrollo, respaldada (restauración probada) y migrada hasta `0004`.
+  **Auditada:** APROBAR CON CONDICIONES (`docs/reviews/ADR-0006-audit-2026-11-24.md`). El
+  2026-11-25 el dueño pidió arreglar lo que pedía arreglo, y las enmiendas A1–A5 de la ADR
+  cierran las condiciones. Sin llave, una URL que el enrutador no puede leer da 401, y deja
+  su línea de registro. Un puerto ocupado se nombra por `CRM_PORT`, y `db:users` rechaza una
+  membresía `WITH ADMIN OPTION`. El cerco y la nota del 413 quedaron escritos. Quedan 301
+  pruebas, cobertura 94,67 / 85,16 / 97,11 / 96,18, sin empujar todavía. **Para F1.3,
+  además:** una prueba de `__proto__` por cada cuerpo nuevo (H9 de esa auditoría).
 
 ### F2 · Circuito y mapa
 

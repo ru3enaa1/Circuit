@@ -98,7 +98,7 @@ desechable sembrada con `database/test/crm-fixture.ts`. Solo D7 abre un puerto.
 | D1 | El código corre con el type stripping de Node, sin compilar ni cargador. Toda importación relativa termina en `.ts`, y `tsconfig.base.json` tiene `allowImportingTsExtensions` y `erasableSyntaxOnly` | `git grep -nE "from '\.\.?/[^']*\.js'" -- '*.ts'` da 0 líneas; `npm run typecheck` da 0; un `enum` plantado en `apps/crm/src` lo pone en 1 (TS1294); D7 arranca el proceso real | no |
 | D2 | Entran `fastify` 5.12.8 y `zod` 4.6.7, en las `dependencies` de `apps/crm` junto con `drizzle-orm` 0.45.4 y `pg` 8.23.1 (R10). Todas van con versión exacta y en el lockfile. No entra ninguna otra dependencia directa | `npm ls --workspace @circuit/crm --depth=0` lista esas cuatro; `git diff f7542cc -- package.json apps/circuit/package.json` no agrega dependencias; `npm audit --audit-level=low` da 0 | sí |
 | D3 | `0004` crea `crm_owner` `NOLOGIN` con la guarda de ADR-0005 D14: es idempotente, resiste dos bases migrando a la vez, y falla si el rol ya existe con atributos o membresías. `crm_owner` es dueño del esquema `crm` y de cada tabla, secuencia, índice y función que hay en él (H3) | `crm-structure-db.test.ts`: `nspowner`, `pg_class.relowner` de todo lo de `crm` y `pg_proc.proowner` son de `crm_owner`; `crm_owner` no tiene atributos ni miembros. Además, el par de la carrera de `migrations-db.test.ts` incluye `0004`, y las pruebas existentes de D7 y D10 de ADR-0005 siguen en verde con el dueño nuevo | sí |
-| D4 | `npm run db:users` crea o actualiza `crm_app` con `LOGIN` e `INHERIT`, sin ningún otro atributo y miembro solo de `crm_service`, con la contraseña de `CRM_DB_PASSWORD`. Si `crm_app` ya existe con atributos o membresías de más, falla en vez de usarlo. Ninguna sentencia que manda lleva la contraseña: lleva un verificador `SCRAM-SHA-256$4096:…` calculado en local. Los únicos miembros de `crm_service` son `crm_app`, y `crm_owner` y `circuit_service` no tienen miembros (H10) | `crm-login-db.test.ts`: `crm_app` entra con su contraseña y no entra con otra (28P01); los atributos y las membresías se comparan con una lista fija; el texto de cada sentencia capturada no contiene la contraseña; `rolpassword` empieza con `SCRAM-SHA-256$`; con `BYPASSRLS` plantado en una transacción que se deshace, el script falla con su mensaje | sí |
+| D4 | `npm run db:users` crea o actualiza `crm_app` con `LOGIN` e `INHERIT`, sin ningún otro atributo y miembro solo de `crm_service`, con la contraseña de `CRM_DB_PASSWORD`. Si `crm_app` ya existe con atributos o membresías de más, o con una membresía `WITH ADMIN OPTION` (A5), falla en vez de usarlo. Ninguna sentencia que manda lleva la contraseña: lleva un verificador `SCRAM-SHA-256$4096:…` calculado en local. Los únicos miembros de `crm_service` son `crm_app`, y `crm_owner` y `circuit_service` no tienen miembros (H10) | `crm-login-db.test.ts`: `crm_app` entra con su contraseña y no entra con otra (28P01); los atributos y las membresías se comparan con una lista fija; el texto de cada sentencia capturada no contiene la contraseña; `rolpassword` empieza con `SCRAM-SHA-256$`; con `BYPASSRLS` plantado en una transacción que se deshace, el script falla con su mensaje | sí |
 | D5 | Como `crm_app` valen D4 y D5 de ADR-0005. Con la cuenta A fijada solo se ven filas de A. Sin cuenta se ven 0 filas, y toda inserción falla con el mensaje de RLS. `DELETE` y `TRUNCATE` fallan con 42501. Su matriz de permisos es la de `crm_service` (H11) | `crm-login-db.test.ts`, sin `SET ROLE`: los conteos, los 42501 con su mensaje y `has_table_privilege('crm_app', …)` comparada con la matriz fija de D5 | sí |
 | D6 | La configuración sale solo de `process.env` y la valida zod: `CRM_DB_PASSWORD`, `POSTGRES_DB`, `DB_PORT` y `CRM_PORT`. El usuario (`crm_app`) y el host (`127.0.0.1`) son constantes. Si falta una variable, o no es válida, el arranque se detiene con un mensaje que nombra la variable y nunca su valor. Si una variable empieza con BOM, lo dice | `config.test.ts`: una variable que falta, un puerto fuera de rango, una variable con BOM, y en ninguno de esos mensajes aparece el valor | no |
 | D7 | El servidor escucha solo en `127.0.0.1`. El proceso real arranca con `node`, sin compilar, y responde | `main-process.test.ts`: lanza `node apps/crm/src/main.ts` con `CRM_PORT=0`, apuntando a una base desechable; lee la dirección que anuncia, que es `127.0.0.1`; `GET /health` da 200; y termina el proceso | sí |
@@ -108,8 +108,8 @@ desechable sembrada con `database/test/crm-fixture.ts`. Solo D7 abre un puerto.
 | D11 | Las rutas son exactamente siete, y ninguna escribe: `GET /health`; `GET /accounts/:slug/stages`; `POST /accounts/:slug/contacts/search`; `GET /accounts/:slug/contacts/:contactId`; `GET /accounts/:slug/contacts/:contactId/notes`; `GET /accounts/:slug/contacts/:contactId/tasks`; y `GET /accounts/:slug/companies/:companyId`. `/health` no pide llave y no devuelve datos | `routes.test.ts`: las rutas que registra un hook `onRoute`, comparadas con esa lista fija de método y ruta | sí |
 | D12 | Cada respuesta trae solo los campos de su lista fija (pregunta 1). Etapa: `id`, `key`, `label`, `position`. Contacto: `id`, `fullName`, `email`, `companyId`, `stageId`, `createdAt`. Empresa: `id`, `name`, `industry`, `sizeRange`, `revenueRange`, `createdAt`. Nota: `id`, `body`, `createdAt`. Tarea: `id`, `title`, `dueOn`, `completedAt`, `createdAt`. Nunca `accountId` ni `archivedAt`. Lo archivado no se devuelve, y un contacto archivado pedido por id da 404 (pregunta 2) | `reads-db.test.ts`: las claves de cada objeto son exactamente las de la lista; una nota y un contacto archivados no aparecen, y el contacto archivado da 404 | sí |
 | D13 | Un registro de otra cuenta responde igual que uno que no existe: 404 `no_encontrado`, nunca 403. RLS lo esconde, y la ruta propia no revela si existe | `reads-db.test.ts`: el contacto de B, pedido por `/accounts/cuenta-a/…` con la llave de A, da el mismo cuerpo que un id que no existe; el control es que la llave de B lo lee con 200 | sí |
-| D14 | Toda entrada pasa por zod, después de la llave y la cuenta. El `slug` sigue `SLUG_PATTERN` y los ids siguen `^[1-9][0-9]{0,15}$`. El correo se recorta, va a minúsculas, mide hasta 254 y tiene la forma de `contacts_email_shape`. `limit` va de 1 a 100, con 50 por defecto, y `before` es un id. Un cuerpo con campos desconocidos se rechaza. Lo inválido da 400 `entrada_invalida`, que nombra el campo y nunca el valor. Un cuerpo de más de 16 KiB da 413 `demasiado_grande` | `input-db.test.ts`: un caso por campo, y ningún cuerpo de error contiene el valor enviado; sin llave, una entrada inválida da 401 y no 400 | sí |
-| D15 | Cada petición escribe una línea de registro con el método, el patrón de la ruta (no la URL), el estado y la duración. Nunca escribe cabeceras, cuerpo, la llave, un correo ni un nombre. Un error de la base se registra solo con su SQLSTATE, y la respuesta es 500 `error_interno`, sin el mensaje | `logging-db.test.ts`: con el registro capturado, una búsqueda con la llave y el correo del fixture no deja en él ni la llave, ni el correo, ni el nombre. Un error plantado que lleva un correo en su `message` y en su `detail` deja solo el código, y el cuerpo del 500 no lo trae | sí |
+| D14 | Toda entrada pasa por zod, después de la llave y la cuenta. El `slug` sigue `SLUG_PATTERN` y los ids siguen `^[1-9][0-9]{0,15}$`. El correo se recorta, va a minúsculas, mide hasta 254 y tiene la forma de `contacts_email_shape`. `limit` va de 1 a 100, con 50 por defecto, y `before` es un id. Un cuerpo con campos desconocidos se rechaza. Lo inválido da 400 `entrada_invalida`, que nombra el campo y nunca el valor. Un cuerpo de más de 16 KiB da 413 `demasiado_grande` | `input-db.test.ts`: un caso por campo, y ningún cuerpo de error contiene el valor enviado; sin llave, una entrada inválida da 401 y no 400, también cuando el enrutador no puede leer la URL (A3) | sí |
+| D15 | Cada petición escribe una línea de registro con el método, el patrón de la ruta (no la URL), el estado y la duración. Nunca escribe cabeceras, cuerpo, la llave, un correo ni un nombre. Un error de la base se registra solo con su SQLSTATE, y la respuesta es 500 `error_interno`, sin el mensaje | `logging-db.test.ts`: con el registro capturado, una búsqueda con la llave y el correo del fixture no deja en él ni la llave, ni el correo, ni el nombre. Un error plantado que lleva un correo en su `message` y en su `detail` deja solo el código, y el cuerpo del 500 no lo trae. Una URL que el enrutador no puede leer también deja su línea, con `route` nula (A3) | sí |
 | D16 | No hay CORS, cookies ni otra forma de autenticarse | `auth-db.test.ts`: ninguna respuesta trae `access-control-allow-origin` ni `set-cookie` | no |
 | D17 | Nada de ADR-0005 se debilita. Las migraciones `0000`–`0003` no cambian (sus hashes, A9). Ninguna prueba existente se quita ni se debilita. Ningún archivo pasa de 400 líneas, así que `crm-rules-db.test.ts`, que tiene 391, se parte antes de crecer | `migration-files.test.ts`; los conteos por archivo de la línea base no bajan, salvo las pruebas que se mueven al partir el archivo, que se nombran; `wc -l` sobre `apps database` no da ningún `.ts` de más de 400 | sí |
 
@@ -155,6 +155,12 @@ poner en rojo su prueba:
 | M11 | D12 | Una consulta que no filtra lo archivado |
 | M12 | D15 | El manejador de errores que registra el error entero |
 | M13 | D14 | El esquema de la búsqueda sin `strict` |
+| M15 | D14 | `frameworkErrors` sin mirar la llave (A3) |
+| M15b | D14 | `frameworkErrors` pide la llave también fuera de `/accounts/` (A3) |
+| M16 | D15 | `frameworkErrors` sin su línea de registro (A3) |
+| M16b | D15 | Esa línea con la URL en vez de `route` nula (A3) |
+| M17 | — | El arranque sin traducir `EADDRINUSE` (A4) |
+| M18 | D4 | `db:users` sin mirar `ADMIN OPTION` (A5) |
 
 ## Cerco
 
@@ -168,6 +174,9 @@ poner en rojo su prueba:
   - `database/schema.sql`, si `npm run db:dump-schema` cambia algo.
   - Las importaciones relativas de `apps/` y `database/`, de `.js` a `.ts`. Es un cambio
     mecánico (D1).
+  - Desde la auditoría (A1): `database/config.ts`, la constante `OWNER_ROLES` y su
+    comentario; las importaciones de `drizzle.config.ts`, que está en la raíz (D1); y en
+    `apps/circuit/test/architecture/`, los comentarios que explican las importaciones `.ts`.
   - `tsconfig.base.json` (dos opciones), `package.json` (los scripts `crm:start` y
     `db:users`, y el lockfile) y `.env.example` (`CRM_DB_PASSWORD` y `CRM_PORT`).
   - `.github/workflows/ci.yml`: solo el paso «Entorno local con una contraseña de un solo
@@ -260,6 +269,11 @@ Decisiones del código dentro de las cláusulas, para que la auditoría las vea:
 - **Mutantes de más:** M11b (un contacto archivado por id) y M14 (sin ese hook). M4 y M5
   los para la revisión final de `db:users`, que falla con su mensaje. Una variante de M5
   que además se salta esa revisión pone en rojo las siete tablas de D5.
+- **Con una llave presente, lo que Fastify responde antes de la ruta va primero (A2).** Un
+  cuerpo de más de 16 KiB da 413, y una URL que el enrutador no puede leer da 400 «ruta»,
+  aunque la llave sea desconocida o mal formada. Fastify lee el cuerpo hasta su límite, o
+  rechaza la URL, antes de que la ruta busque la llave en la base. No revela nada: los
+  cuerpos son fijos. Sin llave, los dos dan 401 (M14 y A3).
 
 ## Preguntas abiertas
 
@@ -279,3 +293,48 @@ la ADR no cambia.
    verificador. Son unas 20 líneas con `node:crypto`, y la contraseña nunca llega al registro.
 7. **¿`crm_owner` también es dueño del esquema, o solo recibe `USAGE`?** Recomendación: dueño.
    Sin login y sin miembros, el riesgo es el mismo, y queda una sola regla para D3.
+
+## Auditoría y enmiendas A1–A5 (2026-11-25)
+
+La auditoría de `adr-guard`, en una sesión aparte, dio APROBAR CON CONDICIONES: 0
+bloqueantes, 0 mayores, 4 menores y 5 notas, con 15 cláusulas en CUMPLE y D14 y D15 en
+PARCIAL (`docs/reviews/ADR-0006-audit-2026-11-24.md`). Las dos fallaban por la misma
+esquina: lo que Fastify responde antes del enrutador. El dueño pidió arreglar lo que pedía
+arreglo. Claude aplicó también las dos enmiendas propuestas, que solo escriben lo que ya
+pasa. El dueño puede revertir cualquiera de ellas.
+
+- **A1 · Cerco (H4, enmienda 1).** Los tres archivos que quedaron fuera de «Puede cambiar»
+  entran en él, cada uno con su razón. Ninguno cambia conducta.
+- **A2 · Lo que va antes de la llave (H5, enmienda 2).** Está en «Notas de implementación»,
+  y cubre también la URL ilegible con una llave presente.
+- **A3 · D14 y D15 enteras (H1, H2).** `frameworkErrors` llama a `answerUnroutable`
+  (`server.ts`). Bajo `/accounts/` y sin llave responde 401 `sin_llave`, con
+  `WWW-Authenticate`. Si no, 400 «ruta». En los dos casos escribe la línea de registro con
+  los mismos campos fijos que `onResponse` y `route` nula. Cubre los dos errores del
+  enrutador que pueden llegar: la URL mal codificada y el parámetro de más de 100
+  caracteres (`maxParamLength`), que la auditoría no nombró. Las pruebas nuevas estaban en
+  rojo antes del arreglo (400 y no 401; 0 líneas). Los controles: con llave, 400 «ruta»; y
+  fuera de `/accounts/`, 400 sin llave. M15, M15b, M16 y M16b, en rojo.
+- **A4 · Puerto ocupado (H3).** Si `listen` falla con `EADDRINUSE`, el arranque cierra la
+  app y lanza un `StartupError` que nombra `CRM_PORT` y nunca su valor. Antes decía solo «El
+  CRM no arrancó (Error).». M17, en rojo.
+- **A5 · `ADMIN OPTION` (H7).** `db:users` también falla si `crm_app` tiene una membresía
+  `WITH ADMIN OPTION`, porque con ella podría hacer miembro de `crm_service` a cualquier
+  rol. El caso estaba en rojo antes del arreglo. M18, en rojo. Siguen sin revisarse
+  `VALID UNTIL` y los permisos dados a `crm_app` directamente en una base. El primero no da
+  más permisos, y el segundo lo ve D5, aunque solo en una base desechable.
+
+Las notas que quedan:
+
+- **H6, hecha:** el README dice «de permiso mínimo y sin atributos de administrador». El
+  título de esta ADR no cambia, porque es el nombre con que la citan la auditoría y la línea
+  base. Su «sin privilegios» quiere decir sin atributos de administrador.
+- **H8, nada que hacer:** el `GRANT crm_service TO crm_app` de `db:users` solo lo ejerce CI,
+  en su servidor nuevo.
+- **H9, para F1.3:** cada cuerpo nuevo lleva su prueba de `__proto__`, o un ayudante común
+  que la tenga, y sigue en modo estricto.
+- **Trampa nueva** en CLAUDE.md §8: `frameworkErrors` no corre ningún hook.
+
+Verificado el 2026-11-25: `npm run check` en 0, con 301 pruebas (10 nuevas) y cobertura
+94,67 / 85,16 / 97,11 / 96,18. Los seis mutantes, cada uno restaurado después y comprobado
+por hash, en rojo en su prueba. No quedó ninguna base `circuit_test_…`.

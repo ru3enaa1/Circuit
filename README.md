@@ -22,8 +22,8 @@ tablero. Lo que sigue está en el
 - La API de lectura del CRM ([ADR-0006](docs/adr/0006-api-lectura-crm.md)): siete rutas
   que solo leen, en `127.0.0.1`. Cada petición pide una llave (`Authorization: Bearer`), la
   cuenta de la ruta tiene que ser la de la llave (si no, 403 con el motivo), y cada lectura
-  corre en una transacción de solo lectura con un usuario de base sin privilegios
-  (`crm_app`). El registro guarda método, ruta, estado y duración, y nada personal.
+  corre en una transacción de solo lectura con un usuario de base de permiso mínimo y sin
+  atributos de administrador (`crm_app`). El registro guarda método, ruta, estado y duración, y nada personal.
 - Una prueba de arquitectura: el núcleo no importa ningún otro módulo ni el SDK de
   Anthropic, y cada módulo se usa solo por su `index.ts`
   ([ADR-0001](docs/adr/0001-codigo-ordena-el-circuito.md),
