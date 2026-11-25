@@ -343,6 +343,14 @@ Se registran con el formato de pitfall-log: regla, síntoma, causa, chequeo y fe
   llave primero, la línea de registro) se repite en `answerUnroutable` de `server.ts`.
   Chequeo: «the key comes before a URL the router cannot read» de `input-db.test.ts` y la
   prueba de la URL ilegible de `logging-db.test.ts`.
+- **En Windows, `git worktree remove --force` sigue una junction** (2026-11-25, auditoría de
+  ADR-0008). Síntoma: al quitar un worktree desechable cuyo `node_modules` era una junction
+  al del clon, se borraron el `node_modules` del clon y 57 archivos versionados de `apps/`.
+  Causa: git entra en la junction y borra lo que hay detrás, y los workspaces de npm enlazan
+  `node_modules/@circuit/crm` con `apps/crm` y `@circuit/circuit` con `apps/circuit`. Se
+  reparó con `git restore --source=HEAD -- apps/` y `npm ci`. Regla: un worktree corre su
+  propio `npm ci` y nunca recibe un enlace al clon. Chequeo: `git status --short` del clon da
+  lo mismo antes y después de quitar el worktree.
 - **Fastify 5.12 deprecó `disableRequestLogging`** (2026-11-24). Con `logger: false` no hace
   falta: no hay registrador que escriba esas líneas. Chequeo: las pruebas no muestran
   `FSTDEP023`.
