@@ -77,6 +77,23 @@ describe('D15 · one line per request, without the request', () => {
     ]);
     expect(JSON.stringify(refused)).not.toContain('test-key-unknown');
   });
+
+  // Fastify answers these from frameworkErrors, where no hook runs (audit of ADR-0006, H2).
+  it('a URL the router cannot read leaves its line too, without a route and without the URL', async () => {
+    const { a } = crm().fixture;
+    const lines = await linesOf(async () => {
+      await crm().app.inject({ method: 'GET', url: '/accounts/cuenta-a/contacts/%zz' });
+      await crm().app.inject({ method: 'GET', url: `/accounts/cuenta-a/contacts/${'7'.repeat(101)}`, headers: bearer(a.apiKey) });
+    });
+    expect(lines.map((line) => Object.keys(line).sort())).toEqual([REQUEST_LINE_KEYS, REQUEST_LINE_KEYS]);
+    expect(lines.map((line) => [line['event'], line['method'], line['route'], line['status']])).toEqual([
+      ['request', 'GET', null, 401],
+      ['request', 'GET', null, 400],
+    ]);
+    expect(lines.every((line) => typeof line['ms'] === 'number' && line['ms'] >= 0)).toBe(true);
+    const text = JSON.stringify(lines);
+    for (const sent of ['cuenta-a', '%zz', '7777777', a.apiKey]) expect(text).not.toContain(sent);
+  });
 });
 
 describe('D15 · an error is logged by its code only', () => {

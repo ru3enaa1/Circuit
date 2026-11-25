@@ -23,6 +23,9 @@ export interface RouteOptions {
   readonly pool: Connector;
 }
 
+/** Every route that reads data lives under it and takes a key. */
+export const ACCOUNTS_PATH = '/accounts';
+
 /** The slug as the route spells it: only compared with the key's (D9), and validated after. */
 function routeSlug(request: FastifyRequest): string {
   const params = request.params as Readonly<Record<string, unknown>>;
@@ -109,5 +112,5 @@ function contactRoutes(app: FastifyInstance, pool: Connector): void {
 
 export async function crmRoutes(app: FastifyInstance, options: RouteOptions): Promise<void> {
   app.get('/health', async () => ({ status: 'ok' }));
-  await app.register(accountRoutes, { ...options, prefix: '/accounts/:slug' });
+  await app.register(accountRoutes, { ...options, prefix: `${ACCOUNTS_PATH}/:slug` });
 }

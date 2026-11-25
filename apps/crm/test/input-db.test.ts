@@ -137,3 +137,28 @@ describe('D14 · the key comes before the input', () => {
     expect(responses.map((response) => errorCodeOf(response))).toEqual(['llave_invalida', 'llave_invalida']);
   });
 });
+
+// A URL the router cannot decode, or a parameter longer than Fastify's maxParamLength (100),
+// never reaches a route or its onRequest hook: Fastify answers it from frameworkErrors. The
+// key still comes first there (audit of ADR-0006, H1).
+describe('D14 · the key comes before a URL the router cannot read', () => {
+  const unroutable = [
+    ['a slug with a broken percent-encoding', '/accounts/%E0%A4%A/stages'],
+    ['a contactId with a broken percent-encoding', '/accounts/cuenta-a/contacts/%zz'],
+    ['a contactId longer than maxParamLength', `/accounts/cuenta-a/contacts/${'1'.repeat(101)}`],
+  ] as const;
+
+  it.each(unroutable)('without a key, %s is 401 sin_llave with WWW-Authenticate', async (_case, url) => {
+    const response = await crm().app.inject({ method: 'GET', url });
+    expect([response.statusCode, errorCodeOf(response)]).toEqual([401, 'sin_llave']);
+    expect(response.headers['www-authenticate']).toBe('Bearer');
+  });
+
+  it.each(unroutable)('with a key, %s is 400 «ruta» (control)', async (_case, url) => {
+    expectInvalid(await crm().app.inject({ method: 'GET', url, headers: asA() }), 'ruta', url);
+  });
+
+  it('outside /accounts/, a URL that cannot be decoded is 400 «ruta» without a key (control)', async () => {
+    expectInvalid(await crm().app.inject({ method: 'GET', url: '/health%zz' }), 'ruta', '%zz');
+  });
+});
