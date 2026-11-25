@@ -306,6 +306,14 @@ revocan como administrador con un `UPDATE`. Una llave que ya se mostró no se pu
   `authorize` sin comparar la cuenta. M12–M14 en rojo, más M12b propio (la transacción con
   `read` fijo), todos restaurados por hash. `npm run check` en 0, 477 pruebas, cobertura
   95,58 / 86,92 / 97,26 / 97,42.
+- **La regla de la guarda, D15, en su commit.** `crm-api-key` en `guards/check-secrets.sh`: `crmk_`
+  y 43 caracteres de base64url, sin otro carácter de base64url pegado delante ni detrás; los
+  bordes van escritos porque `\b` toma el `-` como borde. `check-secrets.test.sh` gana tres
+  casos (28): la llave sola en un `.ts` y entre comillas, salida 1 sin repetirla, y el control
+  (el texto de la regla leído de la guarda, la forma de `keys.ts`, una plantilla y 44
+  caracteres), salida 0. M15 en rojo, más tres propios (sin el borde de atrás, sin el de
+  adelante y sin `-` en la clase), cada uno por su caso y restaurados por hash. La guarda da 0
+  sobre el árbol y sobre los 5 commits sin empujar (`--range`); `pre-push.test.sh`, 10 en 0.
 
 ## Preguntas abiertas
 

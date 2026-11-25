@@ -27,6 +27,10 @@ PG_PASSWORD="POSTGRES""_PASSWORD=local-not-a-real-one"
 # The YAML form, as compose.yaml or a workflow `env:` would write a literal value.
 PG_PASSWORD_YAML="      POSTGRES""_PASSWORD: local-not-a-real-one"
 PG_URL="postgres""ql://circuit_admin:local-not-a-real-one@127.0.0.1:5432/circuit"
+# ADR-0008 D1: `crmk_` and 43 characters of base64url, `_` and `-` among them.
+CRM_PREFIX="crm""k_"
+CRM_TAIL="$(repeat a 20)_-$(repeat B 21)"
+CRM_KEY="$CRM_PREFIX$CRM_TAIL"
 
 case_number=0
 checks=0
@@ -103,13 +107,26 @@ for planted in \
   "github-token|$GITHUB_TOKEN" \
   "github-token|$GITHUB_PAT" \
   "postgres-password|$PG_PASSWORD" \
-  "postgres-url-password|$PG_URL"; do
+  "postgres-url-password|$PG_URL" \
+  "crm-api-key|$CRM_KEY"; do
   rule="${planted%%|*}"
   secret="${planted#*|}"
   new_repo
   plant config.ts "$secret" ""
   expect "$rule in a tracked file" 1 "config.ts:2: $rule" "$secret"
 done
+
+# ADR-0008 D15: a CRM key inside code, between quotes, as a copy from the terminal would land.
+new_repo
+plant client.ts "const key = '$CRM_KEY';" ""
+expect "crm-api-key between quotes in a .ts" 1 "client.ts:2: crm-api-key" "$CRM_TAIL"
+# Its controls: the rule's own text, the shape in keys.ts, a template and a run one character
+# too long are not keys. The rule is read from the guard, so the control follows any change.
+new_repo
+plant rule.sh "$(grep -F '"crm-api-key ' "$guard")" ""
+plant keys.ts "export const API_KEY_SHAPE = /^${CRM_PREFIX}[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]\$/;"$'\n'"const key = \`${CRM_PREFIX}\${tail}\`;" ""
+plant long.ts "${CRM_KEY}x" ""
+expect "the rule, the shape, a template and 44 characters pass" 0 "in 3 file(s)"
 
 # The YAML form, at the root and deep in the tree.
 for file in compose.yaml .github/workflows/ci.yml; do

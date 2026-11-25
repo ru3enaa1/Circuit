@@ -40,6 +40,11 @@ SECRET_RULES=(
   "private-key . -----BEGIN ([A-Z0-9]+ )*PRIVATE KEY( BLOCK)?-----"
   "github-token . gh[pousr]_[A-Za-z0-9]{36,}"
   "github-token . github_pat_[A-Za-z0-9_]{22,}"
+  # A key of the CRM (ADR-0008 D1, D15): `crmk_` and 43 characters of base64url, with no other
+  # base64url character before or after it. The edges are spelled out because `\b` treats `-`
+  # as an edge, and `-` is part of the key. A pattern (`crmk_[A-Za-z0-9_-]`) or a template
+  # (`crmk_${tail}`) is not a key and passes.
+  "crm-api-key . (^|[^A-Za-z0-9_-])crm[k]_[A-Za-z0-9_-]{43}([^A-Za-z0-9_-]|\$)"
   # A value right after `=`, quoted or not; `$` starts a reference, not a value.
   "postgres-password . POSTGRES_PASSWORD[[:space:]]*=[[:space:]]*[\"']?[^[:space:]\"'\$]"
   # The YAML form, a key, `:` and a value, as compose.yaml or a workflow `env:` writes it.

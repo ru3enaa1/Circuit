@@ -115,7 +115,8 @@ en 0, M1–M4 en rojo (`d24ed3a`). **El emisor (D4–D9, D19), en su commit, sin
 `database/keys.ts` y `npm run db:keys -- issue | list | revoke`; 463 pruebas, `npm run check`
 en 0, M5–M11 en rojo (`eeb8ce6`). **Exportar y los tres «no» (D10–D13), en su commit, sin empujar:**
 `GET /accounts/:slug/export` con `export` (`routes/export.ts`) y `agent-key-db.test.ts`;
-477 pruebas, `npm run check` en 0, M12–M14 en rojo. Decide llaves `crmk_` de 256 bits, el emisor `npm run db:keys` (emitir, listar, revocar) como administrador, toda llave
+477 pruebas, `npm run check` en 0, M12–M14 en rojo (`501445b`). **La regla `crm-api-key`
+de la guarda (D15), en su commit, sin empujar:** 28 casos en `check-secrets.test.sh`, M15 en rojo. Decide llaves `crmk_` de 256 bits, el emisor `npm run db:keys` (emitir, listar, revocar) como administrador, toda llave
 emitida con `read` (H2 hecha regla), `GET /accounts/:slug/export` con `export`, la regla de
 la guarda de secretos y H4 (`read-scope.ts` → `scope.ts`). Pedido al dueño, como insumo de
 F2: el material del programa que citará la estación 4.
@@ -380,7 +381,7 @@ archivo sin pruebas plantado en `apps/circuit/src`, que la bajó a 65,62 % y la 
 con 1. Son los pasos de CI, más el `--range` que va antes de cada push (R9):
 
 ```sh
-bash guards/check-secrets.test.sh                 # controles positivos de la guarda: 0 si los 25 casos pasan (unos 40 s en Windows)
+bash guards/check-secrets.test.sh                 # controles positivos de la guarda: 0 si los 28 casos pasan (unos 40 s en Windows)
 bash guards/check-secrets.sh                      # lo versionado, lo nuevo sin ignorar y el índice: 0 limpio, 1 hallazgo, 2 nada revisado
 bash guards/check-secrets.sh --range origin/feat/f0-base..HEAD   # cada commit que se va a publicar (antes del push; CI no lo corre)
 bash guards/check-line-endings.sh '*.sh' '*.json' '*.sql' 'guards/hooks/*' 'database/examples/**' '**/golden/**'
