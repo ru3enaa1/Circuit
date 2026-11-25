@@ -146,7 +146,9 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   `0003`. **Para F1.2 (ADR-0006):** H3 (un dueño sin superusuario para tablas y funciones),
   H8, H10 (los miembros de `crm_service`) y H11 (D4 y D5 conectando como el usuario con
   login). **Para F1.3:** no mandar nunca `id` ni `created_at` (H7). **Para F1.4:** llaves
-  de 128 bits o más al azar (H12).
+  de 128 bits o más al azar (H12). Arreglos empujados el 2026-11-24 (CI en verde en
+  `f7542cc`). **F1.2:** ADR-0006 propuesta y aceptada ese día, con su línea base; el dueño
+  aceptó sus siete recomendaciones.
 
 ### F2 · Circuito y mapa
 

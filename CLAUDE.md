@@ -59,9 +59,12 @@ autores opacos en la bitácora (`0003`) y el hash de cada migración fijado. Och
 trigger, sin valores; llaves solo como SHA-256 y solo por `crm.resolve_api_key`.
 Migraciones `0001` y `0003` (generadas) y `0002` (a mano); `database/schema.sql` sale de
 un `pg_dump` (R8). 164 pruebas, cobertura 98,46 / 92,3 / 100 / 98,24; los mutantes de la
-ADR y los de la auditoría, en rojo. La base de desarrollo está migrada hasta `0003`. Sigue
-F1.2 (API de lectura), cuya ADR-0006 recoge H3, H8, H10 y H11 de la auditoría. Los push
-los pide el dueño; el hook no se salta con `--no-verify`.
+ADR y los de la auditoría, en rojo. La base de desarrollo está migrada hasta `0003`. Los
+arreglos, empujados el 2026-11-24 (CI en verde en `f7542cc`, corrida 45503832664, con la
+carrera de roles en un servidor nuevo). **F1.2 (API de lectura): ADR-0006 aceptada el
+2026-11-24**, con H3, H8, H10, H11 y R10 y su línea base (`docs/reviews/ADR-0006-baseline.md`).
+El dueño aceptó sus siete recomendaciones; el código está en curso. Los push los pide
+el dueño; el hook no se salta con `--no-verify`.
 
 ## 3. Reglas de producto que gobiernan el código
 
