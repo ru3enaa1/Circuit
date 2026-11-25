@@ -17,6 +17,9 @@ docs/privado/
 *.tfstate
 *.tfstate.*
 
+# La llave del agente que deja la semilla (ADR-0009 D21): un secreto que una variable nombra
+.secrets/
+
 # Bases de datos locales y respaldos (ver safe-database)
 database/dev/
 database/backups/

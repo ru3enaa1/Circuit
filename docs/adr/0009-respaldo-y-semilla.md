@@ -408,6 +408,24 @@ Las pruebas nuevas se ven en rojo antes del código, o las muerde su mutante.
   34 paquetes rotos de `scenario-cases.ts`, uno por regla, más tres de control) y
   `scenario-content.test.ts` (4). M10 (`strictObject` → `object` en todo el archivo) y M11, en
   rojo. Los casos de D8 a través de la semilla, con 0 conexiones, llegan con ella (paso 3).
+- **La semilla y la llave (D11–D22, D25), en su commit.** `database/seed.ts`. El candado de
+  sesión va antes de leer el archivo de la llave, así una segunda semilla que esperaba ve la
+  llave que dejó la primera y no rota sin razón. Las filas de cada cuenta entran en este orden:
+  etapas por posición, empresas, todos los contactos, todas las notas y todas las tareas; sin
+  `createdAt` propio, una fila toma el del paquete entero, no el de su cuenta. La salida nombra
+  la cuenta por su `slug` y el archivo por su ruta. `describeFailure` de `backup.ts` suma la
+  restricción al SQLSTATE, como `db:keys`. De `keys.ts` se exportan `insertKey`, `revokeKey` y
+  el tipo `IssueOrder`, sin cambio de conducta: `keys-command`, `keys-db` y `keys-process`
+  siguen con 20, 11 y 2. Pruebas, repartidas por lo que necesitan: `seed-command` (46, sin
+  base: los 34 paquetes de D8 con 0 conexiones, las variables de D7 y D21, y D7 como prueba,
+  que lee los archivos de producción), `seed-db` (D11–D16, 9), `seed-key-db` (D17–D20, 7, una
+  de ellas, el modo `0600`, solo en Linux), `seed-process` (D25, 2) y, en `apps/crm/test/`,
+  `seed-agent-key-db` (D22 y D13 después de una escritura real por la API, 5). La guarda suma
+  dos casos (33). Dos chequeos se hicieron prueba para que su mutante muerda dentro de la
+  suite: D21 (`git check-ignore` sobre el `CRM_AGENT_KEY_FILE` de `.env.example`, M21) y D16,
+  donde la primera semilla demora su `COMMIT` 1,5 s para que la segunda llegue seguro a su
+  chequeo con las filas de la primera sin confirmar (sin eso, M22 mordía solo si las dos se
+  cruzaban). M12–M22, en rojo.
 
 ## Preguntas abiertas
 

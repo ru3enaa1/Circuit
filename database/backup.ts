@@ -125,12 +125,16 @@ export function adminUserOf(env: Env): string {
 }
 
 /**
- * One line for the terminal: our own messages as they are; a database error by its SQLSTATE,
- * never its message or detail, which can carry a value; anything else by its system code.
+ * One line for the terminal: our own messages as they are; a database error by its SQLSTATE and
+ * constraint, never its message or detail, which can carry a value (ADR-0009 D17, as ADR-0008
+ * D6); anything else by its system code, never its message, which can carry the connection.
  */
 export function describeFailure(command: string, error: unknown): string {
   if (error instanceof CommandError) return `${command}: ${error.message}`;
-  if (error instanceof pg.DatabaseError) return `${command} falló (SQLSTATE ${error.code}).`;
+  if (error instanceof pg.DatabaseError) {
+    const constraint = error.constraint === undefined ? '' : `, ${error.constraint}`;
+    return `${command} falló (SQLSTATE ${error.code}${constraint}).`;
+  }
   const code = typeof error === 'object' && error !== null && 'code' in error ? error.code : undefined;
   return typeof code === 'string' ? `${command} falló (${code}).` : `${command} falló.`;
 }

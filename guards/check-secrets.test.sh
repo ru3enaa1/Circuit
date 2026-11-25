@@ -145,6 +145,18 @@ printf '.env\n' > "$repo/.gitignore"
 plant .env "$PG_PASSWORD" no-add
 expect "secret in an ignored .env passes" 0 "clean"
 
+# ADR-0009 D21: the file where the seed leaves the agent's key. Under an ignored .secrets/ it
+# passes; the same key in a new file that git does not ignore is a finding.
+new_repo
+printf '.secrets/\n' > "$repo/.gitignore"
+mkdir -p "$repo/.secrets"
+plant .secrets/crm-agent-key "$CRM_KEY" no-add
+expect "the agent's key in an ignored .secrets/ passes" 0 "clean"
+new_repo
+mkdir -p "$repo/.secrets"
+plant .secrets/crm-agent-key "$CRM_KEY" no-add
+expect "the agent's key in a new file git does not ignore" 1 ".secrets/crm-agent-key:2: crm-api-key" "$CRM_TAIL"
+
 # The next commit carries what is staged, even when the file on disk no longer has it.
 new_repo
 plant config.ts "$ANTHROPIC_KEY" ""

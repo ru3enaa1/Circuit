@@ -57,6 +57,9 @@ type KeysOrder =
   | { readonly order: 'list'; readonly account: string }
   | { readonly order: 'revoke'; readonly id: string };
 
+/** What the step that issues needs; the seed (ADR-0009 D18) builds one for the agent's key. */
+export type IssueOrder = Extract<KeysOrder, { order: 'issue' }>;
+
 function refuse(reason: string): never {
   throw new KeysError(reason, true);
 }
@@ -154,8 +157,11 @@ async function accountIdOf(client: AdminClient, slug: string): Promise<string> {
   return row.id;
 }
 
-/** D4: exactly one row. The key leaves this function only once the caller has committed. */
-async function insertKey(client: AdminClient, order: Extract<KeysOrder, { order: 'issue' }>, key: string): Promise<string> {
+/**
+ * D4: exactly one row. The key leaves this function only once the caller has committed. The
+ * seed issues the agent's key with this same step, inside its own transaction (ADR-0009 D18).
+ */
+export async function insertKey(client: AdminClient, order: IssueOrder, key: string): Promise<string> {
   // The shape the server accepts (D1): a key it would refuse is never stored.
   if (!API_KEY_SHAPE.test(key)) throw new KeysError('La llave nueva no tiene la forma de ADR-0008 D1.');
   const accountId = await accountIdOf(client, order.account);
@@ -187,8 +193,11 @@ async function listKeys(client: AdminClient, slug: string): Promise<readonly str
   return [header, ...result.rows.map((row) => Object.values(row).map(cell).join('\t'))];
 }
 
-/** D7: a live key only, and only its revoked_at. Revoking is final: nothing sets it back. */
-async function revokeKey(client: AdminClient, id: string): Promise<void> {
+/**
+ * D7: a live key only, and only its revoked_at. Revoking is final: nothing sets it back. The
+ * seed revokes a stale agent's key with this same step (ADR-0009 D19).
+ */
+export async function revokeKey(client: AdminClient, id: string): Promise<void> {
   const result = await client.query('UPDATE crm.api_keys SET revoked_at = now() WHERE id = $1 AND revoked_at IS NULL', [id]);
   if (result.rowCount !== 1) throw new KeysError(`No hay una llave viva con el id ${id}.`);
 }

@@ -20,6 +20,7 @@
     "db:keys": "node database/keys.ts",
     "db:backup": "node database/backup.ts",
     "db:restore": "node database/restore.ts",
+    "db:seed": "node database/seed.ts",
     "crm:start": "node --env-file-if-exists=.env apps/crm/src/main.ts"
   },
   "devDependencies": {
