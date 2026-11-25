@@ -173,6 +173,8 @@ describe('D4 · db:users refuses a crm_app with more than it needs', () => {
     ['BYPASSRLS', `ALTER ROLE ${CRM_DB_USER} BYPASSRLS`, USER_GUARD_MESSAGE],
     ['CREATEDB', `ALTER ROLE ${CRM_DB_USER} CREATEDB`, USER_GUARD_MESSAGE],
     ['a second role', `GRANT pg_read_all_data TO ${CRM_DB_USER}`, USER_GUARD_MESSAGE],
+    // It could make any other role a member of crm_service (audit of ADR-0006, H7).
+    ['crm_service WITH ADMIN OPTION', `GRANT ${SERVICE_ROLES.crm} TO ${CRM_DB_USER} WITH ADMIN OPTION`, USER_GUARD_MESSAGE],
     ['a member of its own', `GRANT ${CRM_DB_USER} TO ${SERVICE_ROLES.circuit}`, USER_GUARD_MESSAGE],
     ['crm_service with another member', `GRANT ${SERVICE_ROLES.crm} TO ${SERVICE_ROLES.circuit}`, MEMBERS_GUARD_MESSAGE],
   ])('with %s, it fails with its message', async (_case, setup, message) => {

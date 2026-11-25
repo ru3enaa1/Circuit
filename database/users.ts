@@ -58,6 +58,8 @@ interface RoleState {
   readonly inherit: boolean;
   /** Any of SUPERUSER, CREATEDB, CREATEROLE, REPLICATION or BYPASSRLS. */
   readonly admin: boolean;
+  /** A membership WITH ADMIN OPTION: the role could grant it to anyone (audit of ADR-0006, H7). */
+  readonly grantsMemberships: boolean;
   readonly memberOf: readonly string[];
   readonly members: readonly string[];
 }
@@ -66,6 +68,8 @@ async function roleState(client: Queryable, role: string): Promise<RoleState | u
   const result = await client.query<RoleState>(
     `SELECT r.rolcanlogin AS login, r.rolinherit AS inherit,
             r.rolsuper OR r.rolcreatedb OR r.rolcreaterole OR r.rolreplication OR r.rolbypassrls AS admin,
+            EXISTS(SELECT 1 FROM pg_catalog.pg_auth_members AS m
+                   WHERE m.member = r.oid AND m.admin_option) AS "grantsMemberships",
             ARRAY(SELECT DISTINCT g.rolname::text FROM pg_catalog.pg_auth_members AS m
                   JOIN pg_catalog.pg_roles AS g ON g.oid = m.roleid WHERE m.member = r.oid ORDER BY 1) AS "memberOf",
             ARRAY(SELECT DISTINCT u.rolname::text FROM pg_catalog.pg_auth_members AS m
@@ -76,9 +80,14 @@ async function roleState(client: Queryable, role: string): Promise<RoleState | u
   return result.rows[0];
 }
 
-/** More than crm_app needs: an admin attribute, a role besides crm_service, or a member. */
+/** More than crm_app needs: an admin attribute, a membership it can grant, a role besides crm_service, or a member. */
 function hasMoreThanItNeeds(state: RoleState): boolean {
-  return state.admin || state.memberOf.some((role) => role !== SERVICE_ROLES.crm) || state.members.length > 0;
+  return (
+    state.admin ||
+    state.grantsMemberships ||
+    state.memberOf.some((role) => role !== SERVICE_ROLES.crm) ||
+    state.members.length > 0
+  );
 }
 
 /** The verifier as a SQL literal. CREATE ROLE takes no bind parameters, so it goes in the text. */
