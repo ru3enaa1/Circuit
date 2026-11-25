@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import * as crmSchema from '../../apps/crm/src/db/schema.ts';
 import { OWNER_ROLES, SERVICE_ROLES } from '../config.ts';
+import { crmTablePrivilegesOf, EXPECTED_CRM_SERVICE_PRIVILEGES } from './crm-privileges.ts';
 import { createDisposableDatabase, runMigrations, type DisposableDatabase } from './disposable-db.ts';
 
 // ADR-0005, the structure the migrations leave: read from the catalogs of a freshly migrated
@@ -118,27 +119,7 @@ const EXPECTED_POLICIES: Readonly<Record<string, readonly string[]>> = {
   tasks: OWN_ACCOUNT_RW,
 };
 
-// D5: every table privilege PostgreSQL 18 has (MAINTAIN arrived in 17), and what
-// crm_service holds. The first four can also be granted per column, so they are read with
-// has_any_column_privilege, which a column-level grant cannot slip past.
-const TABLE_PRIVILEGES = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER', 'MAINTAIN'];
-const EXPECTED_CRM_SERVICE_PRIVILEGES = [
-  'accounts SELECT',
-  'audit_log SELECT',
-  'companies INSERT',
-  'companies SELECT',
-  'companies UPDATE',
-  'contacts INSERT',
-  'contacts SELECT',
-  'contacts UPDATE',
-  'notes INSERT',
-  'notes SELECT',
-  'notes UPDATE',
-  'pipeline_stages SELECT',
-  'tasks INSERT',
-  'tasks SELECT',
-  'tasks UPDATE',
-];
+// D5: the matrix of crm_service lives in crm-privileges.ts, shared with crm-login-db.test.ts.
 
 // D12: what every function in crm must look like.
 const PINNED_SEARCH_PATH = ['search_path=pg_catalog, pg_temp'];
@@ -284,17 +265,7 @@ describe('D4 · row-level security', () => {
 
 describe('D5 · the privileges of crm_service', () => {
   it('are exactly those of the matrix', async () => {
-    const held = await rows<{ grant: string }>(
-      `SELECT c.relname || ' ' || p.privilege AS grant
-       FROM pg_class c CROSS JOIN unnest($2::text[]) AS p(privilege)
-       WHERE c.relnamespace = 'crm'::regnamespace AND c.relkind = 'r'
-         AND CASE WHEN p.privilege IN ('SELECT', 'INSERT', 'UPDATE', 'REFERENCES')
-                  THEN has_any_column_privilege($1, c.oid, p.privilege)
-                  ELSE has_table_privilege($1, c.oid, p.privilege) END
-       ORDER BY 1`,
-      [SERVICE_ROLES.crm, TABLE_PRIVILEGES],
-    );
-    expect(held.map((row) => row.grant)).toEqual(EXPECTED_CRM_SERVICE_PRIVILEGES);
+    expect(await crmTablePrivilegesOf(db!.pool, SERVICE_ROLES.crm)).toEqual(EXPECTED_CRM_SERVICE_PRIVILEGES);
   });
 
   it('include nothing on the sequences: identity columns draw ids without it', async () => {

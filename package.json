@@ -15,7 +15,9 @@
     "check": "npm run typecheck && npm run test:coverage",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:dump-schema": "vitest run schema-dump-db --project database --update=all"
+    "db:dump-schema": "vitest run schema-dump-db --project database --update=all",
+    "db:users": "node database/users.ts",
+    "crm:start": "node --env-file-if-exists=.env apps/crm/src/main.ts"
   },
   "devDependencies": {
     "@types/node": "24.19.2",

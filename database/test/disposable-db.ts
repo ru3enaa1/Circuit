@@ -70,12 +70,19 @@ function closedClients(pool: pg.Pool): () => Promise<void> {
 
 export interface DisposableDatabase {
   readonly name: string;
-  /** Connects as the admin from .env, which owns every object the migrations create. */
+  /** Connects as the admin from .env, a superuser that sees past every policy. */
   readonly pool: pg.Pool;
   readonly connection: AdminConnection;
+  /**
+   * A pool on this database as another user, such as crm_app (ADR-0006). drop() ends it and
+   * waits for its sockets first, for the same reason as the admin pool's.
+   */
+  poolAs(user: string, password: string, max?: number): pg.Pool;
   /** Drops the database, closing any connection a failed test left open, and checks it is gone. */
   drop(): Promise<void>;
 }
+
+const DEFAULT_POOL_SIZE = 2;
 
 /** An empty database (copied from template1, so nothing in it comes from the migrations). */
 export async function createDisposableDatabase(): Promise<DisposableDatabase> {
@@ -90,12 +97,21 @@ export async function createDisposableDatabase(): Promise<DisposableDatabase> {
     throw error;
   }
   // A pool does not connect until its first query, so building it here is safe.
-  const pool = new pg.Pool({ ...connection, database: name, max: 2 });
-  const allClosed = closedClients(pool);
+  const pool = new pg.Pool({ ...connection, database: name, max: DEFAULT_POOL_SIZE });
+  const pools: { readonly pool: pg.Pool; readonly allClosed: () => Promise<void> }[] = [
+    { pool, allClosed: closedClients(pool) },
+  ];
+
+  function poolAs(user: string, password: string, max: number = DEFAULT_POOL_SIZE): pg.Pool {
+    const other = new pg.Pool({ ...connection, user, password, database: name, max });
+    pools.push({ pool: other, allClosed: closedClients(other) });
+    return other;
+  }
 
   async function drop(): Promise<void> {
-    await pool.end();
-    await allClosed();
+    // A test may have ended its own pool already; ending one twice rejects.
+    await Promise.all(pools.map(async (entry) => (entry.pool.ended ? undefined : entry.pool.end())));
+    await Promise.all(pools.map((entry) => entry.allClosed()));
     try {
       await admin.query(`DROP DATABASE IF EXISTS ${testDatabase(name)} WITH (FORCE)`);
       const left = await admin.query('SELECT 1 FROM pg_database WHERE datname = $1', [name]);
@@ -105,5 +121,5 @@ export async function createDisposableDatabase(): Promise<DisposableDatabase> {
     }
   }
 
-  return { name, pool, connection, drop };
+  return { name, pool, connection, poolAs, drop };
 }

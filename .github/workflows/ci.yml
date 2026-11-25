@@ -61,15 +61,19 @@ jobs:
       - name: Auditoría de dependencias
         run: npm audit --audit-level=low
 
-      # Non-secret values come from .env.example, as on a fresh clone. The password is made
-      # for this run only and reaches Compose, drizzle-kit and the tests through the
-      # environment, which takes precedence over .env (database/env.ts).
-      - name: Entorno local con una contraseña de un solo uso
+      # Non-secret values come from .env.example, as on a fresh clone. Both passwords are made
+      # for this run only and reach Compose, drizzle-kit and the tests through the
+      # environment, which takes precedence over .env (database/env.ts). The tests create
+      # crm_app with CRM_DB_PASSWORD, the way `npm run db:users` does (ADR-0006 D4).
+      - name: Entorno local con contraseñas de un solo uso
         run: |
           cp .env.example .env
           password="$(openssl rand -hex 24)"
           echo "::add-mask::${password}"
           echo "POSTGRES_PASSWORD=${password}" >> "$GITHUB_ENV"
+          crm_password="$(openssl rand -hex 24)"
+          echo "::add-mask::${crm_password}"
+          echo "CRM_DB_PASSWORD=${crm_password}" >> "$GITHUB_ENV"
       - name: PostgreSQL desde compose.yaml
         id: db
         run: docker compose up -d --wait db
