@@ -64,7 +64,8 @@ ADR y los de la auditoría, en rojo. Los arreglos, empujados el 2026-11-24 (CI e
 **F1.2 (API de lectura) hecha y empujada el 2026-11-24 (CI en verde en `bf7a52f`,
 corrida 45521454430), y auditada:** APROBAR CON CONDICIONES
 (`docs/reviews/ADR-0006-audit-2026-11-24.md`). El 2026-11-25 el dueño pidió arreglar lo que
-pedía arreglo, y las enmiendas A1–A5 de la ADR cierran las condiciones (sin empujar todavía):
+pedía arreglo, y las enmiendas A1–A5 de la ADR cierran las condiciones (empujadas el
+2026-11-25, CI en verde en `b41f8d6`, corrida 45635335825):
 sin llave, una URL que el enrutador no puede leer da 401 y deja su línea de registro; un
 puerto ocupado se nombra por `CRM_PORT`; y `db:users` rechaza `WITH ADMIN OPTION`. Quedan
 301 pruebas, con cobertura 94,67 / 85,16 / 97,11 / 96,18, y los mutantes M15–M18, en rojo.

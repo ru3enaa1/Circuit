@@ -161,7 +161,8 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   cierran las condiciones. Sin llave, una URL que el enrutador no puede leer da 401, y deja
   su línea de registro. Un puerto ocupado se nombra por `CRM_PORT`, y `db:users` rechaza una
   membresía `WITH ADMIN OPTION`. El cerco y la nota del 413 quedaron escritos. Quedan 301
-  pruebas, cobertura 94,67 / 85,16 / 97,11 / 96,18, sin empujar todavía. **Para F1.3,
+  pruebas, cobertura 94,67 / 85,16 / 97,11 / 96,18. Empujadas el 2026-11-25 (CI en verde
+  en `b41f8d6`, corrida 45635335825). **Para F1.3,
   además:** una prueba de `__proto__` por cada cuerpo nuevo (H9 de esa auditoría).
 
 ### F2 · Circuito y mapa
