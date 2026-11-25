@@ -2,7 +2,8 @@
 
 - **Fecha:** 2026-11-25
 - **Estado:** aceptada el 2026-11-25. El dueño aceptó las nueve recomendaciones de
-  «Preguntas abiertas» tal como están escritas.
+  «Preguntas abiertas» tal como están escritas. Auditada ese día: APROBAR CON CONDICIONES
+  (`docs/reviews/ADR-0007-audit-2026-11-25.md`), con las enmiendas A1–A4 al final.
 - **Tarea:** F1.3 de `DEVELOPMENT_PLAN.md`, «API de escritura con bitácora» del CRM simulado.
   Suma lo que dejaron para esta fase ADR-0005 (H7: nunca mandar `id` ni `created_at`; que
   `proposed_by` salga de la llave y no del cliente), ADR-0006 (la lectura de la bitácora) y
@@ -112,13 +113,13 @@ propuesta; lo que cuenta es que cada chequeo exista y muerda.
 | D7 | Todo cuerpo de escritura lleva `approval: { approvedBy, approvalRef }`, los dos obligatorios y con la forma de `AUDIT_AUTHOR_PATTERN`. `approvedBy` no puede tener la forma `key-<n>`: una llave nunca aprueba (**ASUNCIÓN**, preguntas 2 y 9). Sin aprobación, o con una mal formada, da 400 «approval» y no escribe | `write-input-db.test.ts`: sin `approval`; sin uno de sus dos campos; con un nombre con espacio, un correo, más de 40 caracteres y `key-7` en `approvedBy`; con un campo de más dentro de `approval`. Todos dan 400 «approval», y ningún cuerpo de error contiene el valor | sí |
 | D8 | Ninguna escritura manda un valor para `id` ni para `created_at` (ADR-0005, H7), y ninguna toma `account_id` del cuerpo. En un `INSERT` esas dos columnas van como `default` y nunca con `OVERRIDING`. Un `UPDATE` nunca asigna `id`, `account_id` ni `created_at`, y solo el archivado asigna `archived_at`, con el `now()` de la base | `writes-db.test.ts`, con un conector que guarda el texto y los parámetros de cada sentencia: ningún texto contiene `OVERRIDING`; en cada `INSERT`, `id` y `created_at` van como `default`; la lista `SET` de cada `UPDATE` está dentro de las columnas permitidas. Los cuerpos con `id`, `accountId`, `createdAt` o `archivedAt` dan 400 | sí |
 | D9 | Todo cuerpo pasa por zod en modo estricto, también `approval`. `fullName` y `title`, de 1 a 200 caracteres después de recortar; `body` de la nota, de 1 a 4000 después de recortar; el correo, como en la búsqueda (recortado, en minúsculas, hasta 254, con la forma de `contacts_email_shape`); `stageId` y `companyId`, enteros JSON positivos que caben en 2^53, y `companyId` también `null`; `dueOn`, una fecha real `AAAA-MM-DD`; un `PATCH`, al menos un campo. Ningún texto acepta U+0000 ni un sustituto UTF-16 suelto, y el sustituto tampoco en el correo de la búsqueda (**ASUNCIÓN**, pregunta 8), que ya rechaza el NUL (ADR-0006 A6). Lo inválido da 400 `entrada_invalida`, que nombra el campo y nunca el valor | `write-input-db.test.ts`: un caso por campo y por borde (200 y 201, 4000 y 4001, `2026-02-30`, un NUL y un sustituto suelto en cada texto), cada uno 400 y nunca 500; un `__proto__` en cada uno de los cinco cuerpos y dentro de `approval` da 400, y `Object.prototype` queda intacto (H9); `input-db.test.ts`: la búsqueda con un sustituto suelto en el correo da 400 «email» (hoy, 200 sin contactos) | sí |
-| D10 | Las referencias son de la cuenta de la llave. Un `stageId` o un `companyId` que no se ve, o una empresa archivada, dan 400 `entrada_invalida` con el nombre del campo, igual para otra cuenta que para un id que no existe. El contacto de la ruta (`PATCH`, notas, tareas y archivar), si es de otra cuenta, no existe o está archivado, da 404 `no_encontrado`, con el mismo cuerpo en los tres casos. La llave foránea compuesta sigue detrás | `writes-db.test.ts`: la etapa de B en un contacto de A da 400 «stageId», con el mismo cuerpo que un id que no existe; la empresa archivada da 400 «companyId»; el contacto de B en `PATCH`, notas, tareas y archivar da 404, con el mismo cuerpo que un id que no existe; archivar dos veces da 404 la segunda; el control es la llave de B con la etapa de B (201) | sí |
+| D10 | Las referencias son de la cuenta de la llave. Un `stageId` o un `companyId` que no se ve, o una empresa archivada, dan 400 `entrada_invalida` con el nombre del campo, igual para otra cuenta que para un id que no existe. El contacto de la ruta (`PATCH`, notas, tareas y archivar), si es de otra cuenta, no existe o está archivado, da 404 `no_encontrado`, con el mismo cuerpo en los tres casos. En un `PATCH`, las referencias se comprueban antes que el contacto (A3). La llave foránea compuesta sigue detrás | `writes-db.test.ts`: la etapa de B en un contacto de A da 400 «stageId», con el mismo cuerpo que un id que no existe; la empresa archivada da 400 «companyId»; el contacto de B en `PATCH`, notas, tareas y archivar da 404, con el mismo cuerpo que un id que no existe; archivar dos veces da 404 la segunda; el control es la llave de B con la etapa de B (201). `write-refs-db.test.ts` (A3): un contacto que no existe, con la etapa de B, da 400 «stageId»; la llave de A que mueve el contacto de B a la etapa de A recibe 404, no escribe nada y el contacto sigue en su etapa | sí |
 | D11 | La lista cerrada de errores suma `ya_existe` (409), con el mensaje «Ya hay un contacto activo con ese correo.». Crear o actualizar un contacto con el correo de otro contacto activo de la cuenta da 409 y no escribe. La barrera es el índice único de la base, no una consulta previa: la API reconoce el 23505 de `contacts_account_email_active_key` también cuando drizzle lo envuelve (`DrizzleQueryError.cause`). Cualquier otro error de la base da 500 `error_interno` | `writes-db.test.ts`: el correo del fixture, en `POST` y en `PATCH`, da 409, los conteos no cambian y el cuerpo no trae el correo; el control es que el correo de un contacto archivado se puede usar (201). `errors.test.ts`: la lista de códigos y estados, comparada con una lista fija | sí |
 | D12 | La línea de registro de ADR-0006 D15 vale para las escrituras, y nunca lleva el cuerpo. Un error de la base deja su SQLSTATE también cuando drizzle lo envuelve: se lee de la causa, un `pg.DatabaseError`. El mensaje, el SQL y los parámetros del envoltorio no se registran ni se responden nunca. `errorCodes` ya lo hace (ADR-0006 A7, que corrigió F-2); esta cláusula lo exige también en el camino de las escrituras | `logging-db.test.ts`: crear un contacto con un nombre y un correo no deja ninguno de los dos en el registro; un `DrizzleQueryError` plantado, con un correo en su SQL, en sus parámetros y en el mensaje de su causa, deja solo el SQLSTATE de la causa, y el cuerpo del 500 no trae el correo | sí |
-| D13 | Las respuestas traen solo los campos de una lista fija. Crear y actualizar devuelven `{ contact }`, `{ note }` o `{ task }`, con los campos de ADR-0006 D12: 201 al crear y 200 al actualizar. Archivar responde 204 sin cuerpo. La bitácora responde `{ entries }`, de la más nueva a la más vieja, con `limit` y `before` como las notas, y cada entrada trae `id`, `occurredAt`, `tableName`, `rowId`, `operation`, `changedColumns`, `apiKeyId`, `proposedBy`, `approvedBy` y `approvalRef`, nunca `accountId`. `changedColumns` trae los nombres de columna de la base (**ASUNCIÓN**, pregunta 7) | `writes-db.test.ts`: las claves de cada respuesta son exactamente las de la lista; `audit-read-db.test.ts`: las claves de cada entrada son las de la lista, la llave de A no ve las entradas de B y la paginación con `before` no repite ni salta entradas | sí |
+| D13 | Las respuestas traen solo los campos de una lista fija. Crear y actualizar devuelven `{ contact }`, `{ note }` o `{ task }`, con los campos de ADR-0006 D12: 201 al crear y 200 al actualizar. Archivar responde 204 sin cuerpo. La bitácora responde `{ entries }`, de la más nueva a la más vieja, con `limit` y `before` como las notas, y cada entrada trae `id`, `occurredAt`, `tableName`, `rowId`, `operation`, `changedColumns`, `apiKeyId`, `proposedBy`, `approvedBy` y `approvalRef`, nunca `accountId`. `changedColumns` trae los nombres de columna de la base (**ASUNCIÓN**, pregunta 7). Las respuestas de escritura no piden `read`: una llave `{write}` ve lo que escribe (A2) | `writes-db.test.ts`: las claves de cada respuesta son exactamente las de la lista; `audit-read-db.test.ts`: las claves de cada entrada son las de la lista, la llave de A no ve las entradas de B y la paginación con `before` no repite ni salta entradas | sí |
 | D14 | F1.3 no agrega migraciones ni cambia el esquema ni los permisos de la base: usa los que `crm_service` ya tiene | `git diff --exit-code 5bdbf68 -- database/migrations database/test/migration-hashes.ts database/schema.sql apps/crm/src/db/schema.ts` sale con 0; `migration-files.test.ts` sigue en verde | sí |
 | D15 | No entra ninguna dependencia, ni directa ni en el lockfile | `git diff --exit-code 5bdbf68 -- package-lock.json` sale con 0; `npm ls --workspace @circuit/crm --depth=0` lista las cuatro de ADR-0006 D2 y nada más; `npm audit --audit-level=low` da 0 | sí |
-| D16 | Nada de ADR-0005 ni de ADR-0006 se debilita. Ninguna prueba existente se quita ni se debilita: los conteos por archivo de la línea base no bajan. Los únicos cambios en pruebas existentes son la lista de `routes.test.ts` (D1) y las llaves nuevas del fixture. Ningún archivo pasa de 400 líneas | Los conteos de la línea base, comparados archivo por archivo; `git ls-files '*.ts' \| xargs wc -l \| awk '$1 > 400 && $2 != "total"'` no da ninguna línea | sí |
+| D16 | Nada de ADR-0005 ni de ADR-0006 se debilita. Ninguna prueba existente se quita ni se debilita: los conteos por archivo de la línea base no bajan. Los únicos cambios en pruebas existentes son la lista de `routes.test.ts` (D1), las llaves nuevas del fixture y el `beforeAll` de `main-process.test.ts`, que siembra el fixture para D17 (A4, H6); desde la auditoría, también el segundo argumento de cada hook con base (A4). Ningún archivo pasa de 400 líneas | Los conteos de la línea base, comparados archivo por archivo; `git ls-files '*.ts' \| xargs wc -l \| awk '$1 > 400 && $2 != "total"'` no da ninguna línea | sí |
 | D17 | El proceso real escribe: arrancado con `node`, sin compilar, crea una nota y deja su fila en la bitácora | `main-process.test.ts`: el proceso real, sobre una base desechable sembrada, responde 201 a `POST …/notes` con la llave de A, y la base tiene la fila de bitácora con `proposed_by = key-<id>` | no |
 
 ### Chequeos, tal como se corren
@@ -167,6 +168,8 @@ poner en rojo su prueba:
 | M12 | D12 | La ruta de escritura vuelve a lanzar el error sin su causa (`new Error(error.message)`): el SQLSTATE saldría nulo. El de `errorCodes` es M20 de ADR-0006 |
 | M13 | D13 | La bitácora devuelve `accountId` |
 | M14 | D10 | Archivar sin el filtro `archived_at IS NULL`: archivar dos veces daría 204 y otra fila de bitácora |
+| M15 | D10 | El `PATCH` busca el contacto antes que las referencias: un contacto que no existe, con la etapa de B, daría 404 (A3) |
+| M16 | — | Un hook con base sin `DATABASE_HOOK_TIMEOUT_MS`: volvería a correr con el límite de Vitest (A4). M16b, lo mismo en el proyecto `database` |
 
 ## Cerco
 
@@ -183,6 +186,12 @@ poner en rojo su prueba:
   - `apps/crm/test/`: pruebas nuevas, `crm-under-test.ts`, la lista de `routes.test.ts` y
     el caso del sustituto suelto en `input-db.test.ts`.
   - `database/test/crm-fixture.ts`: las dos llaves nuevas de la cuenta A.
+  - Desde la auditoría (A1): `apps/crm/src/routes/reads.ts`, que registra `writeRoutes`
+    dentro del plugin de `/accounts/:slug` (así el hook `onRequest` corre antes del cuerpo,
+    D3) y cede `credentialsOf`; y `apps/crm/src/server/auth.ts`, que lo recibe. (A4):
+    `database/test/disposable-db.ts`, la constante `DATABASE_HOOK_TIMEOUT_MS`, y el segundo
+    argumento de cada hook con base en `apps/crm/test/` y `database/test/`, y
+    `database/test/hook-budget.test.ts`, nueva.
   - Los documentos de estado: `CLAUDE.md` (§2, §4, §8 y §9), `DEVELOPMENT_PLAN.md` y
     `README.md`, sin anunciar nada que no exista. Una línea en ADR-0006 que diga que D11 la
     enmienda esta ADR. Esta ADR y su auditoría en `docs/reviews/`.
@@ -204,7 +213,7 @@ poner en rojo su prueba:
     escritura (pregunta 6).
   - Comprobar la aprobación contra los eventos de circuit (F2, en circuit).
   - El cliente del CRM en circuit (F2) y la semilla (F1.5).
-- **Fuera de la lista, al implementar (2026-11-25):** `apps/crm/src/server/auth.ts` gana
+- **Fuera de la lista, al implementar (2026-11-25), y aceptado en A1:** `apps/crm/src/server/auth.ts` gana
   `credentialsOf`, que antes vivía como `read` y `routeSlug` en `routes/reads.ts`. Las rutas
   que leen y las que escriben la comparten sin que `reads.ts` y `writes.ts` se importen entre
   sí. Es un traslado sin cambio de conducta: las pruebas de ADR-0006 siguen en verde sin
@@ -260,6 +269,18 @@ público (no lleva secretos).
 - Toda escritura nueva hereda el ayudante. Si alguien lo salta, la base falla cerrada: sin
   autor no se escribe nada (ADR-0005 D8) y sin cuenta, tampoco (D4).
 
+## Notas de implementación (2026-11-25)
+
+Decisiones del código dentro de las cláusulas, para que la auditoría las vea:
+
+- **En un `PATCH`, las referencias van antes que el contacto (A3).** `updateContact`
+  comprueba `stageId` y `companyId` y después actualiza el contacto. Por eso un contacto que
+  no existe, con una etapa de otra cuenta, da 400 «stageId» y no 404. No revela nada: el
+  cuerpo es el mismo que el de una etapa que no existe, y la llave de A que mueve el contacto
+  de B a una etapa de A recibe 404 sin escribir.
+- **El `beforeAll` de `main-process.test.ts` siembra el fixture (H6).** D17 necesita una
+  llave para escribir por el proceso real. Ese hook lleva el presupuesto de A4.
+
 ## Preguntas abiertas
 
 Cada una tiene escrita su recomendación como **ASUNCIÓN** en la cláusula que afecta.
@@ -292,3 +313,56 @@ cada ASUNCIÓN queda como decisión y la ADR no cambia.
    sustituto evita que la base guarde U+FFFD sin avisar (D9).
 9. **¿`approvedBy` rechaza la forma `key-<n>`?** Recomendación: sí. Una llave nunca aprueba,
    y es la única aprobación falsa que el CRM puede ver por sí mismo (D7).
+
+## Auditoría y enmiendas A1–A4 (2026-11-25)
+
+La auditoría de `adr-guard`, en una sesión aparte, dio APROBAR CON CONDICIONES: 0
+bloqueantes, 1 mayor, 2 menores y 4 notas, con las 17 cláusulas en CUMPLE
+(`docs/reviews/ADR-0007-audit-2026-11-25.md`). La mayor era de la suite y no del código. El
+dueño pidió arreglar lo que pidiera el informe. Claude aplicó también sus tres enmiendas
+propuestas: la 1 y la 3 solo escriben lo que ya pasa, y la 2 queda como la recomienda el
+informe, con la decisión final pendiente del dueño. El dueño puede revertir cualquiera.
+
+- **A1 · Cerco (H3, enmienda 1).** `routes/reads.ts` y `server/auth.ts` entran en «Puede
+  cambiar», cada uno con su razón. Ninguno cambia la conducta de las lecturas.
+- **A2 · Lo que ve una llave sin `read` (H2, enmienda 2, opción a).** `write` deja ver lo que
+  se escribe, y D13 lo dice. Tiene tres efectos, que confirmaron las sondas P1 y P5 de la
+  auditoría: el `PATCH` devuelve el contacto entero (correo, nombre, etapa y empresa); un
+  409 responde si un correo está activo en la cuenta; y el 400 de `stageId` o de
+  `companyId`, si una etapa o una empresa existe en ella. Choca con la razón de ADR-0006
+  (pregunta 5), que adelantó `read` para que una llave de solo escritura no leyera. Hoy no
+  hace daño: la única llave sin `read` es una del fixture, la del agente tiene `read`, y
+  cada escritura deja su fila en la bitácora. **Pendiente del dueño, en F1.4,** con el
+  formato de las llaves: seguir con (a) o pasar a (b), en la que, sin `read`, una escritura
+  responde solo `{ id }` (o 204). Con (b), el 409 y el 400 seguirían diciendo algo, porque
+  son la barrera.
+- **A3 · Precedencia del `PATCH` (H5, enmienda 3).** Está en «Notas de implementación», y
+  D10 la nombra. Dos pruebas nuevas en `write-refs-db.test.ts`: un contacto que no existe,
+  con la etapa de B, da 400 «stageId» (la precedencia); y la llave de A que mueve el
+  contacto de B a la etapa de A recibe 404, no escribe nada y el contacto sigue en su etapa
+  (la sonda P4). Su control: el mismo cuerpo, en el contacto de A, da 200. M15, en rojo.
+- **A4 · El tiempo de los hooks con base (H1, H6).** Todo `beforeAll` y `afterAll` de una
+  prueba con base lleva `DATABASE_HOOK_TIMEOUT_MS` (`database/test/disposable-db.ts`, 60 s)
+  como segundo argumento: 23 hooks en 10 archivos de `apps/crm/test/` y `database/test/`.
+  Antes corrían con los 10 s de Vitest, y en la primera `npm run check` de la sesión de la
+  auditoría siete los pasaron. Lo comprueba `database/test/hook-budget.test.ts`, que lee
+  cada archivo de prueba que abre una base y cuenta sus hooks y sus presupuestos. M16 (un
+  hook de `crm-under-test.ts` sin él) y M16b (uno de `migrations-db.test.ts`) la ponen en
+  rojo, nombrando el archivo. No se comprueba corriendo con `--hookTimeout=1`: Vitest 5.1.1
+  no pasa esa opción a los proyectos, y con M16 plantado esa orden salió en 0. Por la misma
+  razón, las vueltas de la auditoría con `--hookTimeout=5000` y `=60000` corrieron con los
+  10 s de siempre: lo que prueban es que pasaron con 10 s, no con 5 ni con 60. D16 nombra el
+  cambio del `beforeAll` de `main-process.test.ts` (H6). Dos trampas nuevas en CLAUDE.md §8.
+
+Las notas que quedan:
+
+- **H4, para cuando una ADR lo permita:** `read-scope.ts` también abre las escrituras.
+  Renombrarlo (`scope.ts`) y llevar `KEY_AUTHOR_PREFIX` y `Credentials` a un archivo neutral.
+- **H7, hecha:** la corrida 45650884008 y esta auditoría, en CLAUDE.md §2 y en el plan.
+
+Verificado el 2026-11-25: 10 vueltas seguidas de `npm run check` en 0, la primera como la
+primera de la sesión (con la base ya levantada, así que no fue un arranque en frío), con 415
+pruebas; con `hook-budget.test.ts`, otra más en 0, con 417 pruebas y la cobertura de siempre
+(95,75 / 87,77 / 97,97 / 97,04). M15, M16 y M16b, cada uno restaurado después y comprobado
+por hash, en rojo en su prueba. D14 y D15 en 0, y las guardas en 0. No quedó ninguna base
+`circuit_test_…`.

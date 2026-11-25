@@ -85,13 +85,22 @@ recomendaciones), con su línea base (`docs/reviews/ADR-0007-baseline.md`); enmi
 de ADR-0006. La línea base halló dos fallas de
 ADR-0006, corregidas ese día como sus enmiendas A6–A7: la búsqueda con un NUL en el correo
 da 400 y no 500, y el SQLSTATE de un error que drizzle envuelve llega al registro.
-**F1.3 hecha el 2026-11-25 y empujada con A6–A7, sin auditar:** trece rutas (seis nuevas: crear, actualizar y
+**F1.3 hecha y empujada el 2026-11-25 con A6–A7 (CI en verde en `7a60246`, corrida
+45650884008), y auditada:** APROBAR CON CONDICIONES
+(`docs/reviews/ADR-0007-audit-2026-11-25.md`). Trece rutas (seis nuevas: crear, actualizar y
 archivar un contacto, anotar, crear tarea y leer la bitácora); cada escritura, una
 transacción `READ WRITE` que lee la entrada después de la llave, la cuenta y el permiso, y
 fija `proposed_by = key-<id>` y la aprobación del cuerpo. La llave del agente recibe 403
 «borrado» al archivar. Sin migraciones ni dependencias nuevas. 413 pruebas, cobertura 95,75
 / 87,77 / 97,97 / 97,04; los mutantes M1–M14 de ADR-0007, en rojo. Fuera del cerco, sin
 cambio de conducta: `credentialsOf` pasó de `routes/reads.ts` a `server/auth.ts`.
+El 2026-11-25 el dueño pidió arreglar lo que pidiera la auditoría. Las enmiendas A1–A4 de la
+ADR cierran las condiciones, **sin commit**. Cada hook con base lleva
+`DATABASE_HOOK_TIMEOUT_MS` (H1), y lo comprueba `hook-budget.test.ts`, porque `--hookTimeout`
+no llega a los proyectos (§8). El cerco y la precedencia del `PATCH` quedan escritos, con dos
+pruebas nuevas. H2 (una llave sin `read` ve lo que escribe) queda escrita como la opción (a),
+**pendiente del dueño en F1.4**. Quedan 417 pruebas, con la misma cobertura; 10 vueltas
+seguidas de `npm run check` en 0; M15, M16 y M16b, en rojo.
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -283,6 +292,24 @@ Se registran con el formato de pitfall-log: regla, síntoma, causa, chequeo y fe
   archivos a la vez y la cobertura, un Node nuevo tarda más en escuchar. Regla: esas pruebas
   llevan `PROCESS_TEST_TIMEOUT_MS`, por encima de la espera de arranque. Chequeo: `npm run
   check` en 0.
+- **Un hook con base necesita más de los 10 s por defecto** (2026-11-25, auditoría de
+  ADR-0007, H1). Síntoma: `npm run check` sale con 1 por `HookTimeoutError: Hook timed out
+  in 10000ms` en varios archivos a la vez; sus pruebas no fallan, se saltan, y la vuelta
+  siguiente sale en 0. Causa: crear la base desechable, migrarla, sembrarla y crear
+  `crm_app`, con todos los archivos a la vez y la cobertura, pasó los 10 s de Vitest en la
+  primera vuelta de una sesión. No se reprodujo; en caliente cabe en los 10 s. Regla: todo
+  `beforeAll` y `afterAll` de una prueba con base lleva `DATABASE_HOOK_TIMEOUT_MS`
+  (`database/test/disposable-db.ts`) como segundo argumento. Chequeo:
+  `database/test/hook-budget.test.ts`, que un hook sin el presupuesto pone en rojo.
+- **`--hookTimeout` en la línea de comandos no llega a los proyectos** (2026-11-25, al
+  arreglar H1 de la auditoría de ADR-0007). Síntoma: `npx vitest run --hookTimeout=1` sale
+  en 0 aunque un hook con base no lleve presupuesto. Causa: Vitest 5.1.1 pasa a cada
+  proyecto solo las opciones de `PROJECT_CLI_OVERRIDES` (`vitest/dist/chunks/index.*.js`),
+  y ahí está `testTimeout` pero no `hookTimeout`. Así que las vueltas de la auditoría con
+  `--hookTimeout=5000` y `=60000` corrieron con los 10 s de siempre. Regla: no medir ni
+  probar nada con `--hookTimeout`; el tiempo de un hook se fija en el código. Chequeo: M16
+  de ADR-0007 (un hook sin presupuesto) sale en 0 con `--hookTimeout=1` y en 1 con
+  `hook-budget.test.ts`.
 - **`frameworkErrors` de Fastify no corre ningún hook** (2026-11-25, auditoría de ADR-0006,
   H1 y H2). Síntoma: sin llave, una URL con un `%` mal codificado o con un parámetro de más
   de 100 caracteres daba 400 y no 401, y no dejaba línea de registro. Causa: Fastify 5.12
@@ -408,6 +435,14 @@ Verificados el 2026-11-25 en PowerShell (F1.3, ADR-0007), con los 14 mutantes de
 
 ```powershell
 npx vitest run --project '@circuit/crm' write audit-read errors   # F1.3: 8 archivos, 103 pruebas (permiso, contexto, entrada, referencias, SQL, bitácora)
+```
+
+Verificados el 2026-11-25 en PowerShell (enmiendas A1–A4 de ADR-0007), con M15, M16 y M16b,
+cada uno en rojo en su prueba y restaurado por hash:
+
+```powershell
+npx vitest run --project database hook-budget    # A4: cada hook con base lleva DATABASE_HOOK_TIMEOUT_MS
+npx vitest run --project '@circuit/crm' write-refs   # A3: la precedencia del PATCH y la sonda P4
 ```
 
 ```sh

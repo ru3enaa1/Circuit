@@ -178,7 +178,15 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   la causa que drizzle envuelve. Sin migraciones ni dependencias nuevas (D14, D15). 413
   pruebas, cobertura 95,75 / 87,77 / 97,97 / 97,04; los mutantes M1–M14 de la ADR, en rojo y
   restaurados por hash. Al codificar apareció que `z.iso.date()` acepta el año 0000, que
-  PostgreSQL rechaza: `dueOn` lo rechaza en zod (CLAUDE.md §8).
+  PostgreSQL rechaza: `dueOn` lo rechaza en zod (CLAUDE.md §8). CI en verde en `7a60246`
+  (corrida 45650884008). **Auditada:** APROBAR CON CONDICIONES
+  (`docs/reviews/ADR-0007-audit-2026-11-25.md`): 1 mayor, de la suite (siete `beforeAll`
+  pasaron los 10 s de Vitest en una vuelta). El 2026-11-25 el dueño pidió arreglar lo que
+  pidiera, y las enmiendas A1–A4 de la ADR cierran las condiciones, sin commit todavía. Cada
+  hook con base lleva `DATABASE_HOOK_TIMEOUT_MS`, con una prueba que lo exige. El cerco y la
+  precedencia del `PATCH` quedan escritos, con dos pruebas nuevas. 417 pruebas; 10 vueltas
+  seguidas de `npm run check` en 0. **Para F1.4:** el dueño decide H2 (una llave sin
+  `read` ve lo que escribe; hoy, opción a).
 
 ### F2 · Circuito y mapa
 
