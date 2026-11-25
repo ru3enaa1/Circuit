@@ -204,6 +204,11 @@ poner en rojo su prueba:
     escritura (pregunta 6).
   - Comprobar la aprobación contra los eventos de circuit (F2, en circuit).
   - El cliente del CRM en circuit (F2) y la semilla (F1.5).
+- **Fuera de la lista, al implementar (2026-11-25):** `apps/crm/src/server/auth.ts` gana
+  `credentialsOf`, que antes vivía como `read` y `routeSlug` en `routes/reads.ts`. Las rutas
+  que leen y las que escriben la comparten sin que `reads.ts` y `writes.ts` se importen entre
+  sí. Es un traslado sin cambio de conducta: las pruebas de ADR-0006 siguen en verde sin
+  tocarlas.
 
 ## Restricciones
 

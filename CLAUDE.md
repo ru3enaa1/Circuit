@@ -82,11 +82,16 @@ hasta `0004`, con `crm_app` creado. Los push los pide el dueño; el hook no se s
 `--no-verify`.
 **F1.3 (API de escritura):** ADR-0007 aceptada el 2026-11-25 (el dueño aceptó sus nueve
 recomendaciones), con su línea base (`docs/reviews/ADR-0007-baseline.md`); enmienda D11
-de ADR-0006. El código de F1.3 todavía no empieza. La línea base halló dos fallas de
+de ADR-0006. La línea base halló dos fallas de
 ADR-0006, corregidas ese día como sus enmiendas A6–A7: la búsqueda con un NUL en el correo
-da 400 y no 500, y el SQLSTATE de un error que drizzle envuelve llega al registro. Quedan
-305 pruebas, con cobertura 94,72 / 85,86 / 97,14 / 96,21, y M19 y M20, en rojo. En
-commits locales sobre `5bdbf68`, sin empujar.
+da 400 y no 500, y el SQLSTATE de un error que drizzle envuelve llega al registro.
+**F1.3 hecha el 2026-11-25 y empujada con A6–A7, sin auditar:** trece rutas (seis nuevas: crear, actualizar y
+archivar un contacto, anotar, crear tarea y leer la bitácora); cada escritura, una
+transacción `READ WRITE` que lee la entrada después de la llave, la cuenta y el permiso, y
+fija `proposed_by = key-<id>` y la aprobación del cuerpo. La llave del agente recibe 403
+«borrado» al archivar. Sin migraciones ni dependencias nuevas. 413 pruebas, cobertura 95,75
+/ 87,77 / 97,97 / 97,04; los mutantes M1–M14 de ADR-0007, en rojo. Fuera del cerco, sin
+cambio de conducta: `credentialsOf` pasó de `routes/reads.ts` a `server/auth.ts`.
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -112,9 +117,12 @@ el CRM aparte).
   `database/migrations/0002_crm_security.sql` (ADR-0005), y el dueño sin login de todo
   `crm`, `crm_owner`, en `0004_crm_owner.sql` (ADR-0006). Su servidor (ADR-0006):
   `src/config.ts` (solo del entorno), `src/server/` (Fastify, errores, llave, límites),
-  `src/routes/` (las siete rutas y su zod), `src/db/` (la transacción de lectura y las
-  consultas) y `src/main.ts`. Se conecta como `crm_app`, miembro solo de `crm_service`,
-  nunca como el administrador.
+  `src/routes/` (las lecturas en `reads.ts`, las escrituras y la bitácora en `writes.ts`, y
+  su zod en `input.ts`), `src/db/` (la transacción de cada petición en `read-scope.ts`, las
+  consultas en `reads.ts` y las escrituras en `writes.ts`) y `src/main.ts`. Se conecta como
+  `crm_app`, miembro solo de `crm_service`, nunca como el administrador. Toda escritura
+  nueva pasa por `withWriteScope` (ADR-0007 D4): sin él, la base la rechaza por falta de
+  cuenta o de autor.
 - `apps/board`: el tablero, servido por circuit (llega en F2).
 
 Lo impone `apps/circuit/test/architecture/`: el mapa de dependencias (`module-map.ts`) y una
@@ -249,6 +257,15 @@ Se registran con el formato de pitfall-log: regla, síntoma, causa, chequeo y fe
   incluye U+0000 y `trim()` no lo quita. Un sustituto UTF-16 suelto, en cambio, no falla: se
   guarda como U+FFFD sin avisar. Regla: todo texto que llega a la base rechaza el NUL en zod.
   Chequeo: los casos «a NUL …» de `input-db.test.ts`.
+- **`z.iso.date()` acepta el año 0000 y PostgreSQL no** (2026-11-25, al codificar F1.3).
+  Síntoma: un `dueOn` de `0000-01-01` pasa zod y la base lo rechaza con SQLSTATE 22008, un
+  500. Causa: la expresión de zod 4.6.7 es `\d{4}` para el año, y el tipo `date` no tiene
+  año cero. Los días de cada mes y los bisiestos sí los valida. Regla: `dueOn` rechaza el
+  año 0000 en `input.ts`. Chequeo: «dueOn as year zero…» de `write-input-db.test.ts`.
+- **`SELECT id::text … ORDER BY id` ordena como texto** (2026-11-25, en una prueba de F1.3).
+  Síntoma: `'9'` antes que `'15'`. Causa: `ORDER BY` busca primero entre las columnas de
+  salida, y la salida `id` ya es texto. Regla: calificar la columna (`ORDER BY tabla.id`).
+  Chequeo: `idsInDatabase` de `audit-read-db.test.ts`.
 
 **Herramientas:**
 - **`vitest --update` se come el filtro** (2026-11-24). Síntoma: `vitest run --update x`
@@ -384,6 +401,18 @@ Invoke-WebRequest -UseBasicParsing http://127.0.0.1:4010/health   # 200 {"status
 ```sh
 git grep -nE "from '\.\.?/[^']*\.js'" -- '*.ts' | wc -l              # D1: 0 importaciones .js
 git ls-files '*.ts' | xargs wc -l | awk '$1 > 400 && $2 != "total"'   # D17: ninguna línea
+```
+
+Verificados el 2026-11-25 en PowerShell (F1.3, ADR-0007), con los 14 mutantes de la ADR
+(M1–M14), cada uno en rojo en su prueba y restaurado por hash:
+
+```powershell
+npx vitest run --project '@circuit/crm' write audit-read errors   # F1.3: 8 archivos, 103 pruebas (permiso, contexto, entrada, referencias, SQL, bitácora)
+```
+
+```sh
+git diff --exit-code 5bdbf68 -- database/migrations database/test/migration-hashes.ts database/schema.sql apps/crm/src/db/schema.ts   # D14: 0
+git diff --exit-code 5bdbf68 -- package-lock.json   # D15: 0
 ```
 
 ## 10. Dónde está todo lo demás

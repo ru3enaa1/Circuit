@@ -169,6 +169,16 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   enmiendas A6–A7, cada una con una prueba que estaba en rojo: la búsqueda con un NUL en el
   correo da 400 y no 500, y el registro guarda el SQLSTATE de un error envuelto por drizzle.
   305 pruebas, cobertura 94,72 / 85,86 / 97,14 / 96,21; M19 y M20, en rojo.
+  **F1.3 hecha y empujada el 2026-11-25, sin auditar:** seis rutas nuevas
+  (trece en total): crear, actualizar y archivar un contacto, anotar, crear tarea y leer la
+  bitácora. Cada escritura es una transacción `READ WRITE` que lee la entrada solo después
+  de la llave, la cuenta y el permiso, y fija la cuenta, la llave, `proposed_by = key-<id>` y
+  la aprobación con `set_config(…, true)`. Permiso por ruta, adelantado de F1.4: la llave del
+  agente recibe 403 «borrado» al archivar. `ya_existe` (409) sale del índice único, leído de
+  la causa que drizzle envuelve. Sin migraciones ni dependencias nuevas (D14, D15). 413
+  pruebas, cobertura 95,75 / 87,77 / 97,97 / 97,04; los mutantes M1–M14 de la ADR, en rojo y
+  restaurados por hash. Al codificar apareció que `z.iso.date()` acepta el año 0000, que
+  PostgreSQL rechaza: `dueOn` lo rechaza en zod (CLAUDE.md §8).
 
 ### F2 · Circuito y mapa
 

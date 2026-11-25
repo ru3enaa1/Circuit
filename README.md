@@ -5,7 +5,7 @@ entrantes y trabaja dentro de un CRM, con un tablero donde cada solicitud recorr
 estaciones y una persona aprueba lo que el modelo no debe decidir.
 
 **Estado: fase F1, el CRM simulado.** Existen su esquema de base de datos y su API de
-lectura, que corre en local; todavía no hay escrituras, datos de ejemplo, agente ni
+lectura y de escritura, que corre en local; todavía no hay datos de ejemplo, agente ni
 tablero. Lo que sigue está en el
 [plan de desarrollo](DEVELOPMENT_PLAN.md).
 
@@ -24,6 +24,12 @@ tablero. Lo que sigue está en el
   cuenta de la ruta tiene que ser la de la llave (si no, 403 con el motivo), y cada lectura
   corre en una transacción de solo lectura con un usuario de base de permiso mínimo y sin
   atributos de administrador (`crm_app`). El registro guarda método, ruta, estado y duración, y nada personal.
+- La API de escritura del CRM ([ADR-0007](docs/adr/0007-api-escritura-crm.md)): crear y
+  actualizar un contacto (también moverlo de etapa), anotar, crear una tarea, archivar y
+  leer la bitácora. Cada escritura lleva la aprobación de una persona; el CRM firma como
+  proponente la llave que la manda, y la base deja la fila de bitácora en la misma
+  transacción. Archivar pide el permiso de borrado, que la llave del agente no tiene: 403
+  con el motivo. No hay ninguna ruta que borre.
 - Una prueba de arquitectura: el núcleo no importa ningún otro módulo ni el SDK de
   Anthropic, y cada módulo se usa solo por su `index.ts`
   ([ADR-0001](docs/adr/0001-codigo-ordena-el-circuito.md),
