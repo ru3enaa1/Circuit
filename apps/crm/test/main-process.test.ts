@@ -1,5 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
+import { createServer, type AddressInfo } from 'node:net';
 import { join } from 'node:path';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -132,6 +133,26 @@ describe('D7 · startCrm, in this process', () => {
     // Host and port are named on purpose (they are not secret); the password and the name are not.
     const { CRM_DB_PASSWORD: sentPassword, POSTGRES_DB: sentName } = overrides as Record<string, string | undefined>;
     for (const value of [sentPassword, sentName]) if (value !== undefined) expect((error as Error).message).not.toContain(value);
+  });
+
+  // Audit of ADR-0006, H3: before, this printed only «El CRM no arrancó (Error).».
+  it('with CRM_PORT already taken, stops naming the variable, never its value', async () => {
+    const taken = createServer();
+    taken.listen(0, '127.0.0.1');
+    await once(taken, 'listening');
+    const { port } = taken.address() as AddressInfo;
+    try {
+      const error = await startCrm(crmEnv({ CRM_PORT: String(port) }), () => undefined).then(
+        () => undefined,
+        (reason: unknown) => reason,
+      );
+      expect(error).toBeInstanceOf(StartupError);
+      expect((error as Error).message).toContain('cambia CRM_PORT en .env');
+      expect((error as Error).message).not.toContain(String(port));
+    } finally {
+      taken.close();
+      await once(taken, 'close');
+    }
   });
 
   it('prints its own errors as they are, and any other by its name only', () => {

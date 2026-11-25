@@ -1,5 +1,6 @@
 import type { AddressInfo } from 'node:net';
 
+import type { FastifyInstance } from 'fastify';
 import pg from 'pg';
 
 import { ConfigError, readCrmConfig, type CrmConfig } from './config.ts';
@@ -13,6 +14,8 @@ import { buildServer } from './server/server.ts';
 
 const INVALID_PASSWORD = '28P01';
 const UNKNOWN_DATABASE = '3D000';
+/** Node's code when another process already listens on the port. */
+const ADDRESS_IN_USE = 'EADDRINUSE';
 
 /** The CRM could not start. Its message is safe to print: it never holds a value. */
 export class StartupError extends Error {
@@ -41,13 +44,29 @@ async function checkDatabase(pool: pg.Pool, config: CrmConfig): Promise<void> {
   }
 }
 
+/**
+ * Listens on config.host only (D7). A port already taken is named by its variable, never its
+ * value (D6): Node's error alone printed «El CRM no arrancó (Error).» (audit of ADR-0006, H3).
+ */
+async function listen(app: FastifyInstance, config: CrmConfig): Promise<void> {
+  try {
+    await app.listen({ host: config.host, port: config.port });
+  } catch (error) {
+    await app.close();
+    if (errorCodes(error).code === ADDRESS_IN_USE) {
+      throw new StartupError('El puerto de CRM_PORT ya está en uso: detén lo que lo usa o cambia CRM_PORT en .env.');
+    }
+    throw error;
+  }
+}
+
 export async function startCrm(env: Readonly<Record<string, string | undefined>>, log: LogSink = stdoutLog): Promise<RunningCrm> {
   const config = readCrmConfig(env);
   const pool = createCrmPool(config.db, log);
   try {
     await checkDatabase(pool, config);
     const app = buildServer({ pool, log });
-    await app.listen({ host: config.host, port: config.port });
+    await listen(app, config);
     const bound = app.server.address() as AddressInfo;
     const address = `http://${bound.address}:${bound.port}`;
     log({ event: 'listening', address });
