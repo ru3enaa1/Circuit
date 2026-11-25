@@ -1,3 +1,4 @@
+import { DrizzleQueryError } from 'drizzle-orm';
 import pg from 'pg';
 
 // ADR-0006 D15: one line per event, built here from fixed fields. Nothing in a line comes
@@ -20,11 +21,16 @@ const SYSTEM_ERROR_CODE = /^E[A-Z0-9_]{1,40}$/;
  * system code when the connection failed. Its message and detail can carry the values of the
  * statement (an email, a name), and a pg error carries the connection settings, password
  * included (CLAUDE.md §8), so the error object itself is never logged.
+ *
+ * drizzle-orm 0.45.4 throws every failed statement as a DrizzleQueryError whose message holds
+ * the SQL and its parameters, and keeps the driver's error as its cause. The codes come from
+ * that cause; nothing else of the wrapper is read (ADR-0006 A7).
  */
 export function errorCodes(error: unknown): { readonly sqlstate: string | null; readonly code: string | null } {
-  if (error instanceof pg.DatabaseError) {
-    return { sqlstate: error.code !== undefined && SQLSTATE_SHAPE.test(error.code) ? error.code : null, code: null };
+  const source = error instanceof DrizzleQueryError ? error.cause : error;
+  if (source instanceof pg.DatabaseError) {
+    return { sqlstate: source.code !== undefined && SQLSTATE_SHAPE.test(source.code) ? source.code : null, code: null };
   }
-  const code = typeof error === 'object' && error !== null && 'code' in error ? error.code : undefined;
+  const code = typeof source === 'object' && source !== null && 'code' in source ? source.code : undefined;
   return { sqlstate: null, code: typeof code === 'string' && SYSTEM_ERROR_CODE.test(code) ? code : null };
 }

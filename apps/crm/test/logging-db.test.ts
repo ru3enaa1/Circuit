@@ -1,10 +1,12 @@
+import { DrizzleQueryError, sql } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
 import { describe, expect, it, vi } from 'vitest';
 
 import { readCrmConfig } from '../src/config.ts';
 import { createCrmPool } from '../src/db/pool.ts';
 import type { Connector } from '../src/db/read-scope.ts';
-import { stdoutLog, type LogLine } from '../src/log.ts';
+import { errorCodes, stdoutLog, type LogLine } from '../src/log.ts';
 import { buildServer } from '../src/server/server.ts';
 import { bearer, bodyOf, useCrmUnderTest } from './crm-under-test.ts';
 
@@ -29,6 +31,25 @@ function plantedDatabaseError(): pg.DatabaseError {
   error.code = 'XX000';
   error.detail = `Key (email)=(${PLANTED_EMAIL}) already exists.`;
   return error;
+}
+
+/** PostgreSQL refuses U+0000 in text with this SQLSTATE, so a statement that sends one always fails. */
+const NUL_IN_TEXT = '22021';
+
+/**
+ * The error drizzle itself throws when a statement fails: a DrizzleQueryError whose message
+ * carries the SQL and its parameters (here, an address), with the driver's error as its
+ * cause (baseline of ADR-0007, F-2). Made by a real statement, so a change in drizzle's
+ * wrapping shows up here.
+ */
+async function realDrizzleError(): Promise<unknown> {
+  const statement = drizzle({ client: crm().pool }).execute(sql`SELECT ${`${PLANTED_EMAIL}\u0000`}::text`);
+  return statement.then(
+    () => {
+      throw new Error('Se esperaba que la sentencia con un NUL fallara.');
+    },
+    (error: unknown) => error,
+  );
 }
 
 /** A server whose every query fails with `error`, logging into `logs`. */
@@ -107,6 +128,33 @@ describe('D15 · an error is logged by its code only', () => {
     expect(logs[0]).toEqual({ event: 'internal_error', sqlstate: 'XX000', code: null });
     expect(JSON.stringify(logs)).not.toContain(PLANTED_EMAIL);
     expect(response.body).not.toContain(PLANTED_EMAIL);
+  });
+
+  // ADR-0006 A7: every query drizzle runs comes back wrapped, so this is the shape a real
+  // database error has. The SQLSTATE used to come out null.
+  it('a database error wrapped by drizzle leaves the SQLSTATE of its cause, and never the statement or its values', async () => {
+    const wrapped = await realDrizzleError();
+    // Only meaningful if the wrapper is what arrives, and it does carry the address.
+    expect(wrapped).toBeInstanceOf(DrizzleQueryError);
+    expect(wrapped).not.toBeInstanceOf(pg.DatabaseError);
+    expect((wrapped as DrizzleQueryError).cause).toBeInstanceOf(pg.DatabaseError);
+    expect((wrapped as DrizzleQueryError).message).toContain(PLANTED_EMAIL);
+    const logs: LogLine[] = [];
+    const app = failingServer(wrapped, logs);
+    const response = await app.inject({ method: 'GET', url: '/accounts/cuenta-a/stages', headers: bearer('test-key-cualquiera') });
+    await app.close();
+    expect(response.statusCode).toBe(500);
+    expect(bodyOf(response)).toEqual({ error: { code: 'error_interno', message: 'Error interno.' } });
+    expect(logs[0]).toEqual({ event: 'internal_error', sqlstate: NUL_IN_TEXT, code: null });
+    expect(JSON.stringify(logs)).not.toContain(PLANTED_EMAIL);
+  });
+
+  it('a connection drizzle wraps leaves its system code, and never the wrapper or the cause message', () => {
+    const dropped = Object.assign(new Error(`read ECONNRESET ${PLANTED_EMAIL}`), { code: 'ECONNRESET' });
+    const wrapped = new DrizzleQueryError('SELECT 1 WHERE $1 = $1', [PLANTED_EMAIL], dropped);
+    const codes = errorCodes(wrapped);
+    expect(codes).toEqual({ sqlstate: null, code: 'ECONNRESET' });
+    expect(JSON.stringify(codes)).not.toContain(PLANTED_EMAIL);
   });
 
   it('a connection that fails leaves its system code, never its message', async () => {
