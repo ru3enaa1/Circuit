@@ -201,7 +201,8 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   suite: ninguna prueba vigila que un error de `db:keys` no muestre el hash de la llave ni
   el mensaje del error (H1). El 2026-11-25 el dueño pidió A1 (H1) y eligió (a) para H2: la
   guarda lee también los mensajes de los commits que se publican. H3, H4 y H5 no los pidió.
-  Las dos enmiendas, hechas ese día y sin empujar: A1, tres pruebas de D6 que muerden los
+  Las dos enmiendas, hechas y empujadas ese día (CI en verde en `52e015d`, corrida
+  45694757738): A1, tres pruebas de D6 que muerden los
   mutantes de la auditoría (`497bbfb`); y A2, `--range` lee el mensaje de cada commit, y con
   él el hook de `pre-push` (`15f3023`). 480 pruebas, `npm run check` en 0. Se pidió al dueño
   el insumo de F2: el material del programa que citará la estación 4.
