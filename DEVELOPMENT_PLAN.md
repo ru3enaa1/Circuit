@@ -206,6 +206,21 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   mutantes de la auditoría (`497bbfb`); y A2, `--range` lee el mensaje de cada commit, y con
   él el hook de `pre-push` (`15f3023`). 480 pruebas, `npm run check` en 0. Se pidió al dueño
   el insumo de F2: el material del programa que citará la estación 4.
+  F1.5, con R6 como primer paso, hecha el 2026-11-25, sin empujar ni auditar. ADR-0009
+  aceptada ese día: el dueño aceptó sus diez recomendaciones. Un commit por paso, cada uno
+  con `npm run check` en 0: R6 (`a1d57e0`), el respaldo dentro del contenedor y la
+  restauración solo en una base nueva; el paquete (`88b2a78`), `scenarios/escuela/crm.json`
+  con los insumos de F1 y su formato estricto; la semilla y la llave del agente (`7f04b0a`),
+  una vez por cuenta, firmada `seed` y reproducible, con la llave en un archivo que git
+  ignora; y los documentos. 627 pruebas, M1–M22 en rojo. D26 sobre la base de desarrollo:
+  respaldo `20261125-213637Z-antes-semilla` (41 435 bytes), restaurado en una copia que se
+  volcó igual al original y se borró; `db:seed` dos veces, la primera «sembrada» en las dos
+  cuentas y la segunda «ya estaba» con el archivo de la llave igual byte a byte; una sola
+  llave `agente` viva, `read,write`; con `crm:start` y esa llave, `escuela-andamio/stages` da
+  200 con las seis etapas, `cuenta-vecina` 403 y exportar 403. El respaldo de antes de `0004`
+  también restauró (4 migraciones y las 8 tablas de `crm`), en una base que se borró. Lo que
+  falta para cerrar F1: la auditoría de ADR-0009, el push y la integración a `main`, que
+  decide el dueño.
 
 ### F2 · Circuito y mapa
 
@@ -298,7 +313,7 @@ Lo que una respuesta recomienda y no se aplica en ese paso queda aquí hasta apl
 | R3 | Comparar «Circuit» con productos y paquetes existentes | Un nombre repetido resta en un enlace corto | Claude, en F0.6 | Cerrada el 2026-11-24: es una palabra común. La app de rutas que se llamaba Circuit ahora es Spoke; el nombre más cercano en IA con CRM es Circuitry.ai; el paquete `circuit` de npm está tomado (librería de enlace de datos), sin efecto porque el repositorio es `private` y no se publica en npm. Sirve para el portafolio; si Circuit se ofrece como producto, el nombre se revisa con una búsqueda de marca (el dueño) |
 | R4 | Confirmar en el navegador que la vacante sigue abierta | No se pudo comprobar por consola | El dueño | Abierta |
 | R5 | Elegir el canal del mensaje (plataforma de la vacante o LinkedIn) | Define el formato del GIF y de las tres líneas | El dueño, antes de F6 | Abierta |
-| R6 | Script de respaldo (`pg_dump` dentro del contenedor, no por la tubería de PowerShell) con una restauración probada | Hoy no hay datos que respaldar; el ritual de `safe-database` lo exige desde el primer dato | Claude, antes de la semilla de F1.5 | Abierta |
+| R6 | Script de respaldo (`pg_dump` dentro del contenedor, no por la tubería de PowerShell) con una restauración probada | Hoy no hay datos que respaldar; el ritual de `safe-database` lo exige desde el primer dato | Claude, antes de la semilla de F1.5 | Cerrada el 2026-11-25 (ADR-0009 D1–D6, `a1d57e0`): `npm run db:backup` y `db:restore`, con la restauración probada byte a byte |
 | R7 | CI levanta la base con el mismo `compose.yaml` y una contraseña generada en la corrida | Una sola definición de la base; las pruebas de Compose y de migración corren igual que en local | Claude, en F0.5 | Cerrada el 2026-11-24: la primera corrida salió en verde (45448819374) |
 | R8 | Generar `database/schema.sql` desde una base migrada y compararlo en una prueba | Hoy se escribe a mano porque solo hay dos esquemas vacíos; con tablas se desvía | Claude, en F1.1 | Cerrada el 2026-11-24: `npm run db:dump-schema` lo regenera y `database/test/schema-dump-db.test.ts` falla si difiere (una columna plantada la puso en rojo) |
 | R9 | Hook de `pre-push` que corre `forbidden-phrases.local.txt` sobre lo versionado y `check-secrets.sh --range <remoto>..<local>` sobre cada commit que se publica | La lista privada no puede ir a CI, y CI corre después del push: detecta un secreto, no impide publicarlo (auditoría de ADR-0004, H1). Hoy depende de acordarse antes de cada push | El dueño. Hasta que exista, los dos comandos se corren a mano antes de cada push | Cerrada el 2026-11-24: `guards/hooks/pre-push`, activado con `git config core.hooksPath guards/hooks`, con la condición del dueño: nunca pregunta y para el push solo con un hallazgo o si no pudo revisar. Sus controles (`guards/pre-push.test.sh`, 10 casos, 7 mutantes en rojo) corren en CI |

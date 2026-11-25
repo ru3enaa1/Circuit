@@ -26,7 +26,8 @@ de una empresa real.
 - **Sin fuente, no hay respuesta** en la estación 4.
 - **El modelo está detrás de una interfaz.** Hoy responde un simulador; encenderlo es cambiar
   configuración, no código.
-- **Secretos** solo en variables de entorno; nunca en el repositorio ni en el estado de Terraform versionado.
+- **Secretos** solo en variables de entorno o en archivos que git ignora y que una variable
+  nombra (ADR-0009, pregunta 1); nunca en el repositorio ni en el estado de Terraform versionado.
 - **Datos sintéticos.** Ni marca, ni logo, ni datos de la empresa de la vacante; ni nombres
   ni análisis de terceros estudiados fuera de Circuit. `docs/privado/` no entra a git.
 - **Inspirar, no copiar:** ningún nombre, personaje, logo, música ni imagen de terceros en el
@@ -126,8 +127,24 @@ en `52e015d`, corrida 45694757738):** tres
 pruebas nuevas de D6 en `keys-db.test.ts` (`497bbfb`), en rojo con X1, X4 y X4b; y
 `check-secrets.sh --range` lee también el mensaje de cada commit (`15f3023`, que enmienda
 ADR-0004 C12), con 31 casos en su batería y 11 en la del hook. 480 pruebas, cobertura 95,58
-/ 87,58 / 97,26 / 97,42. La trampa del worktree, en §8. Siguiente: R6 (el respaldo con
-restauración probada) y F1.5 (la semilla). Pedido al dueño, como insumo de F2: el material
+/ 87,58 / 97,26 / 97,42. La trampa del worktree, en §8.
+**R6 y F1.5 (respaldo y semilla), hechas el 2026-11-25, sin empujar ni auditar.** ADR-0009
+aceptada ese día (el dueño aceptó sus diez recomendaciones), con su línea base
+(`docs/reviews/ADR-0009-baseline.md`, sobre `52e015d`); al aceptarla se corrigieron los
+chequeos de D4 y D7, que sin `:(glob)` no leían lo que decían (§8). Un commit por paso: R6
+(`a1d57e0`), `npm run db:backup` y `db:restore`, con el volcado dentro del contenedor y su
+SHA-256 comparado; el paquete (`88b2a78`), `scenarios/escuela/crm.json` y su formato en
+`apps/crm/src/scenario.ts`; la semilla y la llave (`7f04b0a`), `npm run db:seed`, una vez por
+cuenta, firmada `seed`, con las fechas del paquete y la llave del agente en
+`CRM_AGENT_KEY_FILE` (`.secrets/crm-agent-key`, que git ignora); y los documentos. 627
+pruebas (una, el modo `0600`, solo en Linux), cobertura 95,47 / 86,43 / 96,29 / 97,68;
+M1–M22 en rojo, M8 plantado en `pg_restore` (§8). D26 hecho: la base de desarrollo,
+respaldada (`database/backups/20261125-213637Z-antes-semilla/`), restaurada en una copia que
+se volcó igual y se borró, sembrada dos veces (la segunda no tocó nada) y probada con
+`crm:start`; el respaldo de antes de `0004` también restauró, y se borró. **La `.env` del
+dueño no trae `CIRCUIT_SCENARIO` ni `CRM_AGENT_KEY_FILE`:** D26 las pasó por el entorno; hay
+que copiar las dos líneas de `.env.example`. Siguiente: la auditoría de ADR-0009 y, con el sí
+del dueño, el push e integrar F1 a `main`. Pedido al dueño, como insumo de F2: el material
 del programa que citará la estación 4.
 
 ## 3. Reglas de producto que gobiernan el código
@@ -163,6 +180,12 @@ el CRM aparte).
   él, la base la rechaza por falta de cuenta o de autor. Las llaves no las toca la API: las
   emite, lista y revoca `database/keys.ts` (`npm run db:keys`) como el administrador de
   `.env` (ADR-0008 D9).
+- `scenarios/<id>/`: el paquete cambiable del escenario (regla 4, ADR-0009). Su parte del CRM,
+  `crm.json`, es solo datos; su formato, estricto, está en `apps/crm/src/scenario.ts`, y el
+  código no nombra ningún escenario: lo elige `CIRCUIT_SCENARIO`. Lo carga `database/seed.ts`
+  (`npm run db:seed`) como el administrador, una vez por cuenta, y la llave del agente la
+  emite con el paso de `database/keys.ts`. Respaldo y restauración: `database/backup.ts` y
+  `database/restore.ts`, con las herramientas del contenedor.
 - `apps/board`: el tablero, servido por circuit (llega en F2).
 
 Lo impone `apps/circuit/test/architecture/`: el mapa de dependencias (`module-map.ts`) y una
@@ -204,6 +227,10 @@ actions/setup-node v7.1.0 fijadas por SHA, comprobados contra sus etiquetas el 2
 ## 7. Base de datos
 
 - Respaldo → migrar → probar → verificar. Las pruebas usan bases desechables, nunca la original.
+  El respaldo es `npm run db:backup -- --label <motivo>` (R6, ADR-0009); se restaura solo con
+  `npm run db:restore`, en una base nueva, nunca encima de la de desarrollo.
+- La semilla escribe filas cuya bitácora no se borra nunca: antes de la primera en una base,
+  un respaldo. Un paquete cambiado se siembra en una base nueva (ADR-0009 D13).
 - Migraciones solo hacia adelante, en `database/migrations/`. Las filas de prueba se borran por id.
 - Una migración que ya está en `database/test/migration-hashes.ts` no se edita nunca; se
   corrige con una nueva. Cada migración nueva agrega su SHA-256 a esa lista en el mismo commit.
@@ -234,6 +261,12 @@ Se registran con el formato de pitfall-log: regla, síntoma, causa, chequeo y fe
   las líneas de cada archivo, así que todo el árbol parece CRLF. Causa: no se investigó; los
   bytes reales no tenían ningún CR. Regla: contar los CR con `tr -cd '\r' < archivo | wc -c`,
   que da 0 en LF. Chequeo: `bash guards/check-line-endings.sh …` (§9).
+- **PowerShell 5.1 reescribe un binario que pasa por `>`** (2026-11-25, línea base de
+  ADR-0009). Síntoma: `docker compose exec -T db cat <volcado> > archivo` sale con 0, pero de
+  41 435 bytes llegan 42 466, con otro SHA-256. Causa: PowerShell 5.1 lee la salida de un
+  programa como texto y la vuelve a codificar al escribirla. Regla: un binario sale del
+  contenedor con `docker compose cp`, y `db:backup` compara el SHA-256 de adentro y de afuera.
+  Chequeo: M3 de ADR-0009 (la copia por la salida estándar) pone en rojo `backup-db.test.ts`.
 - **Docker Desktop está instalado por usuario** (2026-11-24). Síntoma: `failed to connect
   to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine`. Causa: Docker Desktop
   apagado; el ejecutable está en `%LOCALAPPDATA%\Programs\DockerDesktop\Docker Desktop.exe`,
@@ -302,6 +335,18 @@ Se registran con el formato de pitfall-log: regla, síntoma, causa, chequeo y fe
   500. Causa: la expresión de zod 4.6.7 es `\d{4}` para el año, y el tipo `date` no tiene
   año cero. Los días de cada mes y los bisiestos sí los valida. Regla: `dueOn` rechaza el
   año 0000 en `input.ts`. Chequeo: «dueOn as year zero…» de `write-input-db.test.ts`.
+- **`pg_dump` en formato custom ignora `--no-owner`** (2026-11-25, mutantes de ADR-0009). Síntoma: M8 tal como estaba escrito (`pg_dump
+  --format=custom --no-owner`) sobrevive, y la copia sale con sus dueños. Causa: con un archivo
+  que no es texto, `pg_dump` deja la decisión de los dueños a `pg_restore` (la documentación
+  de `-O`); `--no-acl`, en cambio, sí quita los permisos del archivo (M9 muerde). Regla: los
+  dueños de una restauración se deciden en `pg_restore`. Chequeo: M8 en `pg_restore` pone en
+  rojo `restore-db.test.ts`.
+- **Un mutante que rompe la limpieza deja temporales en el contenedor** (2026-11-25, mutantes
+  de ADR-0009). Síntoma: después de los mutantes, `/tmp` del contenedor tenía dos
+  `circuit-backup-….dump` de 42 KB; las corridas normales no dejan ninguno. Causa: M2 quita el
+  borrado del temporal en una corrida que falla, a propósito. Regla: después de plantar
+  mutantes, `docker compose exec -T db ls -A /tmp` y borrar lo que dejaron. Chequeo: esa
+  orden da una salida vacía.
 - **`SELECT id::text … ORDER BY id` ordena como texto** (2026-11-25, en una prueba de F1.3).
   Síntoma: `'9'` antes que `'15'`. Causa: `ORDER BY` busca primero entre las columnas de
   salida, y la salida `id` ya es texto. Regla: calificar la columna (`ORDER BY tabla.id`).
@@ -349,6 +394,13 @@ Se registran con el formato de pitfall-log: regla, síntoma, causa, chequeo y fe
   llave primero, la línea de registro) se repite en `answerUnroutable` de `server.ts`.
   Chequeo: «the key comes before a URL the router cannot read» de `input-db.test.ts` y la
   prueba de la URL ilegible de `logging-db.test.ts`.
+- **En git, el `*` de una ruta cruza `/`** (2026-11-25, al aceptar ADR-0009). Síntoma:
+  `git grep … -- 'database/*.ts'` lee también los 17 archivos de `database/test/`, y
+  `'apps/*/src'` no casa con ningún archivo, así que un chequeo con esas rutas pasa sin leer
+  lo que dice. Causa: sin `:(glob)`, git compara la ruta entera con `fnmatch` sin
+  `FNM_PATHNAME`. Regla: toda ruta con comodines de un chequeo va con `:(glob)`
+  (`':(glob)database/*.ts'`, `':(glob)apps/*/src/**'`). Chequeo: `git ls-files 'apps/*/src' |
+  wc -l` da 0 y `git ls-files ':(glob)apps/*/src/**' | wc -l` da los archivos.
 - **En Windows, `git worktree remove --force` sigue una junction** (2026-11-25, auditoría de
   ADR-0008). Síntoma: al quitar un worktree desechable cuyo `node_modules` era una junction
   al del clon, se borraron el `node_modules` del clon y 57 archivos versionados de `apps/`.
@@ -401,7 +453,7 @@ archivo sin pruebas plantado en `apps/circuit/src`, que la bajó a 65,62 % y la 
 con 1. Son los pasos de CI, más el `--range` que va antes de cada push (R9):
 
 ```sh
-bash guards/check-secrets.test.sh                 # controles positivos de la guarda: 0 si los 31 casos pasan (unos 40 s en Windows)
+bash guards/check-secrets.test.sh                 # controles positivos de la guarda: 0 si los 33 casos pasan (unos 40 s en Windows)
 bash guards/check-secrets.sh                      # lo versionado, lo nuevo sin ignorar y el índice: 0 limpio, 1 hallazgo, 2 nada revisado
 bash guards/check-secrets.sh --range origin/feat/f0-base..HEAD   # los archivos y el mensaje de cada commit que se va a publicar (antes del push; CI no lo corre)
 bash guards/check-line-endings.sh '*.sh' '*.json' '*.sql' 'guards/hooks/*' 'database/examples/**' '**/golden/**'
@@ -520,6 +572,29 @@ npx vitest run --project '@circuit/crm' keys-db keys-command   # A1: 2 archivos,
 bash guards/check-secrets.test.sh            # A2: 0 si los 31 casos pasan, una llave en un mensaje entre ellos
 bash guards/pre-push.test.sh                 # A2: 0 si los 11 casos pasan
 bash guards/check-secrets.sh --range HEAD    # A2: los archivos y el mensaje de cada commit de la historia: 0 (50 commits, unos 2 min)
+```
+
+Verificados el 2026-11-25 en PowerShell (R6 y F1.5, ADR-0009), con M1–M22 de la ADR, cada uno
+en rojo en su prueba y restaurado por hash (M8 en `pg_restore`), y D26 sobre la base de
+desarrollo. `db:seed` necesita `CIRCUIT_SCENARIO` y `CRM_AGENT_KEY_FILE` en `.env` (las trae
+`.env.example`) o en el entorno:
+
+```powershell
+npx vitest run --project database backup restore         # D1–D6: 4 archivos, 37 pruebas
+npx vitest run --project database scenario seed          # D7–D21 y D25: 6 archivos, 105 pruebas (una solo en Linux)
+npx vitest run --project '@circuit/crm' seed-agent-key   # D22 y D13 después de una escritura por la API: 5 pruebas
+npm run db:backup -- --label <motivo>                    # 0: database/backups/<AAAAMMDD-HHMMSS>Z-<motivo>/ con circuit.dump y su .sha256
+npm run db:restore -- --file database\backups\<carpeta>\circuit.dump --into <base nueva>   # 0; 1 si la base existe, sin tocarla
+npm run db:seed                                          # 0: «sembrada» o «ya estaba» por cuenta, y la ruta de la llave, nunca la llave
+"DROP DATABASE <base de verificación>;" | docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d postgres'   # borra a mano una restauración de prueba
+docker compose exec -T db ls -A /tmp                     # vacío: ningún temporal de db:backup ni de db:restore
+```
+
+```sh
+git check-ignore -q .secrets/crm-agent-key; echo $?      # D21: 0
+git grep -n -E "DROP DATABASE|RENAME TO" -- ':(glob)database/*.ts'   # D4: solo la línea de restore.ts
+git diff --exit-code 52e015d -- database/migrations database/test/migration-hashes.ts database/schema.sql apps/crm/src/db/schema.ts package-lock.json compose.yaml   # D23: 0
+bash guards/check-secrets.test.sh                        # D21: 0 si los 33 casos pasan
 ```
 
 ## 10. Dónde está todo lo demás

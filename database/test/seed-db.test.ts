@@ -81,7 +81,7 @@ describe('D12, D13, D15 · seeding the real package', () => {
 
   it('says «sembrada» for each account, with its counts, and where the key went', () => {
     expect(first?.out).toContain('escuela-andamio: sembrada (6 etapas, 5 empresas');
-    expect(first?.out).toContain('cuenta-vecina: sembrada (1 etapas, 0 empresas, 1 contactos');
+    expect(first?.out).toContain('cuenta-vecina: sembrada (1 etapa, 0 empresas, 1 contacto, 1 nota, 0 tareas).');
     expect(first?.out).toContain(`Llave del agente nueva, en ${keyFile}`);
   });
 

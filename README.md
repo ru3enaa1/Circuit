@@ -5,9 +5,9 @@ entrantes y trabaja dentro de un CRM, con un tablero donde cada solicitud recorr
 estaciones y una persona aprueba lo que el modelo no debe decidir.
 
 **Estado: fase F1, el CRM simulado.** Existen su esquema de base de datos, su API de
-lectura y de escritura, que corre en local, y el comando que emite y revoca sus llaves;
-todavía no hay datos de ejemplo, agente ni tablero. Lo que sigue está en el
-[plan de desarrollo](DEVELOPMENT_PLAN.md).
+lectura y de escritura, que corre en local, el comando que emite y revoca sus llaves, la
+semilla con los datos sintéticos del escenario y el respaldo de la base; todavía no hay
+agente ni tablero. Lo que sigue está en el [plan de desarrollo](DEVELOPMENT_PLAN.md).
 
 ## Qué hay hoy
 
@@ -37,6 +37,15 @@ todavía no hay datos de ejemplo, agente ni tablero. Lo que sigue está en el
   los contactos de una cuenta pide el permiso `export`: la llave del agente (leer y escribir)
   recibe 403 al exportar, al archivar y en otra cuenta, y una prueba lo comprueba con una
   llave emitida por el comando real.
+- El escenario, un paquete de datos que se cambia sin tocar el código
+  ([ADR-0009](docs/adr/0009-respaldo-y-semilla.md)): `scenarios/escuela/crm.json`, una
+  escuela de negocios inventada, Escuela Andamio, con sus seis etapas, cinco empresas
+  inventadas con una facturación marcada como ficticia, sus contactos, notas y tareas, y una
+  segunda cuenta para que el aislamiento se vea. Todo es sintético: los correos están bajo
+  `.test`, un dominio reservado que no entrega correo. `npm run db:seed` lo carga una vez por
+  cuenta y deja la llave del agente en un archivo que git ignora.
+- El respaldo de la base (`npm run db:backup`) y su restauración en una base nueva
+  (`npm run db:restore`), con el SHA-256 comprobado y una prueba que restaura y compara.
 - Una prueba de arquitectura: el núcleo no importa ningún otro módulo ni el SDK de
   Anthropic, y cada módulo se usa solo por su `index.ts`
   ([ADR-0001](docs/adr/0001-codigo-ordena-el-circuito.md),
@@ -79,9 +88,50 @@ npm run check
 `npm run db:users` crea el usuario `crm_app` con la contraseña de `CRM_DB_PASSWORD`.
 
 `npm run crm:start` levanta el CRM en `http://127.0.0.1:4010`: `/health` responde 200, y una
-ruta sin llave, 401. Todavía no hay cuentas, así que tampoco llaves que usar: las cuentas
-llegan con la semilla (F1.5), y las llaves se emiten como dice la sección siguiente.
-`docker compose stop db` detiene la base y conserva sus datos.
+ruta sin llave, 401. Las cuentas y la llave del agente llegan con la semilla (la sección
+siguiente). `docker compose stop db` detiene la base y conserva sus datos.
+
+## Datos de ejemplo: la semilla
+
+```sh
+npm run db:seed
+```
+
+Carga el escenario que nombra `CIRCUIT_SCENARIO` (`escuela`, la carpeta
+`scenarios/escuela/`) en la base de `POSTGRES_DB`, en una sola transacción: o entra todo o
+nada. Una `.env` copiada antes de que existiera la semilla no trae `CIRCUIT_SCENARIO` ni
+`CRM_AGENT_KEY_FILE`; sin ellas el comando sale con 1 y las nombra, y basta con copiar esas
+dos líneas de `.env.example`.
+
+- **Una vez por cuenta.** Una cuenta que no existe nace con todas sus filas; una que ya
+  existe se salta entera, así que correrlo otra vez no duplica nada ni deshace lo que se
+  escribió después. Cambiar los datos de una cuenta ya sembrada pide una base nueva.
+- **Reproducible.** Las fechas salen del paquete y los ids del orden de carga: en una base
+  nueva, el mismo paquete da las mismas filas.
+- **La llave del agente** (`read,write`, etiqueta `agente`) queda en el archivo de
+  `CRM_AGENT_KEY_FILE`, `.secrets/crm-agent-key`, que git ignora; nunca se imprime. Si el
+  archivo ya tiene la llave viva, no se toca; si falta o no sirve, se revoca la anterior y se
+  emite otra.
+
+```powershell
+npm run crm:start   # en otra terminal; Ctrl+C lo detiene
+$k = (Get-Content .secrets\crm-agent-key -Raw).Trim()
+Invoke-WebRequest -UseBasicParsing -Headers @{ Authorization = "Bearer $k" } http://127.0.0.1:4010/accounts/escuela-andamio/stages   # 200
+```
+
+## Respaldar y restaurar
+
+```sh
+npm run db:backup -- --label antes-de-migrar
+npm run db:restore -- --file database/backups/<carpeta>/circuit.dump --into <base nueva>
+```
+
+- `db:backup` vuelca la base de `POSTGRES_DB` dentro del contenedor y la copia a
+  `database/backups/<AAAAMMDD-HHMMSS>Z-<etiqueta>/`, que git ignora, con su SHA-256 al
+  lado. No pasa por una tubería de la terminal: en Windows PowerShell 5.1, `>` reescribe un
+  archivo binario sin avisar.
+- `db:restore` restaura solo en una base nueva que crea, y nunca encima de una que existe.
+  Si algo falla, la borra. Para usar la copia, apuntar `POSTGRES_DB` a ella.
 
 ## Llaves del CRM
 
@@ -106,14 +156,14 @@ npm run db:keys -- revoke --id <id>
 - Sale con 0 si hizo lo pedido y con 1 y el motivo si no; sin orden, con el uso. Un error de
   la base se nombra por su SQLSTATE, sin la llave ni la conexión.
 
-La base de desarrollo todavía no tiene cuentas, así que hoy el comando sale con 1 y «No
-existe la cuenta …». Las pruebas lo ejercen entero sobre bases desechables.
+Las cuentas existen después de la semilla; antes, el comando sale con 1 y «No existe la
+cuenta …». La llave del agente la emite la semilla, no hace falta emitirla a mano.
 
 Las guardas, en Git Bash:
 
 ```sh
 bash guards/check-secrets.sh
-bash guards/check-forbidden-phrases.sh forbidden-phrases.txt README.md apps database
+bash guards/check-forbidden-phrases.sh forbidden-phrases.txt README.md apps database scenarios
 ```
 
 ## Dónde está cada decisión

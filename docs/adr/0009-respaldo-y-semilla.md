@@ -426,6 +426,23 @@ Las pruebas nuevas se ven en rojo antes del código, o las muerde su mutante.
   donde la primera semilla demora su `COMMIT` 1,5 s para que la segunda llegue seguro a su
   chequeo con las filas de la primera sin confirmar (sin eso, M22 mordía solo si las dos se
   cruzaban). M12–M22, en rojo.
+- **Los documentos y D26, en su commit.** README (la semilla, respaldar y restaurar), CLAUDE.md
+  (§1 con la frase de la pregunta 1, §2, §4, §7, tres trampas en §8 y los comandos en §9), el
+  plan (R6 cerrada) y el comentario de `apps/circuit/src/modules/scenario/index.ts`, lo único
+  que cambia en `apps/circuit`. La salida de la semilla dice «1 etapa», no «1 etapas». D26, en
+  la base de desarrollo, con `CIRCUIT_SCENARIO` y `CRM_AGENT_KEY_FILE` por el entorno porque la
+  `.env` del dueño no las trae: respaldo `20261125-213637Z-antes-semilla` (41 435 bytes);
+  restaurado en `circuit_verifica_semilla`, cuyo `pg_dump` dio el mismo SHA-256 que el del
+  original; dos semillas, «sembrada» y «ya estaba», con el archivo de la llave igual byte a
+  byte; `db:keys list` con una sola llave `agente`, `read,write`, viva; `crm:start` con esa
+  llave: `escuela-andamio/stages` 200 con las seis etapas, `cuenta-vecina/stages` 403 y
+  exportar 403. El respaldo `2026-11-24-1921-antes-0004/circuit.dump` restauró en
+  `circuit_verifica_0004` con 4 migraciones y las 8 tablas de `crm`, del administrador, como
+  eran antes de `0004`. Las dos bases se borraron a mano. Después de la última corrida
+  completa: ninguna `circuit_test_…` y el `/tmp` del contenedor vacío. Los mutantes de R6
+  habían dejado dos temporales (M2 quita el borrado a propósito), que se borraron (CLAUDE.md
+  §8). Chequeos de D23 y D24: en 0 o sin líneas; los 38 archivos de la línea base, sin perder
+  pruebas.
 
 ## Preguntas abiertas
 

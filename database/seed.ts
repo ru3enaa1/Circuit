@@ -144,6 +144,10 @@ async function insertRows(client: AdminClient, accountId: string, account: Scena
 /** D15: the row's own date, or the package's. */
 type Dated = (own: string | undefined) => string;
 
+/** How a count of one reads, for each column of countsOf; any other count keeps the plural. */
+const SINGULAR: Readonly<Record<string, string>> = { etapas: 'etapa', empresas: 'empresa', contactos: 'contacto', notas: 'nota', tareas: 'tarea' };
+
+/** D17: counts only, so the line says how much was written and nothing of what. */
 async function countsOf(client: AdminClient, accountId: string): Promise<string> {
   const result = await client.query<Record<string, number>>(
     `SELECT (SELECT count(*) FROM crm.pipeline_stages WHERE account_id = $1)::int AS etapas,
@@ -154,7 +158,7 @@ async function countsOf(client: AdminClient, accountId: string): Promise<string>
     [accountId],
   );
   return Object.entries(result.rows[0] ?? {})
-    .map(([what, count]) => `${count} ${what}`)
+    .map(([what, count]) => `${count} ${count === 1 ? (SINGULAR[what] ?? what) : what}`)
     .join(', ');
 }
 
