@@ -135,16 +135,78 @@ async function seedAccount(client: pg.PoolClient, slug: string): Promise<Fixture
   return { id, slug, apiKeyId, apiKey, stageId, companyId, contactId, email };
 }
 
+async function seedBase(client: pg.PoolClient): Promise<Fixture> {
+  const a = await seedAccount(client, 'cuenta-a');
+  const b = await seedAccount(client, 'cuenta-b');
+  const revokedApiKey = 'test-key-revoked';
+  await client.query(
+    "INSERT INTO crm.api_keys (account_id, label, key_hash, permissions, revoked_at) VALUES ($1, 'revocada', $2, '{read}', now())",
+    [a.id, sha256(revokedApiKey)],
+  );
+  return { a, b, revokedApiKey };
+}
+
 /** Two accounts with one row in every table, committed, written as the admin. */
 export async function seedFixture(pool: pg.Pool): Promise<Fixture> {
+  return inTransaction(pool, { context: FIXTURE_AUTHORS, commit: true }, seedBase);
+}
+
+/** What the read API needs besides the base fixture (ADR-0006 D9, D12), all in account a. */
+export interface ReadExtras {
+  /** A live key of account a with `write` only: it must not read (D9). */
+  readonly writeOnlyKey: string;
+  /** Position 1, after the base fixture's stage at 0. */
+  readonly secondStageId: string;
+  /** Newer than the base fixture's note on a's contact, so a list starts with it. */
+  readonly secondNoteId: string;
+  readonly archivedNoteId: string;
+  /** With a due date and completed, so both nullable columns come back with a value. */
+  readonly doneTaskId: string;
+  readonly archivedTaskId: string;
+  readonly archivedContactId: string;
+  readonly archivedContactEmail: string;
+  readonly archivedCompanyId: string;
+}
+
+export type ReadFixture = Fixture & { readonly extras: ReadExtras };
+
+async function seedReadExtras(client: pg.PoolClient, a: FixtureAccount): Promise<ReadExtras> {
+  const writeOnlyKey = 'test-key-write-only';
+  await client.query("INSERT INTO crm.api_keys (account_id, label, key_hash, permissions) VALUES ($1, 'escritura', $2, '{write}')", [
+    a.id,
+    sha256(writeOnlyKey),
+  ]);
+  const one = (text: string, values: readonly unknown[]) => insertId(client, `${text} RETURNING id`, [a.id, ...values]);
+  const archivedContactEmail = `archivado@${a.slug}.test`;
+  return {
+    writeOnlyKey,
+    secondStageId: await one("INSERT INTO crm.pipeline_stages (account_id, key, label, position) VALUES ($1, 'contactada', 'Contactada', 1)", []),
+    secondNoteId: await one("INSERT INTO crm.notes (account_id, contact_id, body) VALUES ($1, $2, 'Segunda nota')", [a.contactId]),
+    archivedNoteId: await one(
+      "INSERT INTO crm.notes (account_id, contact_id, body, archived_at) VALUES ($1, $2, 'Nota archivada', now())",
+      [a.contactId],
+    ),
+    doneTaskId: await one(
+      "INSERT INTO crm.tasks (account_id, contact_id, title, due_on, completed_at) VALUES ($1, $2, 'Tarea hecha', '2026-11-30', '2026-11-24T10:00:00Z')",
+      [a.contactId],
+    ),
+    archivedTaskId: await one(
+      "INSERT INTO crm.tasks (account_id, contact_id, title, archived_at) VALUES ($1, $2, 'Tarea archivada', now())",
+      [a.contactId],
+    ),
+    archivedContactId: await one(
+      'INSERT INTO crm.contacts (account_id, stage_id, full_name, email, archived_at) VALUES ($1, $2, $3, $4, now())',
+      [a.stageId, 'Persona archivada', archivedContactEmail],
+    ),
+    archivedContactEmail,
+    archivedCompanyId: await one("INSERT INTO crm.companies (account_id, name, archived_at) VALUES ($1, 'Empresa archivada', now())", []),
+  };
+}
+
+/** The base fixture plus ReadExtras, committed in one transaction, written as the admin. */
+export async function seedReadFixture(pool: pg.Pool): Promise<ReadFixture> {
   return inTransaction(pool, { context: FIXTURE_AUTHORS, commit: true }, async (client) => {
-    const a = await seedAccount(client, 'cuenta-a');
-    const b = await seedAccount(client, 'cuenta-b');
-    const revokedApiKey = 'test-key-revoked';
-    await client.query(
-      "INSERT INTO crm.api_keys (account_id, label, key_hash, permissions, revoked_at) VALUES ($1, 'revocada', $2, '{read}', now())",
-      [a.id, sha256(revokedApiKey)],
-    );
-    return { a, b, revokedApiKey };
+    const base = await seedBase(client);
+    return { ...base, extras: await seedReadExtras(client, base.a) };
   });
 }
