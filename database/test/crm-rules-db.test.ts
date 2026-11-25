@@ -11,7 +11,7 @@ import {
   READABLE_TABLES,
   SQLSTATE,
 } from './crm-rules.ts';
-import { createDisposableDatabase, runMigrations, type DisposableDatabase } from './disposable-db.ts';
+import { createDisposableDatabase, DATABASE_HOOK_TIMEOUT_MS, runMigrations, type DisposableDatabase } from './disposable-db.ts';
 
 // ADR-0005, the isolation rules as behaviour: real statements against a migrated disposable
 // database with two synthetic accounts. The audit trail and the keys are in
@@ -26,11 +26,11 @@ beforeAll(async () => {
   db = await createDisposableDatabase();
   await runMigrations(db.pool);
   fixture = await seedFixture(db.pool);
-});
+}, DATABASE_HOOK_TIMEOUT_MS);
 
 afterAll(async () => {
   await db?.drop();
-});
+}, DATABASE_HOOK_TIMEOUT_MS);
 
 const pool = (): pg.Pool => db!.pool;
 const ownContext = (): CrmContext => ownContextOf(fixture);

@@ -20,6 +20,18 @@ const MAINTENANCE_DB = 'postgres';
 
 export const MIGRATIONS_PATH = join(REPO_ROOT, MIGRATIONS_DIR);
 
+/**
+ * The time every beforeAll and afterAll of a test with a database gets, passed as the
+ * hook's second argument. Vitest's default, 10 s, ran out once (audit of ADR-0007, H1): on
+ * the first `npm run check` of a session, seven hooks that create a database, migrate it,
+ * seed it and create crm_app went past it, with every file running at once and coverage on.
+ * Warm runs fit in the default. By how much the cold one went over was not measured, so the
+ * budget is generous; a hook that really hangs still fails in this run, a minute later.
+ * hook-budget.test.ts proves every such hook carries it: `--hookTimeout` cannot, because
+ * Vitest 5.1.1 does not pass it to the projects (CLAUDE.md §8).
+ */
+export const DATABASE_HOOK_TIMEOUT_MS = 60_000;
+
 /** The only identifier this module puts into SQL text; anything but a test database is refused. */
 function testDatabase(name: string): string {
   if (!TEST_DB_NAME.test(name)) {

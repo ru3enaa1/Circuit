@@ -5,7 +5,7 @@ import { AUDITED_TABLES } from '../../apps/crm/src/db/schema.ts';
 import { SERVICE_ROLES } from '../config.ts';
 import { inTransaction, seedFixture, sha256, sqlErrorOf, type CrmContext, type Fixture } from './crm-fixture.ts';
 import { countOf, errorOf as errorIn, ownContext as ownContextOf, SQLSTATE } from './crm-rules.ts';
-import { createDisposableDatabase, runMigrations, type DisposableDatabase } from './disposable-db.ts';
+import { createDisposableDatabase, DATABASE_HOOK_TIMEOUT_MS, runMigrations, type DisposableDatabase } from './disposable-db.ts';
 
 // ADR-0005, the audit trail and the keys as behaviour, against a migrated disposable database
 // with two synthetic accounts. The isolation rules are in crm-rules-db.test.ts; both files
@@ -22,11 +22,11 @@ beforeAll(async () => {
   db = await createDisposableDatabase();
   await runMigrations(db.pool);
   fixture = await seedFixture(db.pool);
-});
+}, DATABASE_HOOK_TIMEOUT_MS);
 
 afterAll(async () => {
   await db?.drop();
-});
+}, DATABASE_HOOK_TIMEOUT_MS);
 
 const pool = (): pg.Pool => db!.pool;
 const ownContext = (): CrmContext => ownContextOf(fixture);

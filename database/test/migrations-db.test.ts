@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { MIGRATIONS_SCHEMA, MIGRATIONS_TABLE, OWNER_ROLES, SERVICE_ROLES, SERVICE_SCHEMAS } from '../config.ts';
 import { inTransaction, sqlErrorOf } from './crm-fixture.ts';
-import { createDisposableDatabase, MIGRATIONS_PATH, runMigrations, type DisposableDatabase } from './disposable-db.ts';
+import { createDisposableDatabase, DATABASE_HOOK_TIMEOUT_MS, MIGRATIONS_PATH, runMigrations, type DisposableDatabase } from './disposable-db.ts';
 import { readMigrationFolder } from './migration-rules.ts';
 
 // Each run creates its own databases, migrates them and drops them (disposable-db.ts).
@@ -78,11 +78,11 @@ describe('migrations on a disposable database', () => {
 
   beforeAll(async () => {
     db = await createDisposableDatabase();
-  });
+  }, DATABASE_HOOK_TIMEOUT_MS);
 
   afterAll(async () => {
     await db?.drop();
-  });
+  }, DATABASE_HOOK_TIMEOUT_MS);
 
   it('applies every migration to an empty database, and a second run applies nothing', async () => {
     const pool = db!.pool;
@@ -111,11 +111,11 @@ describe('two disposable databases migrating at once', () => {
     }
     const failure = created.find((outcome) => outcome.status === 'rejected');
     if (failure) throw failure.reason;
-  });
+  }, DATABASE_HOOK_TIMEOUT_MS);
 
   afterAll(async () => {
     await Promise.all(databases.map((db) => db.drop()));
-  });
+  }, DATABASE_HOOK_TIMEOUT_MS);
 
   it('both apply every migration', async () => {
     expect(databases).toHaveLength(2);
@@ -149,11 +149,11 @@ function describeRoleGuard(
     beforeAll(async () => {
       db = await createDisposableDatabase();
       await runMigrations(db.pool);
-    });
+    }, DATABASE_HOOK_TIMEOUT_MS);
 
     afterAll(async () => {
       await db?.drop();
-    });
+    }, DATABASE_HOOK_TIMEOUT_MS);
 
     const runGuard = (setup?: string): Promise<void> =>
       inTransaction(db!.pool, {}, async (client) => {

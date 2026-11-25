@@ -51,6 +51,16 @@ describe('D10 · a stage or a company of another account is a wrong field', () =
     expect(await rowCounts(crm().db.pool)).toEqual(before);
   });
 
+  // ADR-0007 A3 (audit H5): a PATCH checks its references before its contact, so a contact
+  // that does not exist, sent with another account's stage, is 400 «stageId» and not 404. The
+  // body is the one a stage that does not exist gets, so it tells nothing about b.
+  it("a missing contact with b's stage is 400 «stageId»: the references come before the contact", async () => {
+    const before = await rowCounts(crm().db.pool);
+    const response = await send('PATCH', `contacts/${MISSING_ID}`, { stageId: Number(crm().fixture.b.stageId), approval: APPROVAL });
+    expectInvalid(response, 'stageId', '');
+    expect(await rowCounts(crm().db.pool)).toEqual(before);
+  });
+
   it("b's company, an archived one and one that does not exist are 400 «companyId», with the same body", async () => {
     const { b, extras } = crm().fixture;
     const before = await rowCounts(crm().db.pool);
@@ -86,6 +96,21 @@ describe('D10 · a contact of another account, archived or missing is 404, the s
     expect(bodyOf(responses[0]!)).toEqual({ error: { code: 'no_encontrado', message: 'No se encontró.' } });
     expectSameAnswer(responses, 404);
     expect(await rowCounts(crm().db.pool)).toEqual(before);
+  });
+
+  // ADR-0007 A3 (audit of ADR-0007, probe P4): a's own stage is a reference a may use, so
+  // only the contact can stop this move, and it does: b's contact is not a's.
+  it("a's key moving b's contact to a's own stage is 404, and b's contact stays where it was", async () => {
+    const { a, b } = crm().fixture;
+    const before = await rowCounts(crm().db.pool);
+    const response = await send('PATCH', `contacts/${b.contactId}`, { stageId: Number(a.stageId), approval: APPROVAL });
+    expect([response.statusCode, bodyOf(response)]).toEqual([404, { error: { code: 'no_encontrado', message: 'No se encontró.' } }]);
+    expect(await rowCounts(crm().db.pool)).toEqual(before);
+    const saved = await crm().db.pool.query('SELECT stage_id::text AS stage_id FROM crm.contacts WHERE id = $1', [b.contactId]);
+    expect(saved.rows).toEqual([{ stage_id: b.stageId }]);
+    // Control: the same body on a's own contact is a write, so the 404 above came from the contact.
+    const control = await send('PATCH', `contacts/${a.contactId}`, { stageId: Number(a.stageId), approval: APPROVAL });
+    expect(control.statusCode, control.body).toBe(200);
   });
 
   it('archiving twice: 204, then 404, and one audit row', async () => {

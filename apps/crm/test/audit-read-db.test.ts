@@ -1,6 +1,7 @@
 import type { LightMyRequestResponse } from 'fastify';
 import { beforeAll, describe, expect, it } from 'vitest';
 
+import { DATABASE_HOOK_TIMEOUT_MS } from '../../../database/test/disposable-db.ts';
 import { APPROVAL, bearer, bodyOf, expectInvalid, sendJson, useCrmUnderTest } from './crm-under-test.ts';
 
 // ADR-0007 D13: the audit trail as the API reads it, by account, newest first and paged like
@@ -51,7 +52,7 @@ beforeAll(async () => {
     expect(response.statusCode, response.body).toBe(201);
     noteIds[account] = (bodyOf(response) as { note: { id: number } }).note.id;
   }
-});
+}, DATABASE_HOOK_TIMEOUT_MS);
 
 describe('D13 · the audit trail through the API', () => {
   it('each entry carries the fields of its list, never the account, newest first', async () => {

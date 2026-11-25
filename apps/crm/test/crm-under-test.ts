@@ -4,7 +4,12 @@ import { afterAll, beforeAll, expect } from 'vitest';
 
 import { readLocalEnv } from '../../../database/env.ts';
 import { seedReadFixture, type ReadFixture } from '../../../database/test/crm-fixture.ts';
-import { createDisposableDatabase, runMigrations, type DisposableDatabase } from '../../../database/test/disposable-db.ts';
+import {
+  createDisposableDatabase,
+  DATABASE_HOOK_TIMEOUT_MS,
+  runMigrations,
+  type DisposableDatabase,
+} from '../../../database/test/disposable-db.ts';
 import { createOrUpdateCrmApp, readCrmPassword } from '../../../database/users.ts';
 import { CRM_DB_USER } from '../src/config.ts';
 import type { Connector } from '../src/db/read-scope.ts';
@@ -42,12 +47,12 @@ export function useCrmUnderTest(options: { readonly poolSize?: number } = {}): (
     const app = buildServer({ pool, log: (line) => logs.push(line) });
     await app.ready();
     state = { app, fixture, logs, pool, db };
-  });
+  }, DATABASE_HOOK_TIMEOUT_MS);
 
   afterAll(async () => {
     await state?.app.close();
     await db?.drop();
-  });
+  }, DATABASE_HOOK_TIMEOUT_MS);
 
   return () => {
     if (state === undefined) throw new Error('El CRM de prueba no se levantó: falló el beforeAll.');

@@ -28,7 +28,7 @@ import {
   READABLE_TABLES,
   SQLSTATE,
 } from './crm-rules.ts';
-import { createDisposableDatabase, runMigrations, type DisposableDatabase } from './disposable-db.ts';
+import { createDisposableDatabase, DATABASE_HOOK_TIMEOUT_MS, runMigrations, type DisposableDatabase } from './disposable-db.ts';
 
 // ADR-0006 D4 and D5: crm_app, the user the CRM logs in as. It is made the way `npm run
 // db:users` makes it, and the rules of ADR-0005 are repeated connecting as crm_app, without
@@ -50,11 +50,11 @@ beforeAll(async () => {
   fixture = await seedFixture(db.pool);
   await createOrUpdateCrmApp(db.connection, password);
   asApp = db.poolAs(CRM_DB_USER, password);
-});
+}, DATABASE_HOOK_TIMEOUT_MS);
 
 afterAll(async () => {
   await db?.drop();
-});
+}, DATABASE_HOOK_TIMEOUT_MS);
 
 /** Runs `work` as the admin, in a transaction on the server's maintenance database that is always rolled back. */
 async function onServer<T>(work: (client: pg.Client) => Promise<T>): Promise<T> {

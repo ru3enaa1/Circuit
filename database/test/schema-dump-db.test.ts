@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { REPO_ROOT } from '../config.ts';
-import { createDisposableDatabase, runMigrations, type DisposableDatabase } from './disposable-db.ts';
+import { createDisposableDatabase, DATABASE_HOOK_TIMEOUT_MS, runMigrations, type DisposableDatabase } from './disposable-db.ts';
 
 // R8 and ADR-0005 D16: database/schema.sql is not written by hand. It is the schema-only dump
 // of a freshly migrated disposable database, grants and policies included, and this test
@@ -60,11 +60,11 @@ describe('database/schema.sql', () => {
   beforeAll(async () => {
     db = await createDisposableDatabase();
     await runMigrations(db.pool);
-  });
+  }, DATABASE_HOOK_TIMEOUT_MS);
 
   afterAll(async () => {
     await db?.drop();
-  });
+  }, DATABASE_HOOK_TIMEOUT_MS);
 
   it('is the dump of a freshly migrated database', async () => {
     const dump = dumpSchema(db!.name, db!.connection.user);

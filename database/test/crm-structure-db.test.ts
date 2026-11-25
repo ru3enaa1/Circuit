@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import * as crmSchema from '../../apps/crm/src/db/schema.ts';
 import { OWNER_ROLES, SERVICE_ROLES } from '../config.ts';
 import { crmTablePrivilegesOf, EXPECTED_CRM_SERVICE_PRIVILEGES } from './crm-privileges.ts';
-import { createDisposableDatabase, runMigrations, type DisposableDatabase } from './disposable-db.ts';
+import { createDisposableDatabase, DATABASE_HOOK_TIMEOUT_MS, runMigrations, type DisposableDatabase } from './disposable-db.ts';
 
 // ADR-0005, the structure the migrations leave: read from the catalogs of a freshly migrated
 // disposable database and compared with fixed lists. Changing the schema means changing a
@@ -156,11 +156,11 @@ let db: DisposableDatabase | undefined;
 beforeAll(async () => {
   db = await createDisposableDatabase();
   await runMigrations(db.pool);
-});
+}, DATABASE_HOOK_TIMEOUT_MS);
 
 afterAll(async () => {
   await db?.drop();
-});
+}, DATABASE_HOOK_TIMEOUT_MS);
 
 async function rows<T extends object>(text: string, values: readonly unknown[] = []): Promise<T[]> {
   const result = await db!.pool.query<T>(text, [...values]);

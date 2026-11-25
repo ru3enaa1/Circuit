@@ -8,7 +8,12 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { REPO_ROOT } from '../../../database/config.ts';
 import { readLocalEnv } from '../../../database/env.ts';
 import { seedFixture, type Fixture } from '../../../database/test/crm-fixture.ts';
-import { createDisposableDatabase, runMigrations, type DisposableDatabase } from '../../../database/test/disposable-db.ts';
+import {
+  createDisposableDatabase,
+  DATABASE_HOOK_TIMEOUT_MS,
+  runMigrations,
+  type DisposableDatabase,
+} from '../../../database/test/disposable-db.ts';
 import { createOrUpdateCrmApp, readCrmPassword } from '../../../database/users.ts';
 import { ConfigError } from '../src/config.ts';
 import type { LogLine } from '../src/log.ts';
@@ -37,7 +42,7 @@ beforeAll(async () => {
   await runMigrations(db.pool);
   fixture = await seedFixture(db.pool);
   await createOrUpdateCrmApp(db.connection, password);
-});
+}, DATABASE_HOOK_TIMEOUT_MS);
 
 afterAll(async () => {
   // Before the database goes: a live CRM holds connections to it.
@@ -49,7 +54,7 @@ afterAll(async () => {
     }
   }
   await db?.drop();
-});
+}, DATABASE_HOOK_TIMEOUT_MS);
 
 function crmEnv(overrides: Readonly<Record<string, string | undefined>> = {}): Record<string, string | undefined> {
   return {

@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { DATABASE_HOOK_TIMEOUT_MS } from '../../../database/test/disposable-db.ts';
 import { buildServer } from '../src/server/server.ts';
 import { APPROVAL, bearer, bodyOf, expectInvalid, interceptingConnector, sendJson, useCrmUnderTest, type Statement } from './crm-under-test.ts';
 
@@ -28,11 +29,11 @@ beforeAll(async () => {
     log: () => undefined,
   });
   await app.ready();
-});
+}, DATABASE_HOOK_TIMEOUT_MS);
 
 afterAll(async () => {
   await app?.close();
-});
+}, DATABASE_HOOK_TIMEOUT_MS);
 
 function send(method: 'POST' | 'PATCH', path: string, body: unknown, key = crm().fixture.a.apiKey) {
   return sendJson(app!, method, `/accounts/cuenta-a/${path}`, bearer(key), body);
