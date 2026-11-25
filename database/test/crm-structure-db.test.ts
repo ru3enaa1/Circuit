@@ -3,7 +3,7 @@ import { getTableConfig, PgTable } from 'drizzle-orm/pg-core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import * as crmSchema from '../../apps/crm/src/db/schema.ts';
-import { SERVICE_ROLES } from '../config.ts';
+import { OWNER_ROLES, SERVICE_ROLES } from '../config.ts';
 import { createDisposableDatabase, runMigrations, type DisposableDatabase } from './disposable-db.ts';
 
 // ADR-0005, the structure the migrations leave: read from the catalogs of a freshly migrated
@@ -149,6 +149,11 @@ const EXPECTED_FUNCTIONS = [
 ];
 
 const AUDIT_TRIGGERS = ['companies_audit', 'contacts_audit', 'notes_audit', 'tasks_audit'];
+
+// ADR-0006 D3: what crm holds, by kind, so an owner check over an empty list cannot pass.
+// 8 tables, the 8 sequences of their identity columns, and the indexes behind their keys.
+const CRM_FUNCTIONS = EXPECTED_FUNCTIONS.map((fn) => fn.name);
+const CRM_TABLE_COUNT = 8;
 
 function columnsFromSchemaFile(): Record<string, string[]> {
   const exported: readonly unknown[] = Object.values(crmSchema);
@@ -324,6 +329,49 @@ describe('D12, D13 · functions and schemas', () => {
       [SERVICE_ROLES.crm],
     );
     expect(functions).toEqual(EXPECTED_FUNCTIONS);
+  });
+
+  it('crm_owner owns the schema and every relation and function in it (ADR-0006 D3, audit H3)', async () => {
+    const owned = await rows<{ kind: string; name: string; owner: string }>(
+      `SELECT 'schema' AS kind, n.nspname AS name, pg_get_userbyid(n.nspowner) AS owner
+       FROM pg_namespace n WHERE n.nspname = 'crm'
+       UNION ALL
+       SELECT 'relation ' || c.relkind::text, c.relname, pg_get_userbyid(c.relowner)
+       FROM pg_class c WHERE c.relnamespace = 'crm'::regnamespace
+       UNION ALL
+       SELECT 'function', p.proname, pg_get_userbyid(p.proowner)
+       FROM pg_proc p WHERE p.pronamespace = 'crm'::regnamespace
+       ORDER BY 1, 2`,
+    );
+    const named = (kind: string) => owned.filter((row) => row.kind === kind).map((row) => row.name);
+    expect(named('schema')).toEqual(['crm']);
+    expect(named('function')).toEqual(CRM_FUNCTIONS);
+    expect(named('relation r')).toEqual(Object.keys(EXPECTED_COLUMNS).sort());
+    expect(named('relation S')).toHaveLength(CRM_TABLE_COUNT);
+    expect(named('relation i').length).toBeGreaterThan(CRM_TABLE_COUNT);
+    expect(owned.filter((row) => row.owner !== OWNER_ROLES.crm)).toEqual([]);
+  });
+
+  it('crm_owner cannot log in and has no attribute, membership or member (ADR-0006 D3)', async () => {
+    const found = await rows<Record<string, unknown>>(
+      `SELECT r.rolcanlogin, r.rolsuper, r.rolcreatedb, r.rolcreaterole, r.rolreplication, r.rolbypassrls,
+              (SELECT count(*)::int FROM pg_auth_members m WHERE m.member = r.oid) AS member_of,
+              (SELECT count(*)::int FROM pg_auth_members m WHERE m.roleid = r.oid) AS members
+       FROM pg_roles r WHERE r.rolname = $1`,
+      [OWNER_ROLES.crm],
+    );
+    expect(found).toEqual([
+      {
+        rolcanlogin: false,
+        rolsuper: false,
+        rolcreatedb: false,
+        rolcreaterole: false,
+        rolreplication: false,
+        rolbypassrls: false,
+        member_of: 0,
+        members: 0,
+      },
+    ]);
   });
 
   it('neither service role reaches the schema of the other one (D13)', async () => {

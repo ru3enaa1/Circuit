@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import type pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { MIGRATIONS_SCHEMA, MIGRATIONS_TABLE, SERVICE_ROLES, SERVICE_SCHEMAS } from '../config.ts';
+import { MIGRATIONS_SCHEMA, MIGRATIONS_TABLE, OWNER_ROLES, SERVICE_ROLES, SERVICE_SCHEMAS } from '../config.ts';
 import { inTransaction, sqlErrorOf } from './crm-fixture.ts';
 import { createDisposableDatabase, MIGRATIONS_PATH, runMigrations, type DisposableDatabase } from './disposable-db.ts';
 import { readMigrationFolder } from './migration-rules.ts';
@@ -20,33 +20,40 @@ const FRESH_ROLES_EXPECTED = process.env['CIRCUIT_FRESH_ROLES'] === '1';
 
 const SECURITY_MIGRATION = '0002_crm_security.sql';
 const ROLE_GUARD_MESSAGE = 'crm: un rol de servicio ya existe con atributos o membresías de más';
+const OWNER_MIGRATION = '0004_crm_owner.sql';
+const OWNER_GUARD_MESSAGE = 'crm: crm_owner ya existe con atributos o membresías de más';
 const RAISE_EXCEPTION = 'P0001';
 
-/** The guard of 0002 as written: the one statement that raises ROLE_GUARD_MESSAGE. */
-function roleGuardStatement(): string {
-  const found = readFileSync(join(MIGRATIONS_PATH, SECURITY_MIGRATION), 'utf8')
+/** A guard as written in its migration: the one statement that raises `message`. */
+function guardStatement(file: string, message: string): string {
+  const found = readFileSync(join(MIGRATIONS_PATH, file), 'utf8')
     .split('--> statement-breakpoint')
-    .filter((statement) => statement.includes(ROLE_GUARD_MESSAGE));
+    .filter((statement) => statement.includes(message));
   if (found.length !== 1) {
-    throw new Error(`Se esperaba una sola guarda de roles en ${SECURITY_MIGRATION}; hay ${found.length}.`);
+    throw new Error(`Se esperaba una sola guarda de roles en ${file}; hay ${found.length}.`);
   }
   return found[0]!;
 }
 
-/** The service roles on the server, and whether each has anything it should not. */
+/**
+ * The roles the migrations create (the service roles of 0002 and the owner of 0004), and
+ * whether each has anything it should not. Members are not counted: crm_app is a member of
+ * crm_service on purpose; crm-structure-db.test.ts checks crm_owner has none.
+ */
 async function serviceRolesIn(pool: pg.Pool): Promise<{ rolname: string; risky: boolean }[]> {
   const result = await pool.query<{ rolname: string; risky: boolean }>(
     `SELECT r.rolname,
             r.rolcanlogin OR r.rolsuper OR r.rolcreatedb OR r.rolcreaterole OR r.rolreplication OR r.rolbypassrls
               OR EXISTS (SELECT 1 FROM pg_auth_members AS m WHERE m.member = r.oid) AS risky
      FROM pg_roles AS r WHERE r.rolname = ANY($1) ORDER BY r.rolname`,
-    [Object.values(SERVICE_ROLES)],
+    [[...Object.values(SERVICE_ROLES), ...Object.values(OWNER_ROLES)]],
   );
   return result.rows;
 }
 
 const CLEAN_ROLES = [
   { rolname: SERVICE_ROLES.circuit, risky: false },
+  { rolname: OWNER_ROLES.crm, risky: false },
   { rolname: SERVICE_ROLES.crm, risky: false },
 ];
 
@@ -126,44 +133,71 @@ describe('two disposable databases migrating at once', () => {
   });
 });
 
-// ADR-0005 D14, audit H1 b: a service role found with login, an admin attribute or a
+// ADR-0005 D14, audit H1 b, and ADR-0006 D3: a role found with login, an admin attribute or a
 // membership stops the migration. Each case changes a real role, because roles belong to
 // the server, inside a transaction that is always rolled back: no other connection sees
 // the change, and the last case proves nothing was left behind.
-describe('the role guard of 0002', () => {
-  let db: DisposableDatabase | undefined;
+function describeRoleGuard(
+  title: string,
+  guard: { readonly file: string; readonly message: string },
+  cases: readonly (readonly [string, string])[],
+  lastCase: string,
+): void {
+  describe(title, () => {
+    let db: DisposableDatabase | undefined;
 
-  beforeAll(async () => {
-    db = await createDisposableDatabase();
-    await runMigrations(db.pool);
-  });
-
-  afterAll(async () => {
-    await db?.drop();
-  });
-
-  const runGuard = (setup?: string): Promise<void> =>
-    inTransaction(db!.pool, {}, async (client) => {
-      if (setup !== undefined) await client.query(setup);
-      await client.query(roleGuardStatement());
+    beforeAll(async () => {
+      db = await createDisposableDatabase();
+      await runMigrations(db.pool);
     });
 
-  it('lets clean roles through (control)', async () => {
-    await expect(runGuard()).resolves.toBeUndefined();
-  });
+    afterAll(async () => {
+      await db?.drop();
+    });
 
-  // The role names are constants from config.ts, never input.
-  it.each([
+    const runGuard = (setup?: string): Promise<void> =>
+      inTransaction(db!.pool, {}, async (client) => {
+        if (setup !== undefined) await client.query(setup);
+        await client.query(guardStatement(guard.file, guard.message));
+      });
+
+    it('lets clean roles through (control)', async () => {
+      await expect(runGuard()).resolves.toBeUndefined();
+    });
+
+    it.each(cases)('stops the migration when %s', async (_case, setup) => {
+      const error = await sqlErrorOf(() => runGuard(setup));
+      expect(error.code).toBe(RAISE_EXCEPTION);
+      expect(error.message).toBe(guard.message);
+    });
+
+    it(lastCase, async () => {
+      expect(await serviceRolesIn(db!.pool)).toEqual(CLEAN_ROLES);
+    });
+  });
+}
+
+// The role names are constants from config.ts, never input.
+describeRoleGuard(
+  'the role guard of 0002',
+  { file: SECURITY_MIGRATION, message: ROLE_GUARD_MESSAGE },
+  [
     ['crm_service can log in', `ALTER ROLE ${SERVICE_ROLES.crm} LOGIN`],
     ['crm_service is a member of another role', `GRANT pg_read_all_data TO ${SERVICE_ROLES.crm}`],
     ['circuit_service bypasses row-level security', `ALTER ROLE ${SERVICE_ROLES.circuit} BYPASSRLS`],
-  ])('stops the migration when %s', async (_case, setup) => {
-    const error = await sqlErrorOf(() => runGuard(setup));
-    expect(error.code).toBe(RAISE_EXCEPTION);
-    expect(error.message).toBe(ROLE_GUARD_MESSAGE);
-  });
+  ],
+  'leaves both roles as they were',
+);
 
-  it('leaves both roles as they were', async () => {
-    expect(await serviceRolesIn(db!.pool)).toEqual(CLEAN_ROLES);
-  });
-});
+describeRoleGuard(
+  'the owner guard of 0004',
+  { file: OWNER_MIGRATION, message: OWNER_GUARD_MESSAGE },
+  [
+    ['crm_owner can log in', `ALTER ROLE ${OWNER_ROLES.crm} LOGIN`],
+    ['crm_owner is a member of another role', `GRANT pg_read_all_data TO ${OWNER_ROLES.crm}`],
+    // A member would act as the owner of crm, past every policy.
+    ['crm_owner has a member', `GRANT ${OWNER_ROLES.crm} TO ${SERVICE_ROLES.circuit}`],
+    ['crm_owner bypasses row-level security', `ALTER ROLE ${OWNER_ROLES.crm} BYPASSRLS`],
+  ],
+  'leaves the roles as they were',
+);

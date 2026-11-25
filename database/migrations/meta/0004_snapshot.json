@@ -1,0 +1,1010 @@
+{
+  "id": "ce58edde-f216-4b69-b938-17f6e20c73b1",
+  "prevId": "36daa5f5-a54b-4693-b5dd-ec450607057b",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "crm.accounts": {
+      "name": "accounts",
+      "schema": "crm",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "accounts_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "crm",
+            "type": "always"
+          }
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "accounts_slug_key": {
+          "name": "accounts_slug_key",
+          "columns": [
+            "slug"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "accounts_slug_format": {
+          "name": "accounts_slug_format",
+          "value": "slug ~ '^[a-z0-9-]{1,40}$'"
+        },
+        "accounts_name_length": {
+          "name": "accounts_name_length",
+          "value": "char_length(name) BETWEEN 1 AND 200"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "crm.api_keys": {
+      "name": "api_keys",
+      "schema": "crm",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "api_keys_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "crm",
+            "type": "always"
+          }
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "key_hash": {
+          "name": "key_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "permissions": {
+          "name": "permissions",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "api_keys_account_fk": {
+          "name": "api_keys_account_fk",
+          "tableFrom": "api_keys",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "tableTo": "accounts",
+          "schemaTo": "crm",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "api_keys_account_id_id_key": {
+          "name": "api_keys_account_id_id_key",
+          "columns": [
+            "account_id",
+            "id"
+          ],
+          "nullsNotDistinct": false
+        },
+        "api_keys_key_hash_key": {
+          "name": "api_keys_key_hash_key",
+          "columns": [
+            "key_hash"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "api_keys_key_hash_length": {
+          "name": "api_keys_key_hash_length",
+          "value": "octet_length(key_hash) = 32"
+        },
+        "api_keys_permissions_valid": {
+          "name": "api_keys_permissions_valid",
+          "value": "cardinality(permissions) > 0 AND array_ndims(permissions) = 1 AND permissions <@ ARRAY['read', 'write', 'delete', 'export']::text[]"
+        },
+        "api_keys_label_length": {
+          "name": "api_keys_label_length",
+          "value": "char_length(label) BETWEEN 1 AND 200"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "crm.audit_log": {
+      "name": "audit_log",
+      "schema": "crm",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "audit_log_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "crm",
+            "type": "always"
+          }
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "table_name": {
+          "name": "table_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "row_id": {
+          "name": "row_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "operation": {
+          "name": "operation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "changed_columns": {
+          "name": "changed_columns",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "api_key_id": {
+          "name": "api_key_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proposed_by": {
+          "name": "proposed_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "approved_by": {
+          "name": "approved_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "approval_ref": {
+          "name": "approval_ref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "audit_log_account_id_table_name_row_id_idx": {
+          "name": "audit_log_account_id_table_name_row_id_idx",
+          "columns": [
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "table_name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "row_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "audit_log_account_fk": {
+          "name": "audit_log_account_fk",
+          "tableFrom": "audit_log",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "tableTo": "accounts",
+          "schemaTo": "crm",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "audit_log_api_key_fk": {
+          "name": "audit_log_api_key_fk",
+          "tableFrom": "audit_log",
+          "columnsFrom": [
+            "account_id",
+            "api_key_id"
+          ],
+          "tableTo": "api_keys",
+          "schemaTo": "crm",
+          "columnsTo": [
+            "account_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "audit_log_table_name_valid": {
+          "name": "audit_log_table_name_valid",
+          "value": "table_name IN ('companies', 'contacts', 'notes', 'tasks')"
+        },
+        "audit_log_operation_valid": {
+          "name": "audit_log_operation_valid",
+          "value": "operation IN ('insert', 'update')"
+        },
+        "audit_log_proposed_by_format": {
+          "name": "audit_log_proposed_by_format",
+          "value": "proposed_by ~ '^[a-z0-9-]{1,40}$'"
+        },
+        "audit_log_approved_by_format": {
+          "name": "audit_log_approved_by_format",
+          "value": "approved_by ~ '^[a-z0-9-]{1,40}$'"
+        },
+        "audit_log_approval_ref_format": {
+          "name": "audit_log_approval_ref_format",
+          "value": "approval_ref ~ '^[a-z0-9-]{1,40}$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "crm.companies": {
+      "name": "companies",
+      "schema": "crm",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "companies_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "crm",
+            "type": "always"
+          }
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "industry": {
+          "name": "industry",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "size_range": {
+          "name": "size_range",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revenue_range": {
+          "name": "revenue_range",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "companies_account_fk": {
+          "name": "companies_account_fk",
+          "tableFrom": "companies",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "tableTo": "accounts",
+          "schemaTo": "crm",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "companies_account_id_id_key": {
+          "name": "companies_account_id_id_key",
+          "columns": [
+            "account_id",
+            "id"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "companies_name_length": {
+          "name": "companies_name_length",
+          "value": "char_length(name) BETWEEN 1 AND 200"
+        },
+        "companies_industry_length": {
+          "name": "companies_industry_length",
+          "value": "char_length(industry) BETWEEN 1 AND 200"
+        },
+        "companies_size_range_length": {
+          "name": "companies_size_range_length",
+          "value": "char_length(size_range) BETWEEN 1 AND 200"
+        },
+        "companies_revenue_range_length": {
+          "name": "companies_revenue_range_length",
+          "value": "char_length(revenue_range) BETWEEN 1 AND 200"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "crm.contacts": {
+      "name": "contacts",
+      "schema": "crm",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "contacts_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "crm",
+            "type": "always"
+          }
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "stage_id": {
+          "name": "stage_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "full_name": {
+          "name": "full_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "contacts_account_email_active_key": {
+          "name": "contacts_account_email_active_key",
+          "columns": [
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "email",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "archived_at IS NULL",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "contacts_account_fk": {
+          "name": "contacts_account_fk",
+          "tableFrom": "contacts",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "tableTo": "accounts",
+          "schemaTo": "crm",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "contacts_company_fk": {
+          "name": "contacts_company_fk",
+          "tableFrom": "contacts",
+          "columnsFrom": [
+            "account_id",
+            "company_id"
+          ],
+          "tableTo": "companies",
+          "schemaTo": "crm",
+          "columnsTo": [
+            "account_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "contacts_stage_fk": {
+          "name": "contacts_stage_fk",
+          "tableFrom": "contacts",
+          "columnsFrom": [
+            "account_id",
+            "stage_id"
+          ],
+          "tableTo": "pipeline_stages",
+          "schemaTo": "crm",
+          "columnsTo": [
+            "account_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "contacts_account_id_id_key": {
+          "name": "contacts_account_id_id_key",
+          "columns": [
+            "account_id",
+            "id"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "contacts_full_name_length": {
+          "name": "contacts_full_name_length",
+          "value": "char_length(full_name) BETWEEN 1 AND 200"
+        },
+        "contacts_email_length": {
+          "name": "contacts_email_length",
+          "value": "char_length(email) BETWEEN 1 AND 254"
+        },
+        "contacts_email_lowercase": {
+          "name": "contacts_email_lowercase",
+          "value": "email = lower(email)"
+        },
+        "contacts_email_shape": {
+          "name": "contacts_email_shape",
+          "value": "email ~ '^[^@[:space:]]+@[^@[:space:]]+$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "crm.notes": {
+      "name": "notes",
+      "schema": "crm",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "notes_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "crm",
+            "type": "always"
+          }
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "contact_id": {
+          "name": "contact_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "body": {
+          "name": "body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "notes_account_id_contact_id_idx": {
+          "name": "notes_account_id_contact_id_idx",
+          "columns": [
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "contact_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "notes_account_fk": {
+          "name": "notes_account_fk",
+          "tableFrom": "notes",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "tableTo": "accounts",
+          "schemaTo": "crm",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "notes_contact_fk": {
+          "name": "notes_contact_fk",
+          "tableFrom": "notes",
+          "columnsFrom": [
+            "account_id",
+            "contact_id"
+          ],
+          "tableTo": "contacts",
+          "schemaTo": "crm",
+          "columnsTo": [
+            "account_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "notes_body_length": {
+          "name": "notes_body_length",
+          "value": "char_length(body) BETWEEN 1 AND 4000"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "crm.pipeline_stages": {
+      "name": "pipeline_stages",
+      "schema": "crm",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "pipeline_stages_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "crm",
+            "type": "always"
+          }
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "pipeline_stages_account_fk": {
+          "name": "pipeline_stages_account_fk",
+          "tableFrom": "pipeline_stages",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "tableTo": "accounts",
+          "schemaTo": "crm",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "pipeline_stages_account_id_id_key": {
+          "name": "pipeline_stages_account_id_id_key",
+          "columns": [
+            "account_id",
+            "id"
+          ],
+          "nullsNotDistinct": false
+        },
+        "pipeline_stages_account_id_key_key": {
+          "name": "pipeline_stages_account_id_key_key",
+          "columns": [
+            "account_id",
+            "key"
+          ],
+          "nullsNotDistinct": false
+        },
+        "pipeline_stages_account_id_position_key": {
+          "name": "pipeline_stages_account_id_position_key",
+          "columns": [
+            "account_id",
+            "position"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "pipeline_stages_key_format": {
+          "name": "pipeline_stages_key_format",
+          "value": "key ~ '^[a-z0-9-]{1,40}$'"
+        },
+        "pipeline_stages_label_length": {
+          "name": "pipeline_stages_label_length",
+          "value": "char_length(label) BETWEEN 1 AND 200"
+        },
+        "pipeline_stages_position_range": {
+          "name": "pipeline_stages_position_range",
+          "value": "position >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "crm.tasks": {
+      "name": "tasks",
+      "schema": "crm",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "tasks_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "crm",
+            "type": "always"
+          }
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "contact_id": {
+          "name": "contact_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "due_on": {
+          "name": "due_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "tasks_account_id_contact_id_idx": {
+          "name": "tasks_account_id_contact_id_idx",
+          "columns": [
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "contact_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "tasks_account_fk": {
+          "name": "tasks_account_fk",
+          "tableFrom": "tasks",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "tableTo": "accounts",
+          "schemaTo": "crm",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "tasks_contact_fk": {
+          "name": "tasks_contact_fk",
+          "tableFrom": "tasks",
+          "columnsFrom": [
+            "account_id",
+            "contact_id"
+          ],
+          "tableTo": "contacts",
+          "schemaTo": "crm",
+          "columnsTo": [
+            "account_id",
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "tasks_title_length": {
+          "name": "tasks_title_length",
+          "value": "char_length(title) BETWEEN 1 AND 200"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {
+    "circuit": "circuit",
+    "crm": "crm"
+  },
+  "views": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
