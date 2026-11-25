@@ -12,7 +12,7 @@ import {
   hashMigrations,
   parseJournal,
   type JournalEntry,
-} from './migration-rules.js';
+} from './migration-rules.ts';
 
 // Positive and negative controls for the rules: each check must catch its planted violation
 // and must not fire on the harmless statement that looks like it.

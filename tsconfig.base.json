@@ -25,8 +25,12 @@
     // Third-party declaration files are not ours to fix; our own code is fully checked.
     "skipLibCheck": true,
 
-    // Type checking only. How each app runs (build or type stripping) is decided with the
-    // first server, in F1.
-    "noEmit": true
+    // Type checking only: Node 24 runs the .ts files as they are, by stripping the types
+    // (ADR-0006 D1). Stripping does not rewrite import paths, so relative imports name the
+    // .ts file; and it cannot erase syntax that emits code (enum, namespace, parameter
+    // properties), so TypeScript refuses it here before Node would at run time.
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true
   }
 }

@@ -6,8 +6,8 @@ import {
   MODULE_RULES,
   PACKAGE_OWNERS,
   type ModuleName,
-} from './module-map.js';
-import { readImports } from './source-imports.js';
+} from './module-map.ts';
+import { readImports } from './source-imports.ts';
 
 /**
  * - `not-through-index`: reaches into another module instead of its index.ts (ADR-0003 M1).
@@ -148,7 +148,10 @@ function isRelative(specifier: string): boolean {
   );
 }
 
-/** `src/modules/model/index.js` and `.ts` both name the index (nodenext imports use `.js`). */
+/**
+ * `src/modules/model/index.ts` and `.js` both name the index: the repository imports with
+ * `.ts` (type stripping, ADR-0006 D1), and `.js` is what nodenext would accept otherwise.
+ */
 function isIndexOf(target: string, module: ModuleName): boolean {
   return target.replace(/\.(js|ts)$/, '') === `${MODULES_DIR}/${module}/index`;
 }

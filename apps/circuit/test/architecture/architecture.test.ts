@@ -4,13 +4,13 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { CRM_PACKAGE, MODULE_NAMES } from './module-map.js';
+import { CRM_PACKAGE, MODULE_NAMES } from './module-map.ts';
 import {
   checkSourceFiles,
   declaredDependencies,
   type RuleId,
   type SourceFile,
-} from './module-rules.js';
+} from './module-rules.ts';
 
 const APP_ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const SOURCE_EXTENSIONS = ['.ts', '.tsx', '.mts', '.cts', '.js', '.mjs', '.cjs'];
@@ -77,7 +77,7 @@ describe('positive controls: each rule catches the violation it targets', () => 
     [
       'the core imports another module (M2)',
       'src/modules/circuit/engine.ts',
-      "import { simulator } from '../model/index.js';",
+      "import { simulator } from '../model/index.ts';",
       ['module-not-allowed'],
     ],
     [
@@ -95,25 +95,25 @@ describe('positive controls: each rule catches the violation it targets', () => 
     [
       'a module reaches into the core instead of its index (M1)',
       'src/modules/model/simulator.ts',
-      "import type { Station } from '../circuit/stations.js';",
+      "import type { Station } from '../circuit/stations.ts';",
       ['not-through-index'],
     ],
     [
       'a module imports a module the map does not allow',
       'src/modules/approval/review.ts',
-      "import { client } from '../crm-client/index.js';",
+      "import { client } from '../crm-client/index.ts';",
       ['module-not-allowed'],
     ],
     [
       'a module imports the composition root',
       'src/modules/scenario/load.ts',
-      "import '../../main.js';",
+      "import '../../main.ts';",
       ['module-not-allowed'],
     ],
     [
       'the composition root reaches into a module (M1)',
       'src/main.ts',
-      "import { createSimulator } from './modules/model/simulator.js';",
+      "import { createSimulator } from './modules/model/simulator.ts';",
       ['not-through-index'],
     ],
     [
@@ -125,7 +125,7 @@ describe('positive controls: each rule catches the violation it targets', () => 
     [
       'a relative import into the CRM app (M3)',
       'src/main.ts',
-      "import { db } from '../../crm/src/db.js';",
+      "import { db } from '../../crm/src/db.ts';",
       ['leaves-app'],
     ],
     [
@@ -162,17 +162,17 @@ describe('negative controls: allowed code stays green', () => {
     [
       'a module imports the core through its index',
       'src/modules/model/simulator.ts',
-      "import type { ModelPort } from '../circuit/index.js';",
+      "import type { ModelPort } from '../circuit/index.ts';",
     ],
     [
       'a module imports its own internals',
       'src/modules/circuit/engine.ts',
-      "import { STATIONS } from './stations.js';",
+      "import { STATIONS } from './stations.ts';",
     ],
     [
       'the composition root imports module indexes',
       'src/main.ts',
-      "import { createSimulator } from './modules/model/index.js';",
+      "import { createSimulator } from './modules/model/index.ts';",
     ],
     [
       'the composition root imports a framework',

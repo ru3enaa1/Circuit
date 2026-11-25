@@ -4,10 +4,10 @@ import { join } from 'node:path';
 import type pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { MIGRATIONS_SCHEMA, MIGRATIONS_TABLE, SERVICE_ROLES, SERVICE_SCHEMAS } from '../config.js';
-import { inTransaction, sqlErrorOf } from './crm-fixture.js';
-import { createDisposableDatabase, MIGRATIONS_PATH, runMigrations, type DisposableDatabase } from './disposable-db.js';
-import { readMigrationFolder } from './migration-rules.js';
+import { MIGRATIONS_SCHEMA, MIGRATIONS_TABLE, SERVICE_ROLES, SERVICE_SCHEMAS } from '../config.ts';
+import { inTransaction, sqlErrorOf } from './crm-fixture.ts';
+import { createDisposableDatabase, MIGRATIONS_PATH, runMigrations, type DisposableDatabase } from './disposable-db.ts';
+import { readMigrationFolder } from './migration-rules.ts';
 
 // Each run creates its own databases, migrates them and drops them (disposable-db.ts).
 

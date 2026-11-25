@@ -2,8 +2,8 @@ import { execFileSync } from 'node:child_process';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { REPO_ROOT } from '../config.js';
-import { createDisposableDatabase, runMigrations, type DisposableDatabase } from './disposable-db.js';
+import { REPO_ROOT } from '../config.ts';
+import { createDisposableDatabase, runMigrations, type DisposableDatabase } from './disposable-db.ts';
 
 // R8 and ADR-0005 D16: database/schema.sql is not written by hand. It is the schema-only dump
 // of a freshly migrated disposable database, grants and policies included, and this test

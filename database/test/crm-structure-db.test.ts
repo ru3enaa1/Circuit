@@ -2,9 +2,9 @@ import { is } from 'drizzle-orm';
 import { getTableConfig, PgTable } from 'drizzle-orm/pg-core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import * as crmSchema from '../../apps/crm/src/db/schema.js';
-import { SERVICE_ROLES } from '../config.js';
-import { createDisposableDatabase, runMigrations, type DisposableDatabase } from './disposable-db.js';
+import * as crmSchema from '../../apps/crm/src/db/schema.ts';
+import { SERVICE_ROLES } from '../config.ts';
+import { createDisposableDatabase, runMigrations, type DisposableDatabase } from './disposable-db.ts';
 
 // ADR-0005, the structure the migrations leave: read from the catalogs of a freshly migrated
 // disposable database and compared with fixed lists. Changing the schema means changing a

@@ -4,8 +4,8 @@ import { join } from 'node:path';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
-import { readAdminConnection } from '../connection.js';
-import { readLocalEnv, type Env } from '../env.js';
+import { readAdminConnection } from '../connection.ts';
+import { readLocalEnv, type Env } from '../env.ts';
 
 const SECRET = 'secret-value-that-must-not-leak';
 const COMPLETE: Env = {

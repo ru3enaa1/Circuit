@@ -1,4 +1,4 @@
-import type { MigrationHashes } from './migration-rules.js';
+import type { MigrationHashes } from './migration-rules.ts';
 
 /**
  * The SHA-256 of every migration as committed (ADR-0005 D15, audit H6), the same hash drizzle

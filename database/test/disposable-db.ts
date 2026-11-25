@@ -5,9 +5,9 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import pg from 'pg';
 
-import { MIGRATIONS_DIR, MIGRATIONS_SCHEMA, MIGRATIONS_TABLE, REPO_ROOT } from '../config.js';
-import { readAdminConnection, type AdminConnection } from '../connection.js';
-import { readLocalEnv } from '../env.js';
+import { MIGRATIONS_DIR, MIGRATIONS_SCHEMA, MIGRATIONS_TABLE, REPO_ROOT } from '../config.ts';
+import { readAdminConnection, type AdminConnection } from '../connection.ts';
+import { readLocalEnv } from '../env.ts';
 
 // Every database test creates its own database, migrates it and drops it. The development
 // database named in .env is never opened (CLAUDE.md §7: tests use disposable databases).

@@ -1,8 +1,8 @@
 import { defineConfig } from 'drizzle-kit';
 
-import { MIGRATIONS_DIR, MIGRATIONS_SCHEMA, MIGRATIONS_TABLE, SCHEMA_FILES } from './database/config.js';
-import { readAdminConnection } from './database/connection.js';
-import { readLocalEnv } from './database/env.js';
+import { MIGRATIONS_DIR, MIGRATIONS_SCHEMA, MIGRATIONS_TABLE, SCHEMA_FILES } from './database/config.ts';
+import { readAdminConnection } from './database/connection.ts';
+import { readLocalEnv } from './database/env.ts';
 
 // `npm run db:generate` writes a migration from the schema files; `npm run db:migrate`
 // applies the pending ones to the local database. Both run from the repository root.

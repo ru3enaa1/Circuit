@@ -1,8 +1,8 @@
 import type pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { AUDITED_TABLES } from '../../apps/crm/src/db/schema.js';
-import { SERVICE_ROLES } from '../config.js';
+import { AUDITED_TABLES } from '../../apps/crm/src/db/schema.ts';
+import { SERVICE_ROLES } from '../config.ts';
 import {
   FIXTURE_AUTHORS,
   inTransaction,
@@ -12,8 +12,8 @@ import {
   type CrmContext,
   type Fixture,
   type ServiceRole,
-} from './crm-fixture.js';
-import { createDisposableDatabase, runMigrations, type DisposableDatabase } from './disposable-db.js';
+} from './crm-fixture.ts';
+import { createDisposableDatabase, runMigrations, type DisposableDatabase } from './disposable-db.ts';
 
 // ADR-0005, the rules as behaviour: real statements against a migrated disposable database
 // with two synthetic accounts. Every negative case checks the SQLSTATE, so a statement that

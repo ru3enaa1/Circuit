@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { readImports, stripComments } from './source-imports.js';
+import { readImports, stripComments } from './source-imports.ts';
 
 const specifiers = (source: string): string[] =>
   readImports(source).imports.map((ref) => ref.specifier);

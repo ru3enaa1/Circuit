@@ -3,8 +3,8 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { MIGRATIONS_DIR, REPO_ROOT } from '../config.js';
-import { MIGRATION_SHA256 } from './migration-hashes.js';
+import { MIGRATIONS_DIR, REPO_ROOT } from '../config.ts';
+import { MIGRATION_SHA256 } from './migration-hashes.ts';
 import {
   checkJournal,
   checkMigrationHashes,
@@ -12,7 +12,7 @@ import {
   findDestructiveStatements,
   hashMigrations,
   readMigrationFolder,
-} from './migration-rules.js';
+} from './migration-rules.ts';
 
 // The rules from migration-rules.ts, run on the real migration folder. No database needed.
 

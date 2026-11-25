@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 
 import { describe, expect, it } from 'vitest';
 
-import { REPO_ROOT } from '../config.js';
+import { REPO_ROOT } from '../config.ts';
 
 // compose.yaml as Docker will run it, from `docker compose config`: variables interpolated
 // and the short port syntax expanded, so the test checks what actually binds.

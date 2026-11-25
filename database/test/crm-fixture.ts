@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 
 import pg from 'pg';
 
-import { SERVICE_ROLES } from '../config.js';
+import { SERVICE_ROLES } from '../config.ts';
 
 // Helpers for the crm database tests (ADR-0005). Everything here is synthetic: two invented
 // accounts, with addresses under .test, a domain reserved for tests (RFC 6761).

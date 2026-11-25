@@ -1,4 +1,4 @@
-import type { Env } from './env.js';
+import type { Env } from './env.ts';
 
 // The admin connection: it runs migrations and creates the disposable test databases.
 // Services connect with their own least-privilege users, created in F1 (ADR-0003, M4).
