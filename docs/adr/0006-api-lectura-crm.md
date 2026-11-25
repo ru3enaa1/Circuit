@@ -3,6 +3,8 @@
 - **Fecha:** 2026-11-24
 - **Estado:** aceptada el 2026-11-24. El dueño aceptó las siete recomendaciones de
   «Preguntas abiertas» tal como están escritas.
+- **Enmendada por:** ADR-0007 D1, aceptada el 2026-11-25. La lista de rutas de D11 pasa a
+  ser la de esa cláusula: estas siete y seis más.
 - **Tarea:** F1.2 de `DEVELOPMENT_PLAN.md`, «API de lectura» del CRM simulado. Suma lo que
   la auditoría de ADR-0005 dejó para esta fase (`docs/reviews/ADR-0005-audit-2026-11-24.md`):
   H3 (un dueño sin superusuario), H8 (los documentos de estado en el cerco), H10 (los
@@ -108,8 +110,8 @@ desechable sembrada con `database/test/crm-fixture.ts`. Solo D7 abre un puerto.
 | D11 | Las rutas son exactamente siete, y ninguna escribe: `GET /health`; `GET /accounts/:slug/stages`; `POST /accounts/:slug/contacts/search`; `GET /accounts/:slug/contacts/:contactId`; `GET /accounts/:slug/contacts/:contactId/notes`; `GET /accounts/:slug/contacts/:contactId/tasks`; y `GET /accounts/:slug/companies/:companyId`. `/health` no pide llave y no devuelve datos | `routes.test.ts`: las rutas que registra un hook `onRoute`, comparadas con esa lista fija de método y ruta | sí |
 | D12 | Cada respuesta trae solo los campos de su lista fija (pregunta 1). Etapa: `id`, `key`, `label`, `position`. Contacto: `id`, `fullName`, `email`, `companyId`, `stageId`, `createdAt`. Empresa: `id`, `name`, `industry`, `sizeRange`, `revenueRange`, `createdAt`. Nota: `id`, `body`, `createdAt`. Tarea: `id`, `title`, `dueOn`, `completedAt`, `createdAt`. Nunca `accountId` ni `archivedAt`. Lo archivado no se devuelve, y un contacto archivado pedido por id da 404 (pregunta 2) | `reads-db.test.ts`: las claves de cada objeto son exactamente las de la lista; una nota y un contacto archivados no aparecen, y el contacto archivado da 404 | sí |
 | D13 | Un registro de otra cuenta responde igual que uno que no existe: 404 `no_encontrado`, nunca 403. RLS lo esconde, y la ruta propia no revela si existe | `reads-db.test.ts`: el contacto de B, pedido por `/accounts/cuenta-a/…` con la llave de A, da el mismo cuerpo que un id que no existe; el control es que la llave de B lo lee con 200 | sí |
-| D14 | Toda entrada pasa por zod, después de la llave y la cuenta. El `slug` sigue `SLUG_PATTERN` y los ids siguen `^[1-9][0-9]{0,15}$`. El correo se recorta, va a minúsculas, mide hasta 254 y tiene la forma de `contacts_email_shape`. `limit` va de 1 a 100, con 50 por defecto, y `before` es un id. Un cuerpo con campos desconocidos se rechaza. Lo inválido da 400 `entrada_invalida`, que nombra el campo y nunca el valor. Un cuerpo de más de 16 KiB da 413 `demasiado_grande` | `input-db.test.ts`: un caso por campo, y ningún cuerpo de error contiene el valor enviado; sin llave, una entrada inválida da 401 y no 400, también cuando el enrutador no puede leer la URL (A3) | sí |
-| D15 | Cada petición escribe una línea de registro con el método, el patrón de la ruta (no la URL), el estado y la duración. Nunca escribe cabeceras, cuerpo, la llave, un correo ni un nombre. Un error de la base se registra solo con su SQLSTATE, y la respuesta es 500 `error_interno`, sin el mensaje | `logging-db.test.ts`: con el registro capturado, una búsqueda con la llave y el correo del fixture no deja en él ni la llave, ni el correo, ni el nombre. Un error plantado que lleva un correo en su `message` y en su `detail` deja solo el código, y el cuerpo del 500 no lo trae. Una URL que el enrutador no puede leer también deja su línea, con `route` nula (A3) | sí |
+| D14 | Toda entrada pasa por zod, después de la llave y la cuenta. El `slug` sigue `SLUG_PATTERN` y los ids siguen `^[1-9][0-9]{0,15}$`. El correo se recorta, va a minúsculas, mide hasta 254, tiene la forma de `contacts_email_shape` y no lleva U+0000 (A6). `limit` va de 1 a 100, con 50 por defecto, y `before` es un id. Un cuerpo con campos desconocidos se rechaza. Lo inválido da 400 `entrada_invalida`, que nombra el campo y nunca el valor. Un cuerpo de más de 16 KiB da 413 `demasiado_grande` | `input-db.test.ts`: un caso por campo, y ningún cuerpo de error contiene el valor enviado; sin llave, una entrada inválida da 401 y no 400, también cuando el enrutador no puede leer la URL (A3); un NUL en el correo da 400 «email» y no 500 (A6) | sí |
+| D15 | Cada petición escribe una línea de registro con el método, el patrón de la ruta (no la URL), el estado y la duración. Nunca escribe cabeceras, cuerpo, la llave, un correo ni un nombre. Un error de la base se registra solo con su SQLSTATE, también cuando drizzle lo envuelve (A7), y la respuesta es 500 `error_interno`, sin el mensaje | `logging-db.test.ts`: con el registro capturado, una búsqueda con la llave y el correo del fixture no deja en él ni la llave, ni el correo, ni el nombre. Un error plantado que lleva un correo en su `message` y en su `detail` deja solo el código, y el cuerpo del 500 no lo trae. Una URL que el enrutador no puede leer también deja su línea, con `route` nula (A3). Un `DrizzleQueryError` real, con un correo en sus parámetros, deja el SQLSTATE de su causa y no el correo (A7) | sí |
 | D16 | No hay CORS, cookies ni otra forma de autenticarse | `auth-db.test.ts`: ninguna respuesta trae `access-control-allow-origin` ni `set-cookie` | no |
 | D17 | Nada de ADR-0005 se debilita. Las migraciones `0000`–`0003` no cambian (sus hashes, A9). Ninguna prueba existente se quita ni se debilita. Ningún archivo pasa de 400 líneas, así que `crm-rules-db.test.ts`, que tiene 391, se parte antes de crecer | `migration-files.test.ts`; los conteos por archivo de la línea base no bajan, salvo las pruebas que se mueven al partir el archivo, que se nombran; `wc -l` sobre `apps database` no da ningún `.ts` de más de 400 | sí |
 
@@ -161,6 +163,8 @@ poner en rojo su prueba:
 | M16b | D15 | Esa línea con la URL en vez de `route` nula (A3) |
 | M17 | — | El arranque sin traducir `EADDRINUSE` (A4) |
 | M18 | D4 | `db:users` sin mirar `ADMIN OPTION` (A5) |
+| M19 | D14 | El correo de la búsqueda sin la regla de U+0000 (A6) |
+| M20 | D15 | `errorCodes` sin leer la causa de un `DrizzleQueryError` (A7) |
 
 ## Cerco
 
@@ -338,3 +342,30 @@ Las notas que quedan:
 Verificado el 2026-11-25: `npm run check` en 0, con 301 pruebas (10 nuevas) y cobertura
 94,67 / 85,16 / 97,11 / 96,18. Los seis mutantes, cada uno restaurado después y comprobado
 por hash, en rojo en su prueba. No quedó ninguna base `circuit_test_…`.
+
+## Enmiendas A6–A7 (2026-11-25)
+
+La línea base de ADR-0007 (`docs/reviews/ADR-0007-baseline.md`) encontró dos fallas de esta
+ADR que la auditoría no vio: F-1 y F-2. El dueño pidió arreglar lo que hubiera que arreglar,
+y se corrigieron aquí, donde nacieron, sin esperar a ADR-0007. Cada prueba nueva estaba en
+rojo antes del arreglo.
+
+- **A6 · Un NUL en el correo (F-1, D14).** La búsqueda con U+0000 en el correo daba 500: ni
+  `\s` ni `trim()` lo cubren, zod lo dejaba pasar y PostgreSQL lo rechaza con 22021. Ahora
+  el correo lo rechaza en `input.ts`, con 400 «email». Las pruebas: el NUL dentro de la
+  dirección y al final, donde `trim()` no llega. Antes del arreglo, las dos daban 500. Un
+  sustituto UTF-16 suelto sigue pasando y no busca nada (da 200 sin contactos): se decide
+  con la pregunta 8 de ADR-0007. M19, en rojo.
+- **A7 · El SQLSTATE detrás de drizzle (F-2, D15).** drizzle-orm 0.45.4 lanza cada sentencia
+  fallida como un `DrizzleQueryError`, cuyo mensaje lleva el SQL y sus parámetros. El
+  `pg.DatabaseError` queda en `cause`, y `errorCodes` no lo leía, así que el registro decía
+  `sqlstate: null`. Ahora `errorCodes` (`log.ts`) lee la causa del envoltorio, y nada más de
+  él. La prueba usa el error que drizzle lanza en una sentencia real que falla, con un
+  correo en sus parámetros: antes del arreglo, `sqlstate` salía nulo; ahora sale `22021` y
+  el correo no llega al registro. Una conexión caída detrás del envoltorio deja su código
+  de sistema. M20, en rojo.
+
+Verificado el 2026-11-25: `npm run check` en 0, con 305 pruebas (4 nuevas) y cobertura
+94,72 / 85,86 / 97,14 / 96,21. M19 y M20, cada uno restaurado después y comprobado por
+hash, en rojo en su prueba. La app real arrancó y se detuvo. No quedó ninguna base
+`circuit_test_…`, y la base de desarrollo sigue con 0 filas en `crm`.

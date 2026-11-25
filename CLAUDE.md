@@ -80,6 +80,13 @@ se repiten como `crm_app` (H11). Al empujarla: 291 pruebas, cobertura 94,48 / 85
 96,03 / 96,02; los mutantes M1–M13, más M11b y M14, en rojo. La base de desarrollo, respaldada y migrada
 hasta `0004`, con `crm_app` creado. Los push los pide el dueño; el hook no se salta con
 `--no-verify`.
+**F1.3 (API de escritura):** ADR-0007 aceptada el 2026-11-25 (el dueño aceptó sus nueve
+recomendaciones), con su línea base (`docs/reviews/ADR-0007-baseline.md`); enmienda D11
+de ADR-0006. El código de F1.3 todavía no empieza. La línea base halló dos fallas de
+ADR-0006, corregidas ese día como sus enmiendas A6–A7: la búsqueda con un NUL en el correo
+da 400 y no 500, y el SQLSTATE de un error que drizzle envuelve llega al registro. Quedan
+305 pruebas, con cobertura 94,72 / 85,86 / 97,14 / 96,21, y M19 y M20, en rojo. En
+commits locales sobre `5bdbf68`, sin empujar.
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -229,6 +236,19 @@ Se registran con el formato de pitfall-log: regla, síntoma, causa, chequeo y fe
 - **`pg_dump` 18 cambia en cada corrida** (2026-11-24). Causa: pone una clave `\restrict` al
   azar y el dueño de `.env`. Regla: `--restrict-key=circuit` y `--no-owner`. Chequeo:
   `schema-dump-db.test.ts`.
+- **drizzle envuelve cada error de la base** (2026-11-25, línea base de ADR-0007, F-2).
+  Síntoma: el registro de un 500 dice `sqlstate: null` aunque PostgreSQL dio un código, y
+  `instanceof pg.DatabaseError` da `false`. Causa: drizzle-orm 0.45.4 lanza un
+  `DrizzleQueryError` cuyo mensaje lleva el SQL y sus parámetros (los valores), y deja el
+  error de pg en `cause`. Una prueba que planta un `pg.DatabaseError` suelto no lo ve. Regla:
+  los códigos salen de `cause` (`errorCodes`, `log.ts`); el mensaje y `String(error)` del
+  envoltorio no se registran ni se responden nunca. Chequeo: «a database error wrapped by
+  drizzle…» de `logging-db.test.ts`, con un error que drizzle lanza en una sentencia real.
+- **PostgreSQL rechaza U+0000 en un texto** (2026-11-25, F-1 de la misma línea base).
+  Síntoma: un 500 con SQLSTATE 22021 por una entrada que zod dejó pasar. Causa: `\s` no
+  incluye U+0000 y `trim()` no lo quita. Un sustituto UTF-16 suelto, en cambio, no falla: se
+  guarda como U+FFFD sin avisar. Regla: todo texto que llega a la base rechaza el NUL en zod.
+  Chequeo: los casos «a NUL …» de `input-db.test.ts`.
 
 **Herramientas:**
 - **`vitest --update` se come el filtro** (2026-11-24). Síntoma: `vitest run --update x`

@@ -164,6 +164,11 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   pruebas, cobertura 94,67 / 85,16 / 97,11 / 96,18. Empujadas el 2026-11-25 (CI en verde
   en `b41f8d6`, corrida 45635335825). **Para F1.3,
   además:** una prueba de `__proto__` por cada cuerpo nuevo (H9 de esa auditoría).
+  **F1.3:** ADR-0007 aceptada el 2026-11-25, con su línea base; el dueño aceptó sus nueve
+  recomendaciones. Al medir aparecieron dos fallas de ADR-0006 (F-1 y F-2), corregidas ese día como
+  enmiendas A6–A7, cada una con una prueba que estaba en rojo: la búsqueda con un NUL en el
+  correo da 400 y no 500, y el registro guarda el SQLSTATE de un error envuelto por drizzle.
+  305 pruebas, cobertura 94,72 / 85,86 / 97,14 / 96,21; M19 y M20, en rojo.
 
 ### F2 · Circuito y mapa
 
