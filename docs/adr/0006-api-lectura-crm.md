@@ -239,6 +239,28 @@ secretos).
 - Toda tabla nueva de `crm` necesita su `OWNER TO crm_owner`, además de RLS y permisos.
 - No hay `enum` de TypeScript en el repositorio. Las listas cerradas siguen siendo `as const`.
 
+## Notas de implementación (2026-11-24)
+
+Decisiones del código dentro de las cláusulas, para que la auditoría las vea:
+
+- **Un `slug` fuera de `SLUG_PATTERN` da 403 `cuenta_ajena`, no 400.** La cuenta se compara
+  antes de validar (D9 antes de D14), y un `slug` así nunca es el de una llave. Responde
+  como cualquier otra cuenta y nunca repite el `slug`. Lo prueba `input-db.test.ts`.
+- **Un id, además del patrón, tiene que caber en 2^53.** Con 16 dígitos, `Number` redondearía
+  el id a otro. `9007199254740993` da 400.
+- **`limit` y `before` son de notas y tareas.** Las etapas salen todas, por `position`, con
+  un tope de 100: son una lista corta que trae la semilla.
+- **Las respuestas van envueltas:** `{ stages }`, `{ contacts }` (la búsqueda, con 0 o 1),
+  `{ contact }`, `{ notes }`, `{ tasks }` y `{ company }`. Las notas y las tareas de un
+  contacto archivado, de otra cuenta o inexistente dan 404.
+- **Todo cuerpo se guarda como texto** y la ruta lo parsea después de la llave y la cuenta.
+  Así ningún tipo de contenido hace que el servidor responda antes. Un hook `onRequest`
+  rechaza la falta de llave antes de leer el cuerpo, así que un cuerpo enorme sin llave da
+  401 y no 413 (mutante M14).
+- **Mutantes de más:** M11b (un contacto archivado por id) y M14 (sin ese hook). M4 y M5
+  los para la revisión final de `db:users`, que falla con su mensaje. Una variante de M5
+  que además se salta esa revisión pone en rojo las siete tablas de D5.
+
 ## Preguntas abiertas
 
 Respondidas el 2026-11-24: el dueño aceptó cada recomendación como está escrita, así que

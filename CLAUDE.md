@@ -59,12 +59,19 @@ autores opacos en la bitácora (`0003`) y el hash de cada migración fijado. Och
 trigger, sin valores; llaves solo como SHA-256 y solo por `crm.resolve_api_key`.
 Migraciones `0001` y `0003` (generadas) y `0002` (a mano); `database/schema.sql` sale de
 un `pg_dump` (R8). 164 pruebas, cobertura 98,46 / 92,3 / 100 / 98,24; los mutantes de la
-ADR y los de la auditoría, en rojo. La base de desarrollo está migrada hasta `0003`. Los
-arreglos, empujados el 2026-11-24 (CI en verde en `f7542cc`, corrida 45503832664, con la
-carrera de roles en un servidor nuevo). **F1.2 (API de lectura): ADR-0006 aceptada el
-2026-11-24**, con H3, H8, H10, H11 y R10 y su línea base (`docs/reviews/ADR-0006-baseline.md`).
-El dueño aceptó sus siete recomendaciones; el código está en curso. Los push los pide
-el dueño; el hook no se salta con `--no-verify`.
+ADR y los de la auditoría, en rojo. Los arreglos, empujados el 2026-11-24 (CI en verde en
+`f7542cc`, corrida 45503832664, con la carrera de roles en un servidor nuevo).
+**F1.2 (API de lectura) hecha el 2026-11-24, sin empujar y sin auditar.** ADR-0006
+aceptada ese día (el dueño aceptó sus siete recomendaciones), con su línea base
+(`docs/reviews/ADR-0006-baseline.md`). Fastify y zod en `apps/crm`, corridos por Node sin
+compilar (`npm run crm:start`, solo en `127.0.0.1`); siete rutas de lectura con llave
+Bearer, 403 de cuenta y de permiso, una transacción `READ ONLY` por petición y un registro
+sin datos personales. `0004` deja todo `crm` en manos de `crm_owner`, sin login (H3);
+`npm run db:users` crea `crm_app` con un verificador SCRAM (H10), y las reglas de ADR-0005
+se repiten como `crm_app` (H11). 291 pruebas, cobertura 94,48 / 85,14 / 96,03 / 96,02; los
+mutantes M1–M13, más M11b y M14, en rojo. La base de desarrollo, respaldada y migrada
+hasta `0004`, con `crm_app` creado. Los push los pide el dueño; el hook no se salta con
+`--no-verify`.
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -87,7 +94,12 @@ el CRM aparte).
   habla por HTTP con la llave del agente, y su usuario de base no ve el esquema del CRM.
   El CRM es dueño de sus tablas (`apps/crm/src/db/schema.ts`); lo que drizzle-kit no
   expresa (roles, permisos, RLS, trigger, búsqueda de llaves) está en
-  `database/migrations/0002_crm_security.sql` (ADR-0005).
+  `database/migrations/0002_crm_security.sql` (ADR-0005), y el dueño sin login de todo
+  `crm`, `crm_owner`, en `0004_crm_owner.sql` (ADR-0006). Su servidor (ADR-0006):
+  `src/config.ts` (solo del entorno), `src/server/` (Fastify, errores, llave, límites),
+  `src/routes/` (las siete rutas y su zod), `src/db/` (la transacción de lectura y las
+  consultas) y `src/main.ts`. Se conecta como `crm_app`, miembro solo de `crm_service`,
+  nunca como el administrador.
 - `apps/board`: el tablero, servido por circuit (llega en F2).
 
 Lo impone `apps/circuit/test/architecture/`: el mapa de dependencias (`module-map.ts`) y una
@@ -109,6 +121,10 @@ drizzle-kit 0.31.11 (la 1.0 sigue en RC), pg 8.23.1 y @types/pg 8.23.1. PostgreS
 (`save-exact` en `.npmrc`) y lockfile versionado. El `overrides` de `package.json` sube el
 esbuild que drizzle-kit arrastra por `@esbuild-kit/core-utils` (0.18.20, GHSA-67mh-4wv8-2f99)
 al 0.25.12 que ya usa; se quita cuando drizzle-kit suelte esa dependencia.
+`apps/crm` declara las suyas (R10), verificadas el 2026-11-24: fastify 5.12.8 y zod 4.6.7,
+más drizzle-orm 0.45.4 y pg 8.23.1. **Sin compilar** (ADR-0006 D1): Node 24 quita los
+tipos, así que toda importación relativa termina en `.ts`, y `erasableSyntaxOnly` prohíbe
+`enum`, `namespace` y las propiedades de parámetro (TS1294).
 CI (`.github/workflows/ci.yml`): `ubuntu-24.04`, Node 24.20.0, actions/checkout v7.0.1 y
 actions/setup-node v7.1.0 fijadas por SHA, comprobados contra sus etiquetas el 2026-11-24.
 
@@ -129,6 +145,12 @@ actions/setup-node v7.1.0 fijadas por SHA, comprobados contra sus etiquetas el 2
 - Una migración que ya está en `database/test/migration-hashes.ts` no se edita nunca; se
   corrige con una nueva. Cada migración nueva agrega su SHA-256 a esa lista en el mismo commit.
 - `database/dev/` y `database/backups/` no entran a git.
+- **Toda tabla nueva de `crm` termina con `ALTER TABLE … OWNER TO crm_owner`** (y su RLS y
+  sus permisos): drizzle-kit la crea con el administrador como dueño, y
+  `crm-structure-db.test.ts` se pone en rojo (ADR-0006 D3).
+- `crm_app` es del servidor, no de la base: lo crea `npm run db:users` (después de
+  `db:migrate`), nunca una migración. Las pruebas lo crean igual, con `CRM_DB_PASSWORD` de
+  `.env`, y sin ella fallan con el nombre de la variable.
 
 ## 8. Trampas
 
@@ -145,6 +167,10 @@ Se registran con el formato de pitfall-log: regla, síntoma, causa, chequeo y fe
   no trae sus carpetas. Se vio en el Bash de Claude Code; no se ha confirmado en otra
   terminal de Git Bash. Chequeo: desde bash, `cmd //c "echo %PATH%" | tr ';' '\n' | grep -i
   'nodejs\|docker'` debe listar las dos carpetas; donde no lista ninguna, solo PowerShell.
+- **`grep -c $'\r'` miente en el Bash de Claude Code** (2026-11-24). Síntoma: cuenta todas
+  las líneas de cada archivo, así que todo el árbol parece CRLF. Causa: no se investigó; los
+  bytes reales no tenían ningún CR. Regla: contar los CR con `tr -cd '\r' < archivo | wc -c`,
+  que da 0 en LF. Chequeo: `bash guards/check-line-endings.sh …` (§9).
 - **Docker Desktop está instalado por usuario** (2026-11-24). Síntoma: `failed to connect
   to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine`. Causa: Docker Desktop
   apagado; el ejecutable está en `%LOCALAPPDATA%\Programs\DockerDesktop\Docker Desktop.exe`,
@@ -201,6 +227,20 @@ Se registran con el formato de pitfall-log: regla, síntoma, causa, chequeo y fe
   corre todos los archivos. Causa: `-u, --update [type]` acepta un valor y toma `x` como tal.
   Regla: el filtro va antes y el valor explícito (`--update=all`). Chequeo:
   `npm run db:dump-schema` dice «Test Files 1».
+- **En Windows, un proceso terminado con `kill()` queda con `exitCode` en `null`**
+  (2026-11-24). Síntoma: el `afterAll` de `main-process.test.ts` se colgaba 10 s y dejaba
+  una base `circuit_test_…` sin borrar. Causa: Node pone `signalCode` en su lugar, y esperar
+  `exit` de un proceso que ya salió no termina nunca. Regla: está vivo solo si `exitCode` y
+  `signalCode` son `null`. Chequeo: después de `npm run check`, `SELECT datname FROM
+  pg_database` no muestra ninguna `circuit_test_…`.
+- **Una prueba que lanza un proceso necesita más de los 5 s por defecto** (2026-11-24).
+  Síntoma: `main-process.test.ts` pasa sola y vence con `npm run check`. Causa: con todos los
+  archivos a la vez y la cobertura, un Node nuevo tarda más en escuchar. Regla: esas pruebas
+  llevan `PROCESS_TEST_TIMEOUT_MS`, por encima de la espera de arranque. Chequeo: `npm run
+  check` en 0.
+- **Fastify 5.12 deprecó `disableRequestLogging`** (2026-11-24). Con `logger: false` no hace
+  falta: no hay registrador que escriba esas líneas. Chequeo: las pruebas no muestran
+  `FSTDEP023`.
 
 ## 9. Comandos
 
@@ -228,7 +268,7 @@ interfaces, imagen sin digest, `.sql` fuera del journal, `DROP`, SQL roto y un e
 falta), cada una en rojo en su prueba:
 
 ```powershell
-Copy-Item .env.example .env                       # y poner POSTGRES_PASSWORD (sin BOM)
+Copy-Item .env.example .env                       # y poner POSTGRES_PASSWORD y CRM_DB_PASSWORD (sin BOM)
 docker compose up -d --wait db                    # PostgreSQL 18.7 en 127.0.0.1, espera a que esté sano
 npm run db:migrate                                # aplica las migraciones pendientes a la base de desarrollo
 npm run db:generate -- --name <nombre>            # escribe una migración desde database/schema.ts
@@ -293,7 +333,22 @@ npx vitest run --project database migrations-db -t "two disposable databases"   
 npx vitest run --project database migration-files                                # el hash de cada migración, contra database/test/migration-hashes.ts
 ```
 
-Arrancar la app se agrega cuando exista un servidor (F1.2).
+Verificados el 2026-11-24 en PowerShell (F1.2, ADR-0006), con 16 mutantes (M1–M13, M11b,
+M14 y una variante de M5 sin la guarda) y un `enum` plantado, cada uno en rojo. Las pruebas
+de `crm_app` y del CRM necesitan `CRM_DB_PASSWORD` en `.env`:
+
+```powershell
+npm run db:users                                  # crea o actualiza crm_app (después de db:migrate): 0 listo, 1 con el motivo
+npx vitest run --project database crm-login-db    # crm_app: su contraseña, sus atributos y las reglas de ADR-0005 como crm_app
+npx vitest run --project '@circuit/crm'           # la API: configuración, rutas, llave, cuenta, lectura, entrada, registro y proceso
+npm run crm:start                                 # el CRM en http://127.0.0.1:4010; Ctrl+C lo detiene
+Invoke-WebRequest -UseBasicParsing http://127.0.0.1:4010/health   # 200 {"status":"ok"}; una ruta sin llave da 401
+```
+
+```sh
+git grep -nE "from '\.\.?/[^']*\.js'" -- '*.ts' | wc -l              # D1: 0 importaciones .js
+git ls-files '*.ts' | xargs wc -l | awk '$1 > 400 && $2 != "total"'   # D17: ninguna línea
+```
 
 ## 10. Dónde está todo lo demás
 

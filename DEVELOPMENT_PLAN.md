@@ -148,7 +148,14 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   login). **Para F1.3:** no mandar nunca `id` ni `created_at` (H7). **Para F1.4:** llaves
   de 128 bits o más al azar (H12). Arreglos empujados el 2026-11-24 (CI en verde en
   `f7542cc`). **F1.2:** ADR-0006 propuesta y aceptada ese día, con su línea base; el dueño
-  aceptó sus siete recomendaciones.
+  aceptó sus siete recomendaciones. **F1.2 hecha el 2026-11-24, sin empujar y sin
+  auditar:** la API de lectura (Fastify y zod, sin compilar, en `127.0.0.1`), siete rutas
+  con llave Bearer, 403 de cuenta ajena y de permiso con su motivo (adelantados de F1.4),
+  una transacción `READ ONLY` por petición y un registro sin datos personales. `0004` da
+  todo `crm` a `crm_owner` (H3); `npm run db:users` crea `crm_app` con un verificador SCRAM
+  (H10), y las reglas de ADR-0005 se repiten como `crm_app` (H11); R10 cerrada. 291
+  pruebas, cobertura 94,48 / 85,14 / 96,03 / 96,02; los mutantes M1–M13, más M11b y M14, en
+  rojo. La base de desarrollo, respaldada (restauración probada) y migrada hasta `0004`.
 
 ### F2 · Circuito y mapa
 
@@ -245,7 +252,7 @@ Lo que una respuesta recomienda y no se aplica en ese paso queda aquí hasta apl
 | R7 | CI levanta la base con el mismo `compose.yaml` y una contraseña generada en la corrida | Una sola definición de la base; las pruebas de Compose y de migración corren igual que en local | Claude, en F0.5 | Cerrada el 2026-11-24: la primera corrida salió en verde (45448819374) |
 | R8 | Generar `database/schema.sql` desde una base migrada y compararlo en una prueba | Hoy se escribe a mano porque solo hay dos esquemas vacíos; con tablas se desvía | Claude, en F1.1 | Cerrada el 2026-11-24: `npm run db:dump-schema` lo regenera y `database/test/schema-dump-db.test.ts` falla si difiere (una columna plantada la puso en rojo) |
 | R9 | Hook de `pre-push` que corre `forbidden-phrases.local.txt` sobre lo versionado y `check-secrets.sh --range <remoto>..<local>` sobre cada commit que se publica | La lista privada no puede ir a CI, y CI corre después del push: detecta un secreto, no impide publicarlo (auditoría de ADR-0004, H1). Hoy depende de acordarse antes de cada push | El dueño. Hasta que exista, los dos comandos se corren a mano antes de cada push | Cerrada el 2026-11-24: `guards/hooks/pre-push`, activado con `git config core.hooksPath guards/hooks`, con la condición del dueño: nunca pregunta y para el push solo con un hallazgo o si no pudo revisar. Sus controles (`guards/pre-push.test.sh`, 10 casos, 7 mutantes en rojo) corren en CI |
-| R10 | `apps/crm` declara sus dependencias (`drizzle-orm`, `pg`) en su `package.json` | Hoy `apps/crm/src/db/schema.ts` importa `drizzle-orm` desde la raíz, donde es solo de desarrollo; el servidor del CRM, que en F6 corre en Compose, no puede depender de eso. F1.1 no podía tocar dependencias (ADR-0005 D17) | Claude, en F1.2, con la versión verificada ese día | Abierta |
+| R10 | `apps/crm` declara sus dependencias (`drizzle-orm`, `pg`) en su `package.json` | Hoy `apps/crm/src/db/schema.ts` importa `drizzle-orm` desde la raíz, donde es solo de desarrollo; el servidor del CRM, que en F6 corre en Compose, no puede depender de eso. F1.1 no podía tocar dependencias (ADR-0005 D17) | Claude, en F1.2, con la versión verificada ese día | Cerrada el 2026-11-24: `apps/crm/package.json` declara drizzle-orm 0.45.4, fastify 5.12.8, pg 8.23.1 y zod 4.6.7 (ADR-0006 D2) |
 
 ## 6. Mapa de documentos
 
