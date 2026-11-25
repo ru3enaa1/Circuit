@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { sqlErrorOf } from '../../../database/test/crm-fixture.ts';
-import { withReadScope, withWriteScope } from '../src/db/read-scope.ts';
+import { withReadScope, withWriteScope } from '../src/db/scope.ts';
 import { APPROVAL, bearer, sendJson, useCrmUnderTest } from './crm-under-test.ts';
 
 // ADR-0007 D4: every write is one READ WRITE transaction, and its context (the account, the

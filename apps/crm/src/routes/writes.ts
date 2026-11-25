@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { z } from 'zod';
 
-import { withReadScope, withWriteScope, type Approval, type Connector, type Scope } from '../db/read-scope.ts';
+import { withReadScope, withWriteScope, type Approval, type Connector, type Scope } from '../db/scope.ts';
 import { listAuditLog } from '../db/reads.ts';
 import { addNote, addTask, archiveContact, createContact, updateContact } from '../db/writes.ts';
 import { credentialsOf } from '../server/auth.ts';

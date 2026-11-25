@@ -1,6 +1,6 @@
 import { fastify, type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 
-import type { Connector } from '../db/read-scope.ts';
+import type { Connector } from '../db/scope.ts';
 import { errorCodes, type LogLine, type LogSink } from '../log.ts';
 import { ACCOUNTS_PATH, crmRoutes } from '../routes/reads.ts';
 import { presentedKey } from './auth.ts';

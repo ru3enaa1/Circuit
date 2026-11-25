@@ -261,6 +261,15 @@ revocan como administrador con un `UPDATE`. Una llave que ya se mostró no se pu
 - Toda llave real tiene `read`, así que H2 (a) se sostiene sola. Pasar a (b) sería otra ADR.
 - `scope.ts` y `keys.ts` dejan claro qué abre una transacción y qué es una llave.
 
+## Notas de implementación (2026-11-25)
+
+- **H4 va primero y solo (D18).** `git mv` de `read-scope.ts` a `scope.ts`; `keys.ts` nace
+  con `Credentials` y `KEY_AUTHOR_PREFIX`, movidos tal cual con sus comentarios, y doce
+  archivos cambian solo su importación (cuatro de ellos, pruebas). La forma y el hash entran
+  en `keys.ts` después, con D1–D3. Verificado antes del commit: `npm run check` en 0, 417
+  pruebas, cobertura 95,75 / 87,77 / 97,97 / 97,04, y los 31 archivos con los mismos conteos
+  que la línea base.
+
 ## Preguntas abiertas
 
 Cada una tiene escrita su recomendación como **ASUNCIÓN** en la cláusula que afecta.

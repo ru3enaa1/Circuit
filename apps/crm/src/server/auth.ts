@@ -1,12 +1,12 @@
 import type { FastifyRequest } from 'fastify';
 
-import type { Credentials } from '../db/read-scope.ts';
+import type { Credentials } from '../keys.ts';
 import { ApiError } from './errors.ts';
 import { MAX_KEY_LENGTH } from './limits.ts';
 
 // ADR-0006 D8: the only way to authenticate is `Authorization: Bearer <key>` (RFC 6750 §2.1).
 // No cookie, no query parameter and no other header is read (D16). This module only reads
-// the header; the key is checked against the database by read-scope.ts, by its SHA-256.
+// the header; the key is checked against the database by db/scope.ts, by its SHA-256.
 
 /** RFC 7235 §2.1: the scheme is case-insensitive, and one or more spaces follow it. */
 const BEARER = /^bearer(?: +(.*))?$/i;

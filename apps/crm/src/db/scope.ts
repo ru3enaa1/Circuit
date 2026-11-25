@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type pg from 'pg';
 
+import { KEY_AUTHOR_PREFIX, type Credentials } from '../keys.ts';
 import { ApiError, type Permission } from '../server/errors.ts';
 
 // The transaction every request runs in, one per request on its own connection. It resolves
@@ -22,12 +23,6 @@ const PROPOSED_BY_SETTING = 'crm.proposed_by';
 const APPROVED_BY_SETTING = 'crm.approved_by';
 const APPROVAL_REF_SETTING = 'crm.approval_ref';
 
-/**
- * ADR-0007 D5: who proposes a write is the key that signs it, as `key-<id>`, an opaque id that
- * fits AUDIT_AUTHOR_PATTERN. input.ts refuses this shape as an approver: a key never approves (D7).
- */
-export const KEY_AUTHOR_PREFIX = 'key-';
-
 // `true` in every set_config: for this transaction only, so the next request on this
 // connection starts without an account and without authors.
 const READ_CONTEXT = 'SELECT set_config($1, $2, true), set_config($3, $4, true)';
@@ -44,12 +39,6 @@ export interface Scope {
   readonly accountId: number;
   readonly db: NodePgDatabase;
   readonly client: pg.PoolClient;
-}
-
-export interface Credentials {
-  readonly token: string;
-  /** The account slug as the route spells it, still unvalidated: it is only compared. */
-  readonly slug: string;
 }
 
 /** ADR-0007 D7: who approved a write and the approval it came from, already validated by input.ts. */

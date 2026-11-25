@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { readCrmConfig } from '../src/config.ts';
 import { createCrmPool } from '../src/db/pool.ts';
-import type { Connector } from '../src/db/read-scope.ts';
+import type { Connector } from '../src/db/scope.ts';
 import { errorCodes, stdoutLog, type LogLine } from '../src/log.ts';
 import { buildServer } from '../src/server/server.ts';
 import { APPROVAL, bearer, bodyOf, interceptingConnector, sendJson, useCrmUnderTest } from './crm-under-test.ts';

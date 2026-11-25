@@ -12,7 +12,7 @@ import {
 } from '../../../database/test/disposable-db.ts';
 import { createOrUpdateCrmApp, readCrmPassword } from '../../../database/users.ts';
 import { CRM_DB_USER } from '../src/config.ts';
-import type { Connector } from '../src/db/read-scope.ts';
+import type { Connector } from '../src/db/scope.ts';
 import type { LogLine } from '../src/log.ts';
 import { buildServer } from '../src/server/server.ts';
 

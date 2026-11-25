@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { sqlErrorOf } from '../../../database/test/crm-fixture.ts';
-import { withReadScope } from '../src/db/read-scope.ts';
+import { withReadScope } from '../src/db/scope.ts';
 import { bearer, useCrmUnderTest } from './crm-under-test.ts';
 
 // ADR-0006 D10: every request is one READ ONLY transaction, and its context lasts that

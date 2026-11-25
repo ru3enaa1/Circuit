@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, isNull, lt } from 'drizzle-orm';
 
 import { MAX_PAGE_SIZE } from '../server/limits.ts';
-import type { Scope } from './read-scope.ts';
+import type { Scope } from './scope.ts';
 import { auditLog, companies, contacts, notes, pipelineStages, tasks } from './schema.ts';
 
 // ADR-0006 D12: what each read returns, as fixed lists of columns. The keys of these objects

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { KEY_AUTHOR_PREFIX } from '../db/read-scope.ts';
+import { KEY_AUTHOR_PREFIX } from '../keys.ts';
 import { AUDIT_AUTHOR_PATTERN, EMAIL_MAX_LENGTH, NOTE_BODY_MAX_LENGTH, SHORT_TEXT_MAX_LENGTH, SLUG_PATTERN } from '../db/schema.ts';
 import { ApiError } from '../server/errors.ts';
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '../server/limits.ts';
@@ -23,7 +23,7 @@ const NUL = '\u0000';
 const storable = (value: string): boolean => !value.includes(NUL) && value.isWellFormed();
 /** z.iso.date() checks each month's days and the leap years, but takes year 0000, which PostgreSQL refuses (22008). */
 const YEAR_ZERO = /^0000-/;
-/** D7: the shape a key signs with as proposer (read-scope.ts). A key never approves. */
+/** D7: the shape a key signs with as proposer (keys.ts). A key never approves. */
 const KEY_AUTHOR = new RegExp(`^${KEY_AUTHOR_PREFIX}[0-9]+$`);
 
 // Sixteen digits can pass 2^53; such an id would be rounded into another one, so it is refused.

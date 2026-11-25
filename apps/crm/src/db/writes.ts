@@ -2,7 +2,7 @@ import { and, DrizzleQueryError, eq, isNull, sql } from 'drizzle-orm';
 import pg from 'pg';
 
 import { ApiError } from '../server/errors.ts';
-import type { Scope } from './read-scope.ts';
+import type { Scope } from './scope.ts';
 import { CONTACT, findCompany, findContact, findStage, NOTE, TASK } from './reads.ts';
 import { contacts, notes, tasks } from './schema.ts';
 

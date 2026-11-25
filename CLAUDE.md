@@ -105,7 +105,9 @@ lo que escribe): el dueño eligió la opción (a) el 2026-11-25, mientras ningun
 deje de tener `read` (ADR-0007 A2).
 **F1.4 (llaves con alcance), abierta el 2026-11-25:** ADR-0008 **aceptada** ese día (el
 dueño aceptó sus nueve recomendaciones), con su línea base
-(`docs/reviews/ADR-0008-baseline.md`, sobre `6e8f445`: 417 pruebas, todo en 0). Decide llaves `crmk_` de 256
+(`docs/reviews/ADR-0008-baseline.md`, sobre `6e8f445`: 417 pruebas, todo en 0). **H4 (D18)
+hecha en un commit propio, sin empujar:** `read-scope.ts` → `scope.ts` y
+`apps/crm/src/keys.ts`, con 417 pruebas y los mismos conteos por archivo. Decide llaves `crmk_` de 256
 bits, el emisor `npm run db:keys` (emitir, listar, revocar) como administrador, toda llave
 emitida con `read` (H2 hecha regla), `GET /accounts/:slug/export` con `export`, la regla de
 la guarda de secretos y H4 (`read-scope.ts` → `scope.ts`). Pedido al dueño, como insumo de
@@ -136,7 +138,7 @@ el CRM aparte).
   `crm`, `crm_owner`, en `0004_crm_owner.sql` (ADR-0006). Su servidor (ADR-0006):
   `src/config.ts` (solo del entorno), `src/server/` (Fastify, errores, llave, límites),
   `src/routes/` (las lecturas en `reads.ts`, las escrituras y la bitácora en `writes.ts`, y
-  su zod en `input.ts`), `src/db/` (la transacción de cada petición en `read-scope.ts`, las
+  su zod en `input.ts`), `src/db/` (la transacción de cada petición en `scope.ts`, las
   consultas en `reads.ts` y las escrituras en `writes.ts`) y `src/main.ts`. Se conecta como
   `crm_app`, miembro solo de `crm_service`, nunca como el administrador. Toda escritura
   nueva pasa por `withWriteScope` (ADR-0007 D4): sin él, la base la rechaza por falta de

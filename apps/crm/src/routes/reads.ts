@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 
-import { withReadScope, type Connector, type Scope } from '../db/read-scope.ts';
+import { withReadScope, type Connector, type Scope } from '../db/scope.ts';
 import { findCompany, findContact, findContactsByEmail, listNotes, listStages, listTasks } from '../db/reads.ts';
 import { credentialsOf, presentedKey } from '../server/auth.ts';
 import { ApiError } from '../server/errors.ts';
