@@ -121,8 +121,12 @@ en rojo. Toda llave emitida lleva `read` (H2 hecha regla). La auditoría: las 19
 en CUMPLE, 1 mayor de la suite (H1: ninguna prueba vigila que un error de `db:keys` no
 muestre el hash ni el mensaje), 3 menores y 3 notas. El 2026-11-25 el dueño pidió A1 (H1) y
 eligió (a) para H2: la guarda lee también los mensajes de los commits que se publican. H3,
-H4 y H5 no los pidió y quedan abiertos. Siguiente: A1 y A2. Pedido al dueño, como insumo de
-F2: el material del programa que citará la estación 4.
+H4 y H5 no los pidió y quedan abiertos. **A1 y A2, hechas ese día, sin empujar:** tres
+pruebas nuevas de D6 en `keys-db.test.ts` (`497bbfb`), en rojo con X1, X4 y X4b; y
+`check-secrets.sh --range` lee también el mensaje de cada commit (`15f3023`, que enmienda
+ADR-0004 C12), con 31 casos en su batería y 11 en la del hook. 480 pruebas, cobertura 95,58
+/ 87,58 / 97,26 / 97,42. La trampa del worktree, en §8. Siguiente: el push, que pide el
+dueño. Pedido al dueño, como insumo de F2: el material del programa que citará la estación 4.
 
 ## 3. Reglas de producto que gobiernan el código
 
