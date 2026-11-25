@@ -18,6 +18,8 @@
     "db:dump-schema": "vitest run schema-dump-db --project database --update=all",
     "db:users": "node database/users.ts",
     "db:keys": "node database/keys.ts",
+    "db:backup": "node database/backup.ts",
+    "db:restore": "node database/restore.ts",
     "crm:start": "node --env-file-if-exists=.env apps/crm/src/main.ts"
   },
   "devDependencies": {

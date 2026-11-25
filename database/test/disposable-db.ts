@@ -96,6 +96,44 @@ export interface DisposableDatabase {
 
 const DEFAULT_POOL_SIZE = 2;
 
+/**
+ * ADR-0009: a name for a database that a command under test creates itself, such as the
+ * target of db:restore, in the only form dropTestDatabase accepts.
+ */
+export function newTestDatabaseName(): string {
+  return `${TEST_DB_PREFIX}${randomBytes(TEST_DB_SUFFIX_BYTES).toString('hex')}`;
+}
+
+/**
+ * Drops a test database that a test named but did not create with createDisposableDatabase,
+ * if it exists, and checks it is gone. Close every connection to it first: FORCE would end a
+ * backend that is still closing (see closedClients).
+ */
+export async function dropTestDatabase(name: string): Promise<void> {
+  const connection = readAdminConnection(readLocalEnv());
+  const admin = new pg.Client({ ...connection, database: MAINTENANCE_DB });
+  await connectOrExplain(admin, connection);
+  try {
+    await admin.query(`DROP DATABASE IF EXISTS ${testDatabase(name)} WITH (FORCE)`);
+    const left = await admin.query('SELECT 1 FROM pg_database WHERE datname = $1', [name]);
+    if (left.rowCount !== 0) throw new Error(`La base de prueba ${name} sigue ahí.`);
+  } finally {
+    await admin.end();
+  }
+}
+
+/** Whether a database of that name exists on the server: what a refused restore must not leave. */
+export async function databaseExists(name: string): Promise<boolean> {
+  const connection = readAdminConnection(readLocalEnv());
+  const admin = new pg.Client({ ...connection, database: MAINTENANCE_DB });
+  await connectOrExplain(admin, connection);
+  try {
+    return (await admin.query('SELECT 1 FROM pg_database WHERE datname = $1', [name])).rowCount === 1;
+  } finally {
+    await admin.end();
+  }
+}
+
 /** An empty database (copied from template1, so nothing in it comes from the migrations). */
 export async function createDisposableDatabase(): Promise<DisposableDatabase> {
   const connection = readAdminConnection(readLocalEnv());

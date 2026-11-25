@@ -380,6 +380,25 @@ Las pruebas nuevas se ven en rojo antes del código, o las muerde su mutante.
   mostrado el `DROP DATABASE` de `disposable-db.ts` y D7 habría puesto en rojo las pruebas que
   leen el paquete real. Y `'apps/*/src'` no casaba con ningún archivo (`git ls-files` da 0): D7
   habría pasado sin leer las apps. Los dos van ahora con `:(glob)`, que lee solo lo que nombra.
+- **R6 (D1–D6), en su commit.** `database/backup.ts` y `database/restore.ts`; los dos comparten
+  el ejecutor de docker (`composeDocker`, que no recibe entorno propio: lo que llega al
+  contenedor va en las órdenes, donde una prueba lo ve). `--backups-dir` existe, como
+  `--database`, para que las pruebas escriban en un temporal del sistema. La salida de docker
+  no se imprime nunca: `pg_restore` puede citar una fila. Sobre D3: Compose lee `.env` por su
+  cuenta para interpolar `compose.yaml`, también en un `exec`; eso es de Compose, no de una
+  orden nuestra, y ninguna orden lleva la contraseña. En D4, comprobar y crear son un paso:
+  `CREATE DATABASE` falla con 42P04 si el nombre existe, y solo entonces se marca la base como
+  de esta corrida. Pruebas: `backup-db` (12), `restore-db` (11), `backup-command` (12, sin base
+  ni docker) y `backup-process` (2). Las pruebas miran solo los temporales que ellas mismas
+  nombraron: con todos los archivos a la vez, `ls /tmp` puede mostrar el de otra corrida en
+  curso.
+- **Mutantes de R6.** M1–M7 y M9, en rojo en su prueba, restaurados por hash. M8 tal como está
+  escrito (`pg_dump --no-owner`) **sobrevive, y no puede morder**: PostgreSQL ignora esa opción
+  al escribir un archivo custom (la documentación de `pg_dump`, `-O`). Se plantó donde un error
+  real la pondría, en `pg_restore --no-owner`, y queda en rojo. M5 se plantó dos veces: la
+  primera dejó un paréntesis sin cerrar y salió en rojo por no cargar; la segunda, con la línea
+  entera, sale en rojo por «no order carries a password». M6 es «42P04 se toma como si la base
+  fuera nueva»: la restauración falla, y la base que ya existía se borra.
 
 ## Preguntas abiertas
 
