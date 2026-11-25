@@ -61,7 +61,8 @@ Migraciones `0001` y `0003` (generadas) y `0002` (a mano); `database/schema.sql`
 un `pg_dump` (R8). 164 pruebas, cobertura 98,46 / 92,3 / 100 / 98,24; los mutantes de la
 ADR y los de la auditoría, en rojo. Los arreglos, empujados el 2026-11-24 (CI en verde en
 `f7542cc`, corrida 45503832664, con la carrera de roles en un servidor nuevo).
-**F1.2 (API de lectura) hecha el 2026-11-24, sin empujar y sin auditar.** ADR-0006
+**F1.2 (API de lectura) hecha y empujada el 2026-11-24 (CI en verde en `bf7a52f`,
+corrida 45521454430); sin auditar.** ADR-0006
 aceptada ese día (el dueño aceptó sus siete recomendaciones), con su línea base
 (`docs/reviews/ADR-0006-baseline.md`). Fastify y zod en `apps/crm`, corridos por Node sin
 compilar (`npm run crm:start`, solo en `127.0.0.1`); siete rutas de lectura con llave

@@ -148,8 +148,8 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   login). **Para F1.3:** no mandar nunca `id` ni `created_at` (H7). **Para F1.4:** llaves
   de 128 bits o más al azar (H12). Arreglos empujados el 2026-11-24 (CI en verde en
   `f7542cc`). **F1.2:** ADR-0006 propuesta y aceptada ese día, con su línea base; el dueño
-  aceptó sus siete recomendaciones. **F1.2 hecha el 2026-11-24, sin empujar y sin
-  auditar:** la API de lectura (Fastify y zod, sin compilar, en `127.0.0.1`), siete rutas
+  aceptó sus siete recomendaciones. **F1.2 hecha y empujada el 2026-11-24 (CI en
+  verde en `bf7a52f`, corrida 45521454430), sin auditar:** la API de lectura (Fastify y zod, sin compilar, en `127.0.0.1`), siete rutas
   con llave Bearer, 403 de cuenta ajena y de permiso con su motivo (adelantados de F1.4),
   una transacción `READ ONLY` por petición y un registro sin datos personales. `0004` da
   todo `crm` a `crm_owner` (H3); `npm run db:users` crea `crm_app` con un verificador SCRAM
