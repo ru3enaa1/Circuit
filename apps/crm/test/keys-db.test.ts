@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import type pg from 'pg';
+import pg from 'pg';
 import { describe, expect, it } from 'vitest';
 
 import { readLocalEnv } from '../../../database/env.ts';
@@ -68,6 +68,38 @@ async function countKeys(): Promise<number> {
 
 const read = (key: string) => crm().app.inject({ method: 'GET', url: '/accounts/cuenta-a/stages', headers: bearer(key) });
 
+/** The real admin connection, keeping every error the database raised, to show what it carried. */
+function recordingConnector(errors: unknown[]): ConnectAdmin {
+  const real = adminConnector(env());
+  return async () => {
+    const client = await real();
+    return {
+      query: <R extends pg.QueryResultRow>(text: string, values?: unknown[]) =>
+        client.query<R>(text, values).catch((error: unknown) => {
+          errors.push(error);
+          throw error;
+        }),
+      end: () => client.end(),
+    };
+  };
+}
+
+/** The real admin connection, whose COMMIT fails with `failure()`; `refused` gets one entry per COMMIT. */
+function failingCommitConnector(failure: () => Error, refused: string[] = []): ConnectAdmin {
+  const real = adminConnector(env());
+  return async () => {
+    const client = await real();
+    return {
+      query: <R extends pg.QueryResultRow>(text: string, values?: unknown[]) => {
+        if (text !== 'COMMIT') return client.query<R>(text, values);
+        refused.push(text);
+        return Promise.reject<pg.QueryResult<R>>(failure());
+      },
+      end: () => client.end(),
+    };
+  };
+}
+
 describe('D4 · issue', () => {
   it('writes exactly one row and prints its id and the key once, on stdout only', async () => {
     const before = await countKeys();
@@ -114,20 +146,48 @@ describe('D6 · the key is shown only after its COMMIT', () => {
   });
 
   it('a COMMIT that fails leaves no key on stdout and no row', async () => {
-    const real = adminConnector(env());
-    const connect: ConnectAdmin = async () => {
-      const client = await real();
-      return {
-        query: <R extends pg.QueryResultRow>(text: string, values?: unknown[]) =>
-          text === 'COMMIT' ? Promise.reject<pg.QueryResult<R>>(new Error('COMMIT falló a propósito')) : client.query<R>(text, values),
-        end: () => client.end(),
-      };
-    };
     const before = await countKeys();
-    const run = await keys(issueArgs('sin-commit'), { connect });
+    const run = await keys(issueArgs('sin-commit'), { connect: failingCommitConnector(() => new Error('COMMIT falló a propósito')) });
     expect(run.code).toBe(1);
     expect(run.out.match(KEY_IN_TEXT)).toBeNull();
     expect(await countKeys()).toBe(before);
+  });
+});
+
+// ADR-0008 A1 (H1 of its audit): the rest of D6. pg's detail of a 23505 spells the hash, and the
+// message of an unexpected error can carry anything, the connection included; neither is printed.
+describe('D6 · an error shows neither the hash of the key nor its own message', () => {
+  it('a 23505 names its SQLSTATE, and not the hash that the detail of pg carries', async () => {
+    const repeated = testApiKey('repetida-hash');
+    const newKey = () => repeated;
+    expect((await keys(issueArgs('primera-hash'), { newKey })).code).toBe(0);
+    const errors: unknown[] = [];
+    const run = await keys(issueArgs('segunda-hash'), { newKey, connect: recordingConnector(errors) });
+    expect([run.code, run.out]).toEqual([1, '']);
+    expect(run.err).toContain('23505');
+    const hex = createHash('sha256').update(repeated).digest('hex');
+    // The premise: what is kept out was there to leak, or this would pass with nothing to hide.
+    const duplicate = errors.find((error) => error instanceof pg.DatabaseError && error.code === '23505');
+    expect(duplicate instanceof pg.DatabaseError ? duplicate.detail : undefined).toContain(hex);
+    expect(run.err).not.toContain(hex);
+  });
+
+  // describeFailure has a branch for an error with a system code and one for an error without.
+  it.each([
+    { kind: 'without a code', code: undefined, said: 'db:keys falló.' },
+    { kind: 'with a system code', code: 'ECONNRESET', said: 'db:keys falló (ECONNRESET).' },
+  ])('an unexpected error $kind says that db:keys failed, without its message and without the key', async ({ kind, code, said }) => {
+    const planted = `COMMIT falló a propósito (${kind}), con un texto que no debe salir`;
+    const failure = () => Object.assign(new Error(planted), code === undefined ? {} : { code });
+    const label = code === undefined ? 'sin-commit-mensaje' : 'sin-commit-codigo';
+    const key = testApiKey(label);
+    const refused: string[] = [];
+    const run = await keys(issueArgs(label), { newKey: () => key, connect: failingCommitConnector(failure, refused) });
+    expect(refused).toEqual(['COMMIT']);
+    expect([run.code, run.out]).toEqual([1, '']);
+    expect(run.err).toContain(said);
+    expect(run.err).not.toContain(planted);
+    expect(run.err).not.toContain(key.slice(PREFIX_LENGTH));
   });
 });
 

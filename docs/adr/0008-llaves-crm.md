@@ -2,7 +2,8 @@
 
 - **Fecha:** 2026-11-25
 - **Estado:** aceptada el 2026-11-25. El dueño aceptó las nueve recomendaciones de
-  «Preguntas abiertas» tal como están escritas.
+  «Preguntas abiertas» tal como están escritas. Auditada ese día: APROBAR CON CONDICIONES
+  (`docs/reviews/ADR-0008-audit-2026-11-25.md`), con sus enmiendas al final.
 - **Tarea:** F1.4 de `DEVELOPMENT_PLAN.md`, «llaves con alcance» del CRM simulado. Suma lo que
   dejaron para esta fase ADR-0005 (H12: llaves de al menos 128 bits al azar), ADR-0006 y
   ADR-0007 (el formato, la generación, la revocación y la ruta de exportar), H2 de la
@@ -351,3 +352,25 @@ cada ASUNCIÓN queda como decisión y la ADR no cambia.
    F2 (D18).
 9. **¿Las llaves no vencen?** Recomendación: no vencen en F1.4; se revocan. Es una
    demostración local con un agente.
+
+## Auditoría y enmiendas (2026-11-25)
+
+La auditoría de `adr-guard`, en una sesión aparte, dio APROBAR CON CONDICIONES: 0
+bloqueantes, 1 mayor, 3 menores y 3 notas, con las 19 cláusulas en CUMPLE
+(`docs/reviews/ADR-0008-audit-2026-11-25.md`). La mayor era de la suite y no del código. El
+2026-11-25 el dueño pidió A1 y eligió la opción (a) de H2. No pidió H3 (`_llave_` en
+Markdown), H4 (una opción repetida de `db:keys`) ni H5 (el comentario de las trece rutas),
+así que quedan abiertos. Tampoco cambian H6 ni H7, que eran notas sin arreglo.
+
+- **A1 · El resto de D6 (H1).** D6 prometía que ningún error muestra el hash ni el mensaje
+  del error, y solo la llave tenía prueba. El texto de la cláusula no cambia. Son tres pruebas
+  nuevas en `keys-db.test.ts`, en un bloque propio de D6. La primera es un 23505: el error
+  nombra su SQLSTATE y no el hash, que el `detail` de pg trae en hexadecimal. La segunda y la
+  tercera son un `COMMIT` que falla con un error inesperado, sin código y con un código de
+  sistema: el error dice que `db:keys` falló, sin su mensaje y sin la llave. Cada una
+  comprueba antes su premisa: que el `detail` sí traía el hash, y que el `COMMIT` sí se
+  rechazó. Sin eso pasarían también sin nada que esconder. El `COMMIT` que falla de antes
+  comparte con ellas el conector, sin cambiar lo que comprueba. Los mutantes de la auditoría,
+  plantados en `database/keys.ts`, quedan en rojo, cada uno en su prueba: X1 (`describeFailure`
+  suma el `detail`) y X4 (suma `String(error)` a un error sin código). También queda en rojo
+  X4b, propio (suma `String(error)` a uno con código). `keys-db` pasa de 8 a 11 pruebas.
