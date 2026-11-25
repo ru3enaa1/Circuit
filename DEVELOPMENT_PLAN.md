@@ -188,14 +188,20 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   precedencia del `PATCH` quedan escritos, con dos pruebas nuevas. 417 pruebas; 10 vueltas
   seguidas de `npm run check` en 0. **H2:** el dueño eligió la opción (a) el 2026-11-25
   (una llave sin `read` ve lo que escribe, mientras ninguna llave real deje de tener `read`).
-  **F1.4, abierta el 2026-11-25:** ADR-0008 aceptada ese día (el dueño aceptó sus nueve
+  **F1.4, hecha y empujada el 2026-11-25 (CI en verde en `ece213b`, corrida 45682667249),
+  y auditada:** APROBAR CON CONDICIONES (`docs/reviews/ADR-0008-audit-2026-11-25.md`).
+  ADR-0008 aceptada ese día (el dueño aceptó sus nueve
   recomendaciones), con su línea base sobre `6e8f445` (417 pruebas, todo en 0). H4 (D18)
   hecha primero, sin cambio de conducta: `read-scope.ts` pasa a `scope.ts`. Después, en su propio
   commit, D1–D3 y D14: la forma de la llave, el generador, el hash y las llaves de prueba con
   esa forma (433 pruebas, `npm run check` en 0). Luego, en su commit, el emisor `npm run
   db:keys` (D4–D9, D19; 463 pruebas). Después, en su commit, exportar y la prueba de los tres
-  «no» (D10–D13; 477 pruebas). Luego, en su commit, la regla `crm-api-key` de la guarda (D15). Luego, en su commit, el README (emitir, listar y revocar). Se pidió al dueño
-  el insumo de F2: el material del programa que citará la estación 4.
+  «no» (D10–D13; 477 pruebas). Luego, en su commit, la regla `crm-api-key` de la guarda
+  (D15), y al final el README (emitir, listar y revocar). La auditoría dio 1 mayor, de la
+  suite: ninguna prueba vigila que un error de `db:keys` no muestre el hash de la llave ni
+  el mensaje del error (H1). El 2026-11-25 el dueño pidió A1 (H1) y eligió (a) para H2: la
+  guarda lee también los mensajes de los commits que se publican. H3, H4 y H5 no los pidió.
+  Se pidió al dueño el insumo de F2: el material del programa que citará la estación 4.
 
 ### F2 · Circuito y mapa
 

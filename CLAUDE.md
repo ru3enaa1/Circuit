@@ -103,24 +103,25 @@ pruebas nuevas. Quedan 417 pruebas, con la misma cobertura; 10 vueltas
 seguidas de `npm run check` en 0; M15, M16 y M16b, en rojo. **H2** (una llave sin `read` ve
 lo que escribe): el dueño eligió la opción (a) el 2026-11-25, mientras ninguna llave real
 deje de tener `read` (ADR-0007 A2).
-**F1.4 (llaves con alcance), abierta el 2026-11-25:** ADR-0008 **aceptada** ese día (el
-dueño aceptó sus nueve recomendaciones), con su línea base
-(`docs/reviews/ADR-0008-baseline.md`, sobre `6e8f445`: 417 pruebas, todo en 0). **H4 (D18)
-hecha en un commit propio (`7b60367`), sin empujar:** `read-scope.ts` → `scope.ts` y
-`apps/crm/src/keys.ts`, con 417 pruebas y los mismos conteos por archivo. **D1–D3 y D14
-hechas, sin empujar:** la forma `crmk_` (`API_KEY_SHAPE`, con la última letra canónica), el
-generador y `hashApiKey` en `keys.ts`; `presentedKey` rechaza otra forma sin tomar conexión;
-toda llave de prueba sale de `testApiKey` (`crm-fixture.ts`). 433 pruebas, `npm run check`
-en 0, M1–M4 en rojo (`d24ed3a`). **El emisor (D4–D9, D19), en su commit, sin empujar:**
-`database/keys.ts` y `npm run db:keys -- issue | list | revoke`; 463 pruebas, `npm run check`
-en 0, M5–M11 en rojo (`eeb8ce6`). **Exportar y los tres «no» (D10–D13), en su commit, sin empujar:**
-`GET /accounts/:slug/export` con `export` (`routes/export.ts`) y `agent-key-db.test.ts`;
-477 pruebas, `npm run check` en 0, M12–M14 en rojo (`501445b`). **La regla `crm-api-key`
-de la guarda (D15), en su commit, sin empujar:** 28 casos en `check-secrets.test.sh`, M15 en rojo
-(`acd5e2b`). **El README (emitir, listar y revocar), §4 y §9 de este archivo y la línea
-«Enmendada por» de ADR-0007, en su commit, sin empujar.** Decide llaves `crmk_` de 256 bits, el emisor `npm run db:keys` (emitir, listar, revocar) como administrador, toda llave
-emitida con `read` (H2 hecha regla), `GET /accounts/:slug/export` con `export`, la regla de
-la guarda de secretos y H4 (`read-scope.ts` → `scope.ts`). Pedido al dueño, como insumo de
+**F1.4 (llaves con alcance), hecha y empujada el 2026-11-25 (CI en verde en `ece213b`,
+corrida 45682667249), y auditada:** APROBAR CON CONDICIONES
+(`docs/reviews/ADR-0008-audit-2026-11-25.md`). ADR-0008 **aceptada** ese día (el dueño aceptó
+sus nueve recomendaciones), con su línea base (`docs/reviews/ADR-0008-baseline.md`, sobre
+`6e8f445`: 417 pruebas, todo en 0). Un commit por paso: H4 (D18, `7b60367`), `read-scope.ts`
+→ `scope.ts` y `apps/crm/src/keys.ts`, sin cambio de conducta; D1–D3 y D14 (`d24ed3a`), la
+forma `crmk_` (`API_KEY_SHAPE`, con la última letra canónica), el generador y `hashApiKey`
+en `keys.ts`, `presentedKey` que rechaza otra forma sin tomar conexión y toda llave de prueba
+desde `testApiKey` (`crm-fixture.ts`); el emisor (D4–D9, D19, `eeb8ce6`), `database/keys.ts` y
+`npm run db:keys -- issue | list | revoke`; exportar y los tres «no» (D10–D13, `501445b`),
+`GET /accounts/:slug/export` con `export` (`routes/export.ts`) y `agent-key-db.test.ts`; la
+regla `crm-api-key` de la guarda (D15, `acd5e2b`), con 28 casos en `check-secrets.test.sh`; y
+los documentos (`ece213b`): el README (emitir, listar y revocar), §4 y §9 de este archivo y
+«Enmendada por» en ADR-0007. 477 pruebas, cobertura 95,58 / 86,92 / 97,26 / 97,42; M1–M15
+en rojo. Toda llave emitida lleva `read` (H2 hecha regla). La auditoría: las 19 cláusulas
+en CUMPLE, 1 mayor de la suite (H1: ninguna prueba vigila que un error de `db:keys` no
+muestre el hash ni el mensaje), 3 menores y 3 notas. El 2026-11-25 el dueño pidió A1 (H1) y
+eligió (a) para H2: la guarda lee también los mensajes de los commits que se publican. H3,
+H4 y H5 no los pidió y quedan abiertos. Siguiente: A1 y A2. Pedido al dueño, como insumo de
 F2: el material del programa que citará la estación 4.
 
 ## 3. Reglas de producto que gobiernan el código
