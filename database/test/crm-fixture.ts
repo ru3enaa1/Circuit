@@ -171,6 +171,8 @@ export interface ReadExtras {
   /** A live key of account a with read, write and delete: the only one that archives (ADR-0007 D2). */
   readonly deleteKey: string;
   readonly deleteKeyId: string;
+  /** A live key of account a with read and export: the only one that exports (ADR-0008 D11). */
+  readonly exportKey: string;
   /** Position 1, after the base fixture's stage at 0. */
   readonly secondStageId: string;
   /** Newer than the base fixture's note on a's contact, so a list starts with it. */
@@ -200,12 +202,17 @@ async function seedReadExtras(client: pg.PoolClient, a: FixtureAccount): Promise
     "INSERT INTO crm.api_keys (account_id, label, key_hash, permissions) VALUES ($1, 'completa', $2, '{read,write,delete}')",
     [sha256(deleteKey)],
   );
+  const exportKey = testApiKey('exportacion');
+  await one("INSERT INTO crm.api_keys (account_id, label, key_hash, permissions) VALUES ($1, 'exportacion', $2, '{read,export}')", [
+    sha256(exportKey),
+  ]);
   const archivedContactEmail = `archivado@${a.slug}.test`;
   return {
     writeOnlyKey,
     readOnlyKey,
     deleteKey,
     deleteKeyId,
+    exportKey,
     secondStageId: await one("INSERT INTO crm.pipeline_stages (account_id, key, label, position) VALUES ($1, 'contactada', 'Contactada', 1)", []),
     secondNoteId: await one("INSERT INTO crm.notes (account_id, contact_id, body) VALUES ($1, $2, 'Segunda nota')", [a.contactId]),
     archivedNoteId: await one(

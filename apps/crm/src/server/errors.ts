@@ -4,7 +4,8 @@ import { MAX_BODY_BYTES } from './limits.ts';
 // { "error": { "code", "message" } }. The message is fixed per code, in Spanish, and never
 // repeats a value from the request. entrada_invalida names the field, and field names come
 // only from the API's own schemas (input.ts), never from the request. ADR-0007 adds
-// ya_existe (D11) and names the missing permission in sin_permiso (D2).
+// ya_existe (D11) and names the missing permission in sin_permiso (D2); ADR-0008 D11 adds
+// the export permission's message.
 
 export const ERROR_STATUS = {
   sin_llave: 401,
@@ -20,14 +21,15 @@ export const ERROR_STATUS = {
 
 export type ErrorCode = keyof typeof ERROR_STATUS;
 
-/** ADR-0007 D2: what each route requires. A key may also hold `export`, which no route asks for yet. */
-export type Permission = 'read' | 'write' | 'delete';
+/** ADR-0007 D2: what each route requires; `export` only the export (ADR-0008 D11). */
+export type Permission = 'read' | 'write' | 'delete' | 'export';
 
 /** The read message is the one ADR-0006 answered with, unchanged (D2). */
 const MISSING_PERMISSION: Readonly<Record<Permission, string>> = {
   read: 'La llave no tiene permiso de lectura.',
   write: 'La llave no tiene permiso de escritura.',
   delete: 'La llave no tiene permiso de borrado.',
+  export: 'La llave no tiene permiso de exportación.',
 };
 
 const MESSAGES: Readonly<Record<Exclude<ErrorCode, 'entrada_invalida' | 'sin_permiso'>, string>> = {

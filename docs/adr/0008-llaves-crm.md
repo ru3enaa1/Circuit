@@ -294,6 +294,18 @@ revocan como administrador con un `UPDATE`. Una llave que ya se mostró no se pu
   se vieron en rojo antes del código; lo prueban M5–M11, todos en rojo por su cláusula y
   restaurados por hash. `npm run check` en 0, 463 pruebas, cobertura 95,53 / 86,79 / 97,2 /
   97,39.
+- **Exportar y los tres «no», D10–D13, en su commit.** `routes/export.ts`, registrada dentro del
+  plugin de `/accounts/:slug`; `exportContacts` en `db/reads.ts`; `Permission` suma `export`
+  con su mensaje. `withReadScope` recibe el permiso de la ruta como último argumento, `read`
+  por omisión, para que sus llamadas en las pruebas no cambien (D17); `ReadPermission` y
+  `WritePermission` cierran qué permiso va con qué transacción. El fixture gana `exportKey`
+  (`{read,export}`); la llave de exportar de B la crea `export-db.test.ts`, que también siembra
+  55 contactos en A para que se vean el límite de 50 y el de 100. `export-db.test.ts` (D11,
+  D12, 9) se vio en rojo antes del código (404); `agent-key-db.test.ts` (D13, 5) se escribió
+  después, y la muerden tres mutantes propios: exportar con `read`, archivar con `write` y
+  `authorize` sin comparar la cuenta. M12–M14 en rojo, más M12b propio (la transacción con
+  `read` fijo), todos restaurados por hash. `npm run check` en 0, 477 pruebas, cobertura
+  95,58 / 86,92 / 97,26 / 97,42.
 
 ## Preguntas abiertas
 

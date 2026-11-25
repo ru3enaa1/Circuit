@@ -113,7 +113,9 @@ generador y `hashApiKey` en `keys.ts`; `presentedKey` rechaza otra forma sin tom
 toda llave de prueba sale de `testApiKey` (`crm-fixture.ts`). 433 pruebas, `npm run check`
 en 0, M1–M4 en rojo (`d24ed3a`). **El emisor (D4–D9, D19), en su commit, sin empujar:**
 `database/keys.ts` y `npm run db:keys -- issue | list | revoke`; 463 pruebas, `npm run check`
-en 0, M5–M11 en rojo. Decide llaves `crmk_` de 256 bits, el emisor `npm run db:keys` (emitir, listar, revocar) como administrador, toda llave
+en 0, M5–M11 en rojo (`eeb8ce6`). **Exportar y los tres «no» (D10–D13), en su commit, sin empujar:**
+`GET /accounts/:slug/export` con `export` (`routes/export.ts`) y `agent-key-db.test.ts`;
+477 pruebas, `npm run check` en 0, M12–M14 en rojo. Decide llaves `crmk_` de 256 bits, el emisor `npm run db:keys` (emitir, listar, revocar) como administrador, toda llave
 emitida con `read` (H2 hecha regla), `GET /accounts/:slug/export` con `export`, la regla de
 la guarda de secretos y H4 (`read-scope.ts` → `scope.ts`). Pedido al dueño, como insumo de
 F2: el material del programa que citará la estación 4.

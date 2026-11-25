@@ -1,11 +1,10 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { z } from 'zod';
 
-import { withReadScope, withWriteScope, type Approval, type Connector, type Scope } from '../db/scope.ts';
+import { withReadScope, withWriteScope, type Approval, type Connector, type Scope, type WritePermission } from '../db/scope.ts';
 import { listAuditLog } from '../db/reads.ts';
 import { addNote, addTask, archiveContact, createContact, updateContact } from '../db/writes.ts';
 import { credentialsOf } from '../server/auth.ts';
-import type { Permission } from '../server/errors.ts';
 import {
   accountParams,
   archiveBody,
@@ -40,7 +39,7 @@ function contactInput<S extends z.ZodObject>(request: FastifyRequest, body: S): 
 function write<I extends { readonly approval: Approval }, T>(
   pool: Connector,
   request: FastifyRequest,
-  permission: Exclude<Permission, 'read'>,
+  permission: WritePermission,
   parse: () => I,
   work: (scope: Scope, input: I) => Promise<T>,
 ): Promise<T> {

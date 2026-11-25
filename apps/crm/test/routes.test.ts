@@ -3,9 +3,9 @@ import { describe, expect, it } from 'vitest';
 
 import { buildServer } from '../src/server/server.ts';
 
-// ADR-0006 D11, amended by ADR-0007 D1: the routes the server registers, compared with a fixed
-// list of method and pattern. Adding a route means changing this list, and that change shows
-// in the diff.
+// ADR-0006 D11, amended by ADR-0007 D1 and then by ADR-0008 D10: the routes the server
+// registers, compared with a fixed list of method and pattern. Adding a route means changing
+// this list, and that change shows in the diff. None issues, lists or revokes keys (ADR-0008 D9).
 
 const EXPECTED_ROUTES = [
   'GET /accounts/:slug/audit-log',
@@ -13,6 +13,7 @@ const EXPECTED_ROUTES = [
   'GET /accounts/:slug/contacts/:contactId',
   'GET /accounts/:slug/contacts/:contactId/notes',
   'GET /accounts/:slug/contacts/:contactId/tasks',
+  'GET /accounts/:slug/export',
   'GET /accounts/:slug/stages',
   'GET /health',
   'PATCH /accounts/:slug/contacts/:contactId',
@@ -29,7 +30,7 @@ const unusedPool = {
 };
 
 describe('D11 · the routes', () => {
-  it('are exactly the thirteen of the list, and none is a DELETE', async () => {
+  it('are exactly the fourteen of the list, and none is a DELETE', async () => {
     const app = buildServer({ pool: unusedPool, log: () => undefined });
     const seen: string[] = [];
     // Added before ready(): the routes are registered inside plugins, which load then.

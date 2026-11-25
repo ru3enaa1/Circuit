@@ -39,6 +39,13 @@ export interface Scope {
   readonly client: pg.PoolClient;
 }
 
+/**
+ * What a READ ONLY transaction may require (ADR-0008 D11): the reads take `read`, the export
+ * `export`. A write never runs on these, nor a read on `write` or `delete`.
+ */
+export type ReadPermission = Extract<Permission, 'read' | 'export'>;
+export type WritePermission = Extract<Permission, 'write' | 'delete'>;
+
 /** ADR-0007 D7: who approved a write and the approval it came from, already validated by input.ts. */
 export interface Approval {
   readonly approvedBy: string;
@@ -120,9 +127,17 @@ async function inTransaction<T>(
 
 const scopeOf = (client: pg.PoolClient, key: ResolvedKey): Scope => ({ accountId: key.accountId, db: drizzle({ client }), client });
 
-/** ADR-0006 D10: READ ONLY, with the account and the key set, and no author. */
-export function withReadScope<T>(pool: Connector, credentials: Credentials, work: (scope: Scope) => Promise<T>): Promise<T> {
-  return inTransaction(pool, 'read', credentials, 'read', async (client, key) => {
+/**
+ * ADR-0006 D10: READ ONLY, with the account and the key set, and no author. `permission` is
+ * the route's: `read` unless the route says otherwise, and only the export says `export`.
+ */
+export function withReadScope<T>(
+  pool: Connector,
+  credentials: Credentials,
+  work: (scope: Scope) => Promise<T>,
+  permission: ReadPermission = 'read',
+): Promise<T> {
+  return inTransaction(pool, 'read', credentials, permission, async (client, key) => {
     await client.query(READ_CONTEXT, [ACCOUNT_SETTING, String(key.accountId), API_KEY_SETTING, String(key.apiKeyId)]);
     return work(scopeOf(client, key));
   });
@@ -136,7 +151,7 @@ export function withReadScope<T>(pool: Connector, credentials: Credentials, work
 export function withWriteScope<I extends { readonly approval: Approval }, T>(
   pool: Connector,
   credentials: Credentials,
-  permission: Exclude<Permission, 'read'>,
+  permission: WritePermission,
   parse: () => I,
   work: (scope: Scope, input: I) => Promise<T>,
 ): Promise<T> {

@@ -15,11 +15,13 @@ import {
   parseInput,
   searchBody,
 } from './input.ts';
+import { exportRoutes } from './export.ts';
 import { writeRoutes } from './writes.ts';
 
-// ADR-0007 D1, which amends ADR-0006 D11: exactly thirteen routes. /health takes no key and
-// returns no data; the other twelve live under /accounts/:slug/ and take a key. The six of this
-// file read through withReadScope; the six of writes.ts are the writes and the audit trail.
+// ADR-0008 D10, which amends ADR-0007 D1: exactly fourteen routes. /health takes no key and
+// returns no data; the other thirteen live under /accounts/:slug/ and take a key. The six of
+// this file read through withReadScope; the six of writes.ts are the writes and the audit
+// trail; export.ts is the export.
 
 export interface RouteOptions {
   readonly pool: Connector;
@@ -78,6 +80,7 @@ async function accountRoutes(app: FastifyInstance, options: RouteOptions): Promi
   contactRoutes(app, pool);
   // In this plugin, so the hook above runs before any of their bodies is read.
   writeRoutes(app, pool);
+  exportRoutes(app, pool);
 }
 
 /** One contact by id, and its notes and tasks: 404 when the contact is archived or not visible. */

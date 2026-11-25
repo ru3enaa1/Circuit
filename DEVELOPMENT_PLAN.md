@@ -193,8 +193,8 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   hecha primero, sin cambio de conducta: `read-scope.ts` pasa a `scope.ts`. Después, en su propio
   commit, D1–D3 y D14: la forma de la llave, el generador, el hash y las llaves de prueba con
   esa forma (433 pruebas, `npm run check` en 0). Luego, en su commit, el emisor `npm run
-  db:keys` (D4–D9, D19; 463 pruebas). Falta exportar, la prueba de los tres «no», la regla de
-  la guarda y el README. Se pidió al dueño
+  db:keys` (D4–D9, D19; 463 pruebas). Después, en su commit, exportar y la prueba de los tres
+  «no» (D10–D13; 477 pruebas). Falta la regla de la guarda y el README. Se pidió al dueño
   el insumo de F2: el material del programa que citará la estación 4.
 
 ### F2 · Circuito y mapa

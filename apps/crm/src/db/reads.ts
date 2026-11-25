@@ -118,6 +118,25 @@ export function listTasks(scope: Scope, contactId: number, page: Page) {
     .limit(page.limit);
 }
 
+/**
+ * ADR-0008 D12: the account's active contacts, with the same fields as one contact, newest
+ * first and paged like the notes. Only the export reads it, and only with `export`.
+ */
+export function exportContacts(scope: Scope, page: Page) {
+  return scope.db
+    .select(CONTACT)
+    .from(contacts)
+    .where(
+      and(
+        eq(contacts.accountId, scope.accountId),
+        isNull(contacts.archivedAt),
+        page.before === undefined ? undefined : lt(contacts.id, page.before),
+      ),
+    )
+    .orderBy(desc(contacts.id))
+    .limit(page.limit);
+}
+
 /** A stage of the key's account, by id; stages are never archived. */
 export async function findStage(scope: Scope, stageId: number) {
   const found = await scope.db
