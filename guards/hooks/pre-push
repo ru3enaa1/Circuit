@@ -9,8 +9,9 @@
 # reveal the names it protects (ADR-0004 audit, H1; DEVELOPMENT_PLAN, R9).
 #
 # For every ref being pushed, with the existing guards:
-#   1. check-secrets.sh --range on each commit that no ref of that remote has yet, so a key
-#      added in one commit and removed in the next is still caught;
+#   1. check-secrets.sh --range on each commit that no ref of that remote has yet, over its
+#      tree and its message, so a key added in one commit and removed in the next is still
+#      caught, and so is one pasted into a message (ADR-0008 A2);
 #   2. the private list over the tree of the pushed commit, and over the diff, message and
 #      author of each of those new commits.
 # Deleting a remote ref publishes nothing and is not checked.

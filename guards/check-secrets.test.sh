@@ -176,6 +176,28 @@ expect "a key removed in a later commit is gone from the head" 0 "clean"
 guard_args=(--range "$base..HEAD")
 expect "--range finds the key in the commit that added it" 1 "$added:leak.txt:2: anthropic-api-key" "$ANTHROPIC_KEY"
 expect "--range finds the secrets file in that commit" 1 "FAIL  $added:.env: env file"
+
+# ADR-0008 A2: a push publishes each message too. A key pasted into a message, with clean
+# files, is found by --range, and only there: the next commit has no message yet.
+new_repo
+plant base.txt "harmless" ""
+commit "base"
+base="$(git -C "$repo" rev-parse HEAD)"
+plant notes.txt "harmless too" ""
+commit "$(printf 'fix: pega la salida de db:keys\n\nla llave es %s' "$CRM_KEY")"
+pasted="$(git -C "$repo" rev-parse --short HEAD)"
+expect "a key only in a commit message is not in the next commit" 0 "clean"
+guard_args=(--range "$base..HEAD")
+expect "--range finds a key in a commit message" 1 "FAIL  $pasted:(message):3: crm-api-key" "$CRM_TAIL"
+# Its control: a message that only names a secret passes. The last two lines would fail if
+# the YAML form read messages (a line that starts with the variable and `:`), or if the CRM
+# rule took 44 characters for a key.
+new_repo
+plant notes.txt "harmless" ""
+# Single quotes on purpose: the `$` and the template are the text of the message.
+commit "$(printf 'docs: POSTGRES_PASSWORD=$VAR y la forma `%s${tail}`\n\nPOSTGRES_PASSWORD: sale de .env\n%sx' "$CRM_PREFIX" "$CRM_KEY")"
+guard_args=(--range HEAD)
+expect "--range: a message that only names a secret passes" 0 "clean: no secret shapes or secret files in 1 commit(s)"
 # Each refusal names its own reason: a later check failing by accident is not this one.
 guard_args=(--range HEAD..HEAD)
 expect "--range with no commit checks nothing" 2 "no commit in 'HEAD..HEAD'; nothing was checked"

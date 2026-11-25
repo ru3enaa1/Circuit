@@ -3,6 +3,9 @@
 - **Fecha:** 2026-11-24
 - **Estado:** aceptada (el dueño, 2026-11-24, con los supuestos de las preguntas abiertas).
   Enmendada el mismo día tras su auditoría (ver «Enmiendas», al final)
+- **Enmendada por:** ADR-0008 A2, el 2026-11-25. En C12, con `--range`, la guarda revisa
+  también el mensaje de cada commit del rango, con las reglas que leen todo archivo. Así el
+  hook de `pre-push` vigila los mensajes que publica.
 - **Tarea:** F0.5 de `DEVELOPMENT_PLAN.md`: «GitHub Actions: tipos, pruebas con cobertura,
   frases prohibidas sobre el README y las apps, finales de línea y patrones de secretos».
   Terminado cuando «la rama en verde; una frase plantada la pone en rojo».

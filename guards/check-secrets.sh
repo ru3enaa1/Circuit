@@ -11,15 +11,19 @@
 #
 # Without arguments it checks what the next commit can carry: every tracked or new (not
 # ignored) file in the working tree, and the index, where a staged version can hold a
-# secret the file on disk no longer has. With --range it checks the tree of every commit
-# in the range instead: a key added in one commit and removed in the next is gone from the
-# head, not from the history a push publishes. CI runs the first form after the push, so
-# it detects; only a pre-push hook with --range prevents. In both forms:
+# secret the file on disk no longer has. With --range it checks the tree and the message
+# of every commit in the range instead: a key added in one commit and removed in the next
+# is gone from the head, not from the history a push publishes, and a push publishes each
+# message too. CI runs the first form after the push, so it detects; only a pre-push hook
+# with --range prevents. In both forms:
 #   1. no file name is one of a secrets file: `.env` or `.env.*` other than `.env.example`,
 #      Terraform state, or a `.tfvars` other than `*.tfvars.example`;
-#   2. no line matches a secret shape (SECRET_RULES below).
-# Only the commit (with --range), the file, the line number and the rule are printed,
-# never the line: printing it would copy the secret into the CI log.
+#   2. no line matches a secret shape (SECRET_RULES below);
+#   3. with --range only, no line of a commit message matches a rule that reads every file
+#      (ADR-0008 A2). A rule limited to some paths, like the YAML form, does not apply to a
+#      message, which is not one of those files.
+# Only the commit (with --range), the file or `(message)`, the line number and the rule
+# are printed, never the line: printing it would copy the secret into the CI log.
 #
 # A pattern catches the shapes it knows, not every secret. A value that only names a
 # variable (`=$VAR`, `=${{ secrets.X }}`) is a reference, not a secret, and passes.
@@ -141,6 +145,32 @@ report_secret_lines() {
   done
 }
 
+# report_secret_message <commit>: runs every rule that reads every file (paths `.`) over the
+# commit's message, with one FAIL line per hit. A key pasted from the terminal into a message
+# is published with the push like any file (ADR-0008 A2). LC_ALL=C and -a read the message
+# as bytes, so a byte that is not valid UTF-8 cannot turn the match into "binary file".
+report_secret_message() {
+  local commit="$1" rule name rest regex message out status
+  message="$(git log -1 --format=%B "$commit")" \
+    || { echo "error: cannot read the message of $commit; nothing was checked"; exit 2; }
+  for rule in "${SECRET_RULES[@]}"; do
+    name="${rule%% *}"
+    rest="${rule#* }"
+    regex="${rest#* }"
+    case ",${rest%% *}," in *,.,*) ;; *) continue ;; esac
+    out="$(printf '%s\n' "$message" | LC_ALL=C grep -a -n -E -e "$regex")"
+    status=$?
+    if [ "$status" -eq 0 ]; then
+      # "line:text" -> "commit:(message):line"; the text stays out of the log.
+      printf '%s\n' "$out" | cut -d: -f1 | sed "s|^|FAIL  $commit:(message):|; s|\$|: $name|"
+      found=1
+    elif [ "$status" -gt 1 ]; then
+      echo "error: grep failed on rule $name in the message of $commit; nothing was checked"
+      exit 2
+    fi
+  done
+}
+
 check_next_commit() {
   local files=()
   mapfile -d '' -t files < <(git -c core.quotePath=false ls-files -z --cached --others --exclude-standard)
@@ -161,6 +191,7 @@ check_range() {
     mapfile -d '' -t files < <(git -c core.quotePath=false ls-tree -r -z --name-only "$commit")
     report_secret_files "$commit:" "${files[@]}"
     report_secret_lines "$commit"
+    report_secret_message "$commit"
   done
   finish "${#commits[@]} commit(s)"
 }

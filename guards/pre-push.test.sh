@@ -90,6 +90,11 @@ commit b.txt "ok" "fix: $PRIVATE"
 expect stopped "forbidden phrases found" "a private name in a commit message stops the push" refs/heads/main main
 rewind main
 
+# ADR-0008 A2: a secret pasted into a commit message, with clean files, stops the push.
+commit b2.txt "ok" "fix: pega la llave $SECRET"
+expect stopped "(message):1: anthropic-api-key" "a secret in a commit message stops the push" refs/heads/main main
+rewind main
+
 commit c.txt "$PRIVATE"
 g rm -q c.txt
 g commit -q -m "test: remove it"

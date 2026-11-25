@@ -395,9 +395,9 @@ archivo sin pruebas plantado en `apps/circuit/src`, que la bajó a 65,62 % y la 
 con 1. Son los pasos de CI, más el `--range` que va antes de cada push (R9):
 
 ```sh
-bash guards/check-secrets.test.sh                 # controles positivos de la guarda: 0 si los 28 casos pasan (unos 40 s en Windows)
+bash guards/check-secrets.test.sh                 # controles positivos de la guarda: 0 si los 31 casos pasan (unos 40 s en Windows)
 bash guards/check-secrets.sh                      # lo versionado, lo nuevo sin ignorar y el índice: 0 limpio, 1 hallazgo, 2 nada revisado
-bash guards/check-secrets.sh --range origin/feat/f0-base..HEAD   # cada commit que se va a publicar (antes del push; CI no lo corre)
+bash guards/check-secrets.sh --range origin/feat/f0-base..HEAD   # los archivos y el mensaje de cada commit que se va a publicar (antes del push; CI no lo corre)
 bash guards/check-line-endings.sh '*.sh' '*.json' '*.sql' 'guards/hooks/*' 'database/examples/**' '**/golden/**'
 bash guards/check-forbidden-phrases.sh forbidden-phrases.txt README.md apps database
 ```
@@ -408,7 +408,7 @@ pregunta nada y para el push solo con un hallazgo (1) o si no pudo revisar (2):
 
 ```sh
 git config core.hooksPath guards/hooks   # lo activa en este clon (desactivar: git config --unset core.hooksPath)
-bash guards/pre-push.test.sh             # sus controles positivos: 0 si los 10 casos pasan (unos 25 s en Windows)
+bash guards/pre-push.test.sh             # sus controles positivos: 0 si los 11 casos pasan (unos 25 s en Windows)
 ```
 
 Sin el hook, o para revisar a mano, verificados el 2026-11-24 antes y después del primer
@@ -496,10 +496,24 @@ npm run db:keys -- revoke --id <id>                   # definitivo: desde la pet
 ```
 
 ```sh
-bash guards/check-secrets.test.sh                     # D15: 0 si los 28 casos pasan, la llave crmk_ entre ellos
+bash guards/check-secrets.test.sh                     # D15: 0 si los 31 casos pasan, la llave crmk_ entre ellos
 git diff --exit-code 6e8f445 -- database/migrations database/test/migration-hashes.ts database/schema.sql apps/crm/src/db/schema.ts package-lock.json   # D16: 0
 git grep -n "test-key-" -- apps/crm/test database/test | wc -l   # D14: 0
 git grep -n "read-scope" -- '*.ts' | wc -l                       # D18: 0
+```
+
+Verificados el 2026-11-25 (enmiendas A1–A2 de ADR-0008). Cada mutante quedó en rojo en su
+prueba y se restauró por hash: X1, X4 y X4b en `database/keys.ts`, y tres de la guarda (sin
+la llamada, sin el `cut` y sin el filtro de rutas).
+
+```powershell
+npx vitest run --project '@circuit/crm' keys-db keys-command   # A1: 2 archivos, 31 pruebas; ningún error de db:keys muestra el hash ni su mensaje
+```
+
+```sh
+bash guards/check-secrets.test.sh            # A2: 0 si los 31 casos pasan, una llave en un mensaje entre ellos
+bash guards/pre-push.test.sh                 # A2: 0 si los 11 casos pasan
+bash guards/check-secrets.sh --range HEAD    # A2: los archivos y el mensaje de cada commit de la historia: 0 (50 commits, unos 2 min)
 ```
 
 ## 10. Dónde está todo lo demás

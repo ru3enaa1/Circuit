@@ -374,3 +374,22 @@ así que quedan abiertos. Tampoco cambian H6 ni H7, que eran notas sin arreglo.
   plantados en `database/keys.ts`, quedan en rojo, cada uno en su prueba: X1 (`describeFailure`
   suma el `detail`) y X4 (suma `String(error)` a un error sin código). También queda en rojo
   X4b, propio (suma `String(error)` a uno con código). `keys-db` pasa de 8 a 11 pruebas.
+- **A2 · Los mensajes de los commits (H2, opción a).** «Daño a vigilar» dice que la guarda
+  reconoce una llave copiada de la terminal «en cada `git push` y en CI», y eso valía para
+  los archivos, no para los mensajes. Ahora, con `--range`, `check-secrets.sh` pasa también
+  por el mensaje de cada commit del rango las reglas que leen todo archivo (las de `.`). La
+  forma YAML de `postgres-password` no se aplica: un mensaje no es un `.yml`, y «POSTGRES_PASSWORD:
+  sale de .env» daría un falso rojo. El hook de `pre-push` ya corre `--range` sobre cada
+  commit nuevo, así que lo hereda; de él cambia solo el comentario. CI sigue con la forma sin
+  argumentos, que no tiene ningún mensaje que leer. Se imprimen el commit, `(message)`, la
+  línea y la regla, nunca el texto. Enmienda ADR-0004 C12, y el cerco de esta ADR suma
+  `guards/hooks/pre-push` (su comentario) y `guards/pre-push.test.sh`. `check-secrets.test.sh`
+  pasa de 28 a 31 casos. El primero: una llave que está solo en un mensaje no está en el
+  próximo commit. El segundo: `--range` la encuentra en la línea 3 sin repetirla. El
+  control: un mensaje que solo nombra secretos sale con 0, con una línea YAML y una corrida
+  de 44 caracteres que lo pondrían en rojo si el filtro se rompiera. `pre-push.test.sh` pasa
+  de 10 a 11: una llave en un mensaje, con los archivos limpios, detiene el push. Tres
+  mutantes propios en rojo, restaurados por hash. Sin la llamada fallan las dos baterías;
+  sin el `cut`, la salida repite la llave; sin el filtro de rutas, falla el control. Sobre los
+  50 commits de la historia, `--range HEAD` da 0. Sin cubrir quedan los mensajes de las
+  etiquetas anotadas y las notas de git: el remoto no tiene ni unas ni otras.
