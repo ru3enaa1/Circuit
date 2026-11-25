@@ -1,0 +1,205 @@
+{
+  "createdAt": "2026-11-01T09:00:00Z",
+  "agentAccount": "escuela-andamio",
+  "accounts": [
+    {
+      "slug": "escuela-andamio",
+      "name": "Escuela Andamio",
+      "stages": [
+        { "key": "nueva", "label": "Nueva solicitud", "position": 0 },
+        { "key": "diagnostico", "label": "Diagnóstico", "position": 1 },
+        { "key": "programa-propuesto", "label": "Programa propuesto", "position": 2 },
+        { "key": "conversacion-agendada", "label": "Conversación agendada", "position": 3 },
+        { "key": "inscrita", "label": "Inscrita", "position": 4 },
+        { "key": "descartada", "label": "Descartada", "position": 5 }
+      ],
+      "companies": [
+        {
+          "name": "Confecciones Hilo Verde",
+          "industry": "Confección textil",
+          "sizeRange": "35 personas",
+          "revenueRange": "COP 2.000–3.000 millones al año (ficticio)",
+          "createdAt": "2026-11-03T14:00:00Z"
+        },
+        {
+          "name": "Ferretería Tuerca y Tornillo",
+          "industry": "Comercio de ferretería, tres sedes",
+          "sizeRange": "48 personas",
+          "revenueRange": "COP 4.000–6.000 millones al año (ficticio)",
+          "createdAt": "2026-11-05T10:30:00Z"
+        },
+        {
+          "name": "Panadería Trigo de Abril",
+          "industry": "Panadería y pastelería",
+          "sizeRange": "60 personas",
+          "revenueRange": "COP 3.000–4.000 millones al año (ficticio)",
+          "createdAt": "2026-11-07T16:15:00Z"
+        },
+        {
+          "name": "Transportes Ruta Clara",
+          "industry": "Transporte de carga",
+          "sizeRange": "80 personas",
+          "revenueRange": "COP 8.000–10.000 millones al año (ficticio)",
+          "createdAt": "2026-11-10T08:45:00Z"
+        },
+        {
+          "name": "Clínica Dental Sonrisa Alta",
+          "industry": "Salud oral",
+          "sizeRange": "22 personas",
+          "revenueRange": "COP 1.000–1.500 millones al año (ficticio)",
+          "createdAt": "2026-11-18T11:20:00Z"
+        }
+      ],
+      "contacts": [
+        {
+          "fullName": "Lucía Restrepo Arango",
+          "email": "lucia@hiloverde.test",
+          "stage": "diagnostico",
+          "company": "Confecciones Hilo Verde",
+          "createdAt": "2026-11-03T14:05:00Z",
+          "notes": [
+            {
+              "body": "Fundadora. Escribió por el formulario: la empresa factura bien, pero cada pedido grande pasa por ella y no sabe en qué se le va la semana.",
+              "createdAt": "2026-11-03T14:10:00Z"
+            },
+            {
+              "body": "Llamada de diagnóstico: tres procesos sin dueño (compras, producción y despachos). Encaja con Radiografía de la operación.",
+              "createdAt": "2026-11-06T15:30:00Z"
+            }
+          ],
+          "tasks": [
+            {
+              "title": "Enviar la guía de Radiografía de la operación",
+              "dueOn": "2026-11-12",
+              "completedAt": "2026-11-11T16:00:00Z",
+              "createdAt": "2026-11-06T15:35:00Z"
+            }
+          ]
+        },
+        {
+          "fullName": "Sara Londoño Mejía",
+          "email": "sara@hiloverde.test",
+          "stage": "diagnostico",
+          "company": "Confecciones Hilo Verde",
+          "createdAt": "2026-11-06T15:40:00Z",
+          "notes": [
+            {
+              "body": "Lleva la producción. Lucía pidió incluirla en el diagnóstico porque conoce los tiempos de cada máquina.",
+              "createdAt": "2026-11-06T15:45:00Z"
+            }
+          ]
+        },
+        {
+          "fullName": "Andrés Molina Cárdenas",
+          "email": "andres.molina@tuercaytornillo.test",
+          "stage": "programa-propuesto",
+          "company": "Ferretería Tuerca y Tornillo",
+          "createdAt": "2026-11-05T10:35:00Z",
+          "notes": [
+            {
+              "body": "Gerente de operaciones. Cada sede trabaja distinto y quiere manuales operativos comunes. Se le propuso Delegar con sistema.",
+              "createdAt": "2026-11-09T09:00:00Z"
+            }
+          ],
+          "tasks": [
+            {
+              "title": "Agendar la conversación sobre Delegar con sistema",
+              "dueOn": "2026-11-28",
+              "createdAt": "2026-11-09T09:05:00Z"
+            }
+          ]
+        },
+        {
+          "fullName": "Paula Giraldo Henao",
+          "email": "paula@trigodeabril.test",
+          "stage": "conversacion-agendada",
+          "company": "Panadería Trigo de Abril",
+          "createdAt": "2026-11-07T16:20:00Z",
+          "notes": [
+            {
+              "body": "Fundadora. Los pedidos y el inventario se llevan en hojas sueltas; pidió ejemplos de indicadores para el horno y las rutas de entrega.",
+              "createdAt": "2026-11-12T11:00:00Z"
+            }
+          ],
+          "tasks": [
+            {
+              "title": "Preparar la conversación sobre Escalar con sistemas",
+              "dueOn": "2026-11-27",
+              "createdAt": "2026-11-12T11:10:00Z"
+            }
+          ]
+        },
+        {
+          "fullName": "Jorge Ramírez Ospina",
+          "email": "jorge.ramirez@rutaclara.test",
+          "stage": "inscrita",
+          "company": "Transportes Ruta Clara",
+          "createdAt": "2026-11-10T08:50:00Z",
+          "notes": [
+            {
+              "body": "Se inscribió en Delegar con sistema, en la cohorte de enero. Quiere dueños de proceso para despacho y mantenimiento.",
+              "createdAt": "2026-11-17T17:00:00Z"
+            }
+          ],
+          "tasks": [
+            {
+              "title": "Enviar la bienvenida de la cohorte",
+              "dueOn": "2026-11-20",
+              "completedAt": "2026-11-19T10:00:00Z",
+              "createdAt": "2026-11-17T17:05:00Z"
+            }
+          ]
+        },
+        {
+          "fullName": "Camila Duque Salazar",
+          "email": "camila@sonrisaalta.test",
+          "stage": "nueva",
+          "company": "Clínica Dental Sonrisa Alta",
+          "createdAt": "2026-11-18T11:25:00Z",
+          "notes": [
+            {
+              "body": "Solicitud nueva: la agenda de la clínica depende de una sola persona y los fines de mes se pierden citas.",
+              "createdAt": "2026-11-18T11:30:00Z"
+            }
+          ],
+          "tasks": [
+            {
+              "title": "Responder la solicitud con el material del programa",
+              "dueOn": "2026-11-26",
+              "createdAt": "2026-11-18T11:35:00Z"
+            }
+          ]
+        },
+        {
+          "fullName": "Mateo Vélez Torres",
+          "email": "mateo.velez@correo.test",
+          "stage": "descartada",
+          "createdAt": "2026-11-14T13:00:00Z",
+          "notes": [
+            {
+              "body": "Buscaba empleo, no un programa: fuera de alcance. Se le respondió con amabilidad y se cerró.",
+              "createdAt": "2026-11-14T13:20:00Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "cuenta-vecina",
+      "name": "Academia Vecina (cuenta de prueba)",
+      "stages": [
+        { "key": "nueva", "label": "Nueva solicitud", "position": 0 }
+      ],
+      "contacts": [
+        {
+          "fullName": "Contacto de la Cuenta Vecina",
+          "email": "contacto@academia-vecina.test",
+          "stage": "nueva",
+          "notes": [
+            { "body": "Fila de otra cuenta: la llave del agente de Escuela Andamio no la ve." }
+          ]
+        }
+      ]
+    }
+  ]
+}

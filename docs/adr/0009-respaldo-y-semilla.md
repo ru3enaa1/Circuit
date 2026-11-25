@@ -399,6 +399,15 @@ Las pruebas nuevas se ven en rojo antes del código, o las muerde su mutante.
   primera dejó un paréntesis sin cerrar y salió en rojo por no cargar; la segunda, con la línea
   entera, sale en rojo por «no order carries a password». M6 es «42P04 se toma como si la base
   fuera nueva»: la restauración falla, y la base que ya existía se borra.
+- **El paquete (D7–D10), en su commit.** `apps/crm/src/scenario.ts` con zod estricto en cada
+  objeto. Un contacto apunta a su empresa por el nombre, que no se repite en la cuenta: un
+  paquete no lleva ids (D9). Las posiciones de las etapas se declaran y deben ser 0..n−1. El
+  texto se guarda tal como viene, así que se rechaza el que trae espacios alrededor (la API los
+  recorta; el paquete no transforma nada). El rechazo nombra hasta cinco rutas, y cada clave
+  desconocida por su nombre: zod las junta en un solo aviso. Pruebas: `scenario.test.ts` (37:
+  34 paquetes rotos de `scenario-cases.ts`, uno por regla, más tres de control) y
+  `scenario-content.test.ts` (4). M10 (`strictObject` → `object` en todo el archivo) y M11, en
+  rojo. Los casos de D8 a través de la semilla, con 0 conexiones, llegan con ella (paso 3).
 
 ## Preguntas abiertas
 
