@@ -1,13 +1,14 @@
 import { and, asc, desc, eq, isNull, lt } from 'drizzle-orm';
 
 import { MAX_PAGE_SIZE } from '../server/limits.ts';
-import type { ReadScope } from './read-scope.ts';
-import { companies, contacts, notes, pipelineStages, tasks } from './schema.ts';
+import type { Scope } from './read-scope.ts';
+import { auditLog, companies, contacts, notes, pipelineStages, tasks } from './schema.ts';
 
 // ADR-0006 D12: what each read returns, as fixed lists of columns. The keys of these objects
 // are the keys of the JSON: never account_id, never archived_at. Archived rows are not
 // returned (pregunta 2). Every query filters by the key's account even though RLS does too
 // (ADR-0005 D4): the filter matches the indexes, and RLS stays the barrier behind it.
+// ADR-0007 D13: the writes answer with these same lists, and the audit log with its own.
 
 const STAGE = {
   id: pipelineStages.id,
@@ -16,7 +17,7 @@ const STAGE = {
   position: pipelineStages.position,
 };
 
-const CONTACT = {
+export const CONTACT = {
   id: contacts.id,
   fullName: contacts.fullName,
   email: contacts.email,
@@ -34,9 +35,9 @@ const COMPANY = {
   createdAt: companies.createdAt,
 };
 
-const NOTE = { id: notes.id, body: notes.body, createdAt: notes.createdAt };
+export const NOTE = { id: notes.id, body: notes.body, createdAt: notes.createdAt };
 
-const TASK = {
+export const TASK = {
   id: tasks.id,
   title: tasks.title,
   dueOn: tasks.dueOn,
@@ -51,7 +52,7 @@ export interface Page {
 }
 
 /** The stages of a pipeline are a short, ordered list that the seed brings; no pagination. */
-export function listStages(scope: ReadScope) {
+export function listStages(scope: Scope) {
   return scope.db
     .select(STAGE)
     .from(pipelineStages)
@@ -61,7 +62,7 @@ export function listStages(scope: ReadScope) {
 }
 
 /** At most one: the email is unique among an account's active contacts (ADR-0005). */
-export function findContactsByEmail(scope: ReadScope, email: string) {
+export function findContactsByEmail(scope: Scope, email: string) {
   return scope.db
     .select(CONTACT)
     .from(contacts)
@@ -69,7 +70,7 @@ export function findContactsByEmail(scope: ReadScope, email: string) {
     .limit(1);
 }
 
-export async function findContact(scope: ReadScope, contactId: number) {
+export async function findContact(scope: Scope, contactId: number) {
   const found = await scope.db
     .select(CONTACT)
     .from(contacts)
@@ -77,7 +78,7 @@ export async function findContact(scope: ReadScope, contactId: number) {
   return found[0];
 }
 
-export async function findCompany(scope: ReadScope, companyId: number) {
+export async function findCompany(scope: Scope, companyId: number) {
   const found = await scope.db
     .select(COMPANY)
     .from(companies)
@@ -85,7 +86,7 @@ export async function findCompany(scope: ReadScope, companyId: number) {
   return found[0];
 }
 
-export function listNotes(scope: ReadScope, contactId: number, page: Page) {
+export function listNotes(scope: Scope, contactId: number, page: Page) {
   return scope.db
     .select(NOTE)
     .from(notes)
@@ -101,7 +102,7 @@ export function listNotes(scope: ReadScope, contactId: number, page: Page) {
     .limit(page.limit);
 }
 
-export function listTasks(scope: ReadScope, contactId: number, page: Page) {
+export function listTasks(scope: Scope, contactId: number, page: Page) {
   return scope.db
     .select(TASK)
     .from(tasks)
@@ -114,5 +115,41 @@ export function listTasks(scope: ReadScope, contactId: number, page: Page) {
       ),
     )
     .orderBy(desc(tasks.id))
+    .limit(page.limit);
+}
+
+/** A stage of the key's account, by id; stages are never archived. */
+export async function findStage(scope: Scope, stageId: number) {
+  const found = await scope.db
+    .select({ id: pipelineStages.id })
+    .from(pipelineStages)
+    .where(and(eq(pipelineStages.accountId, scope.accountId), eq(pipelineStages.id, stageId)));
+  return found[0];
+}
+
+/**
+ * ADR-0007 D13: an entry of the audit trail, never its account. changedColumns holds the
+ * database's column names, as the trigger writes them (pregunta 7).
+ */
+const AUDIT_ENTRY = {
+  id: auditLog.id,
+  occurredAt: auditLog.occurredAt,
+  tableName: auditLog.tableName,
+  rowId: auditLog.rowId,
+  operation: auditLog.operation,
+  changedColumns: auditLog.changedColumns,
+  apiKeyId: auditLog.apiKeyId,
+  proposedBy: auditLog.proposedBy,
+  approvedBy: auditLog.approvedBy,
+  approvalRef: auditLog.approvalRef,
+};
+
+/** Newest first, paged like the notes; the audit trail only grows (ADR-0005 D9). */
+export function listAuditLog(scope: Scope, page: Page) {
+  return scope.db
+    .select(AUDIT_ENTRY)
+    .from(auditLog)
+    .where(and(eq(auditLog.accountId, scope.accountId), page.before === undefined ? undefined : lt(auditLog.id, page.before)))
+    .orderBy(desc(auditLog.id))
     .limit(page.limit);
 }

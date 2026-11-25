@@ -8,7 +8,7 @@ import { createCrmPool } from '../src/db/pool.ts';
 import type { Connector } from '../src/db/read-scope.ts';
 import { errorCodes, stdoutLog, type LogLine } from '../src/log.ts';
 import { buildServer } from '../src/server/server.ts';
-import { bearer, bodyOf, useCrmUnderTest } from './crm-under-test.ts';
+import { APPROVAL, bearer, bodyOf, interceptingConnector, sendJson, useCrmUnderTest } from './crm-under-test.ts';
 
 // ADR-0006 D15: one line per request with method, route pattern, status and duration, and
 // nothing that came with the request. A database error leaves its SQLSTATE and nothing else.
@@ -191,5 +191,53 @@ describe('D15 · an error is logged by its code only', () => {
     pool.emit('error', dropped);
     await pool.end();
     expect(logs).toEqual([{ event: 'pool_error', sqlstate: '57P01', code: null }]);
+  });
+});
+
+// ADR-0007 D12: the same line for a write, and never its body. A database error raised by a
+// write leaves the SQLSTATE of its cause, read through drizzle's wrapper.
+describe('D12 · a write is logged like a read, and its errors by their code only', () => {
+  it('creating a contact leaves one request line, and neither the name nor the address', async () => {
+    const { a } = crm().fixture;
+    const body = { fullName: 'Nombre Plantado', email: PLANTED_EMAIL, stageId: Number(a.stageId), approval: APPROVAL };
+    const lines = await linesOf(() => sendJson(crm().app, 'POST', '/accounts/cuenta-a/contacts', bearer(a.apiKey), body));
+    expect(lines).toHaveLength(1);
+    expect(Object.keys(lines[0]!).sort()).toEqual(REQUEST_LINE_KEYS);
+    expect(lines[0]).toMatchObject({ event: 'request', method: 'POST', route: '/accounts/:slug/contacts', status: 201 });
+    const text = JSON.stringify(lines);
+    for (const secret of [a.apiKey, PLANTED_EMAIL, 'Nombre Plantado', APPROVAL.approvalRef]) expect(text).not.toContain(secret);
+  });
+
+  // The error is planted where the driver raises it, under drizzle, so drizzle wraps it as it
+  // wraps a real one: a DrizzleQueryError whose message carries the statement's parameters
+  // (here, the address) and whose cause carries the address in its message and its detail.
+  it.each([
+    ['any error', 'XX000', undefined],
+    ['a unique violation on another index', '23505', 'contacts_pkey'],
+  ])('%s in a write is 500 with its SQLSTATE, never the statement, its values or the cause message', async (_case, sqlstate, constraint) => {
+    const { a } = crm().fixture;
+    let planted = 0;
+    const pool = interceptingConnector(crm().pool, (statement) => {
+      if (!statement.text.startsWith('insert into "crm"."contacts"')) return undefined;
+      planted += 1;
+      const error = plantedDatabaseError();
+      error.code = sqlstate;
+      if (constraint !== undefined) error.constraint = constraint;
+      return error;
+    });
+    const logs: LogLine[] = [];
+    const app = buildServer({ pool, log: (line) => logs.push(line) });
+    const body = { fullName: 'Nombre Plantado', email: PLANTED_EMAIL, stageId: Number(a.stageId), approval: APPROVAL };
+    const response = await sendJson(app, 'POST', '/accounts/cuenta-a/contacts', bearer(a.apiKey), body);
+    await app.close();
+    // Only meaningful if the write itself got as far as the planted error.
+    expect(planted).toBe(1);
+    expect(response.statusCode).toBe(500);
+    expect(bodyOf(response)).toEqual({ error: { code: 'error_interno', message: 'Error interno.' } });
+    expect(logs.filter((line) => line['event'] === 'internal_error')).toEqual([{ event: 'internal_error', sqlstate, code: null }]);
+    for (const text of [JSON.stringify(logs), response.body]) {
+      expect(text).not.toContain(PLANTED_EMAIL);
+      expect(text).not.toContain('Nombre Plantado');
+    }
   });
 });

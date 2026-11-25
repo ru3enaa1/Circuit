@@ -68,7 +68,7 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
     // request line, from fixed fields.
     logger: false,
     bodyLimit: MAX_BODY_BYTES,
-    // D11: exactly the seven routes; Fastify would add a HEAD for every GET.
+    // ADR-0007 D1: exactly the thirteen routes; Fastify would add a HEAD for every GET.
     exposeHeadRoutes: false,
     frameworkErrors: (_error, request, reply) => {
       answerUnroutable(request, reply, deps.log);

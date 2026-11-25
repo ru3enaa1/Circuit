@@ -1,8 +1,8 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 
-import { withReadScope, type Connector, type ReadScope } from '../db/read-scope.ts';
+import { withReadScope, type Connector, type Scope } from '../db/read-scope.ts';
 import { findCompany, findContact, findContactsByEmail, listNotes, listStages, listTasks } from '../db/reads.ts';
-import { presentedKey } from '../server/auth.ts';
+import { credentialsOf, presentedKey } from '../server/auth.ts';
 import { ApiError } from '../server/errors.ts';
 import {
   accountParams,
@@ -15,28 +15,21 @@ import {
   parseInput,
   searchBody,
 } from './input.ts';
+import { writeRoutes } from './writes.ts';
 
-// ADR-0006 D11: exactly seven routes, and none of them writes. /health takes no key and returns
-// no data; the other six live under /accounts/:slug/ and go through withReadScope.
+// ADR-0007 D1, which amends ADR-0006 D11: exactly thirteen routes. /health takes no key and
+// returns no data; the other twelve live under /accounts/:slug/ and take a key. The six of this
+// file read through withReadScope; the six of writes.ts are the writes and the audit trail.
 
 export interface RouteOptions {
   readonly pool: Connector;
 }
 
-/** Every route that reads data lives under it and takes a key. */
+/** Every route that reads or writes data lives under it and takes a key. */
 export const ACCOUNTS_PATH = '/accounts';
 
-/** The slug as the route spells it: only compared with the key's (D9), and validated after. */
-function routeSlug(request: FastifyRequest): string {
-  const params = request.params as Readonly<Record<string, unknown>>;
-  return typeof params['slug'] === 'string' ? params['slug'] : '';
-}
-
-function read<T>(pool: Connector, request: FastifyRequest, work: (scope: ReadScope) => Promise<T>): Promise<T> {
-  const presented = presentedKey(request.headers.authorization);
-  if (presented === 'missing') throw new ApiError('sin_llave');
-  if (presented === 'malformed') throw new ApiError('llave_invalida');
-  return withReadScope(pool, { token: presented.token, slug: routeSlug(request) }, work);
+function read<T>(pool: Connector, request: FastifyRequest, work: (scope: Scope) => Promise<T>): Promise<T> {
+  return withReadScope(pool, credentialsOf(request), work);
 }
 
 function found<T>(row: T | undefined): T {
@@ -45,7 +38,7 @@ function found<T>(row: T | undefined): T {
 }
 
 /** Another account's contact reads as one that does not exist (D13): RLS hides it from findContact. */
-async function activeContact(scope: ReadScope, request: FastifyRequest): Promise<number> {
+async function activeContact(scope: Scope, request: FastifyRequest): Promise<number> {
   const { contactId } = parseInput(contactParams, request.params, 'ruta');
   return found(await findContact(scope, contactId)).id;
 }
@@ -83,6 +76,8 @@ async function accountRoutes(app: FastifyInstance, options: RouteOptions): Promi
   );
 
   contactRoutes(app, pool);
+  // In this plugin, so the hook above runs before any of their bodies is read.
+  writeRoutes(app, pool);
 }
 
 /** One contact by id, and its notes and tasks: 404 when the contact is archived or not visible. */

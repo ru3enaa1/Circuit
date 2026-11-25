@@ -7,6 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { REPO_ROOT } from '../../../database/config.ts';
 import { readLocalEnv } from '../../../database/env.ts';
+import { seedFixture, type Fixture } from '../../../database/test/crm-fixture.ts';
 import { createDisposableDatabase, runMigrations, type DisposableDatabase } from '../../../database/test/disposable-db.ts';
 import { createOrUpdateCrmApp, readCrmPassword } from '../../../database/users.ts';
 import { ConfigError } from '../src/config.ts';
@@ -27,11 +28,14 @@ const LOOPBACK = /^http:\/\/127\.0\.0\.1:\d+$/;
 
 const password = readCrmPassword(readLocalEnv());
 let db: DisposableDatabase | undefined;
+/** Two seeded accounts, so the real process has a key to write with (ADR-0007 D17). */
+let fixture: Fixture | undefined;
 const children: ChildProcess[] = [];
 
 beforeAll(async () => {
   db = await createDisposableDatabase();
   await runMigrations(db.pool);
+  fixture = await seedFixture(db.pool);
   await createOrUpdateCrmApp(db.connection, password);
 });
 
@@ -93,6 +97,29 @@ describe('D7 · the real process', () => {
     const health = await fetch(`${listening}/health`);
     expect(health.status).toBe(200);
     expect(await health.json()).toEqual({ status: 'ok' });
+    child.kill();
+    await once(child, 'exit');
+  }, PROCESS_TEST_TIMEOUT_MS);
+
+  // ADR-0007 D17: the write path end to end, in the process npm run crm:start runs.
+  it('writes: a note through the real process leaves its audit row, signed by the key', async () => {
+    const { a } = fixture!;
+    const { child, listening, stderr } = await launch(crmEnv());
+    expect(listening, stderr).toMatch(LOOPBACK);
+    const response = await fetch(`${listening}/accounts/cuenta-a/contacts/${a.contactId}/notes`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${a.apiKey}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ body: 'Nota del proceso real', approval: { approvedBy: 'mentor', approvalRef: 'aprobacion-proceso' } }),
+    });
+    expect(response.status).toBe(201);
+    const { note } = (await response.json()) as { note: { id: number } };
+    const audit = await db!.pool.query(
+      "SELECT api_key_id::text, proposed_by, approved_by, approval_ref FROM crm.audit_log WHERE table_name = 'notes' AND row_id = $1",
+      [note.id],
+    );
+    expect(audit.rows).toEqual([
+      { api_key_id: a.apiKeyId, proposed_by: `key-${a.apiKeyId}`, approved_by: 'mentor', approval_ref: 'aprobacion-proceso' },
+    ]);
     child.kill();
     await once(child, 'exit');
   }, PROCESS_TEST_TIMEOUT_MS);

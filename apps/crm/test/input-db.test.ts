@@ -95,6 +95,12 @@ describe('D14 · the search body', () => {
     expectInvalid(await post(JSON.stringify({ email })), 'email', 'cuenta-a.test');
   });
 
+  // A lone UTF-16 surrogate reaches PostgreSQL as U+FFFD. The search used to answer 200 with no
+  // contacts; ADR-0007 D9 refuses it in every text, this one included.
+  it('a lone surrogate in the address is 400 «email»', async () => {
+    expectInvalid(await post(JSON.stringify({ email: 'conta\ud800cto@cuenta-a.test' })), 'email', 'cuenta-a.test');
+  });
+
   it.each([
     ['an unknown field', '{"email":"contacto@cuenta-a.test","campo_desconocido":1}', 'campo_desconocido'],
     ['an array', '["contacto@cuenta-a.test"]', 'contacto@cuenta-a.test'],

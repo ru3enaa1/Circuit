@@ -151,10 +151,15 @@ export async function seedFixture(pool: pg.Pool): Promise<Fixture> {
   return inTransaction(pool, { context: FIXTURE_AUTHORS, commit: true }, seedBase);
 }
 
-/** What the read API needs besides the base fixture (ADR-0006 D9, D12), all in account a. */
+/** What the API needs besides the base fixture (ADR-0006 D9, D12; ADR-0007 D2), all in account a. */
 export interface ReadExtras {
   /** A live key of account a with `write` only: it must not read (D9). */
   readonly writeOnlyKey: string;
+  /** A live key of account a with `read` only: it must not write (ADR-0007 D2). */
+  readonly readOnlyKey: string;
+  /** A live key of account a with read, write and delete: the only one that archives (ADR-0007 D2). */
+  readonly deleteKey: string;
+  readonly deleteKeyId: string;
   /** Position 1, after the base fixture's stage at 0. */
   readonly secondStageId: string;
   /** Newer than the base fixture's note on a's contact, so a list starts with it. */
@@ -177,9 +182,19 @@ async function seedReadExtras(client: pg.PoolClient, a: FixtureAccount): Promise
     sha256(writeOnlyKey),
   ]);
   const one = (text: string, values: readonly unknown[]) => insertId(client, `${text} RETURNING id`, [a.id, ...values]);
+  const readOnlyKey = 'test-key-read-only';
+  await one("INSERT INTO crm.api_keys (account_id, label, key_hash, permissions) VALUES ($1, 'lectura', $2, '{read}')", [sha256(readOnlyKey)]);
+  const deleteKey = 'test-key-read-write-delete';
+  const deleteKeyId = await one(
+    "INSERT INTO crm.api_keys (account_id, label, key_hash, permissions) VALUES ($1, 'completa', $2, '{read,write,delete}')",
+    [sha256(deleteKey)],
+  );
   const archivedContactEmail = `archivado@${a.slug}.test`;
   return {
     writeOnlyKey,
+    readOnlyKey,
+    deleteKey,
+    deleteKeyId,
     secondStageId: await one("INSERT INTO crm.pipeline_stages (account_id, key, label, position) VALUES ($1, 'contactada', 'Contactada', 1)", []),
     secondNoteId: await one("INSERT INTO crm.notes (account_id, contact_id, body) VALUES ($1, $2, 'Segunda nota')", [a.contactId]),
     archivedNoteId: await one(
