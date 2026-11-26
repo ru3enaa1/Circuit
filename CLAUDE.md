@@ -128,7 +128,7 @@ pruebas nuevas de D6 en `keys-db.test.ts` (`497bbfb`), en rojo con X1, X4 y X4b;
 `check-secrets.sh --range` lee también el mensaje de cada commit (`15f3023`, que enmienda
 ADR-0004 C12), con 31 casos en su batería y 11 en la del hook. 480 pruebas, cobertura 95,58
 / 87,58 / 97,26 / 97,42. La trampa del worktree, en §8.
-**R6 y F1.5 (respaldo y semilla), hechas el 2026-11-25, sin empujar ni auditar.** ADR-0009
+**R6 y F1.5 (respaldo y semilla), hechas el 2026-11-25, sin empujar.** ADR-0009
 aceptada ese día (el dueño aceptó sus diez recomendaciones), con su línea base
 (`docs/reviews/ADR-0009-baseline.md`, sobre `52e015d`); al aceptarla se corrigieron los
 chequeos de D4 y D7, que sin `:(glob)` no leían lo que decían (§8). Un commit por paso: R6
@@ -143,9 +143,20 @@ respaldada (`database/backups/20261125-213637Z-antes-semilla/`), restaurada en u
 se volcó igual y se borró, sembrada dos veces (la segunda no tocó nada) y probada con
 `crm:start`; el respaldo de antes de `0004` también restauró, y se borró. **La `.env` del
 dueño no trae `CIRCUIT_SCENARIO` ni `CRM_AGENT_KEY_FILE`:** D26 las pasó por el entorno; hay
-que copiar las dos líneas de `.env.example`. Siguiente: la auditoría de ADR-0009 y, con el sí
-del dueño, el push e integrar F1 a `main`. Pedido al dueño, como insumo de F2: el material
-del programa que citará la estación 4.
+que copiar las dos líneas de `.env.example`. **Auditada el 2026-11-26: BLOQUEAR**
+(`docs/reviews/ADR-0009-audit-2026-11-26.md`): `npm run check` salía con 1 en 2 de 5 vueltas
+(H1), más tres mayores (H2–H4). El dueño pidió aplicar los arreglos con lo que más asegura, y
+las enmiendas A1–A7 de la ADR los cierran: presupuesto con nombre en cada prueba que siembra o
+llama a docker, vigilado por `hook-budget.test.ts`, y `adminClient`, que escucha el `'error'`
+de una sesión cortada; el correo del paquete con `storable`; las pruebas de D7 y de las ramas
+de D19; una clave desconocida que no se repite; `ORDER BY` calificados; las carpetas de llaves
+de las pruebas, borradas; mensajes propios para las fallas raras de la semilla; y
+`database/command.ts` y `docker.ts` (H11). Commits `03177b5`, `39c11cc` y `321c0d3`, sin
+empujar. 648 pruebas, cobertura 95,62 / 86,6 / 96,72 / 97,71; los mutantes de cada enmienda,
+en rojo; 10 vueltas seguidas de `npm run check` en 0 (de 50 a 131 s). H10 (`db:keys list` ordena el id como texto) queda abierto, para la fase que toque
+`db:keys`. Siguiente: el push, que pide el dueño, y CI en verde en Linux, con la prueba del
+modo `0600` (D20); después, integrar F1 a `main`. Pedido al dueño, como insumo de F2: el
+material del programa que citará la estación 4.
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -267,6 +278,13 @@ Se registran con el formato de pitfall-log: regla, síntoma, causa, chequeo y fe
   programa como texto y la vuelve a codificar al escribirla. Regla: un binario sale del
   contenedor con `docker compose cp`, y `db:backup` compara el SHA-256 de adentro y de afuera.
   Chequeo: M3 de ADR-0009 (la copia por la salida estándar) pone en rojo `backup-db.test.ts`.
+- **PowerShell 5.1 lee como ANSI un archivo UTF-8 sin BOM** (2026-11-26, enmiendas de
+  ADR-0009). Síntoma: plantar un mutante a mano con `Get-Content -Raw` y restaurarlo con
+  `[IO.File]::WriteAllText` dejó `Â«`, `â€¦` y `fallÃ³` en `command.ts`, y el hash no volvió.
+  Causa: sin BOM, `Get-Content` de PowerShell 5.1 decodifica con la página de códigos del
+  sistema; `WriteAllText` escribe UTF-8. Regla: los archivos del repositorio se leen y se
+  escriben con Node (`mutants.mjs` del scratchpad), o con `-Encoding UTF8` en PowerShell, y
+  todo mutante se restaura comprobando el hash. Chequeo: `git diff` del archivo da vacío.
 - **Docker Desktop está instalado por usuario** (2026-11-24). Síntoma: `failed to connect
   to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine`. Causa: Docker Desktop
   apagado; el ejecutable está en `%LOCALAPPDATA%\Programs\DockerDesktop\Docker Desktop.exe`,
@@ -347,6 +365,16 @@ Se registran con el formato de pitfall-log: regla, síntoma, causa, chequeo y fe
   borrado del temporal en una corrida que falla, a propósito. Regla: después de plantar
   mutantes, `docker compose exec -T db ls -A /tmp` y borrar lo que dejaron. Chequeo: esa
   orden da una salida vacía.
+- **`pg` emite `'error'` en el cliente cuando el servidor corta la sesión** (2026-11-26,
+  auditoría de ADR-0009, H1). Síntoma: «Connection terminated unexpectedly» como error no
+  manejado, y la vuelta de `npm run check` en 1, cuando una prueba vencida dejó su base borrarse
+  con `WITH (FORCE)` bajo una semilla conectada; en la terminal, el proceso muere con una traza.
+  Causa: pg 8.23 rechaza las consultas pendientes y además emite el evento
+  (`_handleErrorEvent`), salvo si el cliente ya estaba terminando. Por eso un corte mientras
+  espera fuera de la transacción a veces no lo muestra, y uno con el `ROLLBACK` pendiente,
+  siempre. Regla: todo cliente de un comando se crea con `adminClient` (`database/command.ts`).
+  Chequeo: «A1 · a seed whose session the server ends» de `seed-failure-db.test.ts`, en rojo sin
+  el oyente.
 - **`SELECT id::text … ORDER BY id` ordena como texto** (2026-11-25, en una prueba de F1.3).
   Síntoma: `'9'` antes que `'15'`. Causa: `ORDER BY` busca primero entre las columnas de
   salida, y la salida `id` ya es texto. Regla: calificar la columna (`ORDER BY tabla.id`).
@@ -377,6 +405,13 @@ Se registran con el formato de pitfall-log: regla, síntoma, causa, chequeo y fe
   `beforeAll` y `afterAll` de una prueba con base lleva `DATABASE_HOOK_TIMEOUT_MS`
   (`database/test/disposable-db.ts`) como segundo argumento. Chequeo:
   `database/test/hook-budget.test.ts`, que un hook sin el presupuesto pone en rojo.
+- **Una prueba que siembra o llama a docker necesita más de los 5 s por defecto** (2026-11-26,
+  auditoría de ADR-0009, H1). Síntoma: `npm run check` salía con 1 en 2 de 5 vueltas; vencían
+  D15 de `seed-db` (5 124 ms) y `schema-dump-db` (5 353 ms), que pasan solas. Causa: con todos
+  los archivos a la vez, la cobertura y docker ocupado por las pruebas del respaldo. Regla: esas
+  pruebas llevan `SEED_TEST_TIMEOUT_MS` o `DOCKER_TEST_TIMEOUT_MS` como último argumento.
+  Chequeo: «the tests that seed or call docker» de `hook-budget.test.ts`, y 10 vueltas seguidas
+  de `npm run check` en 0.
 - **`--hookTimeout` en la línea de comandos no llega a los proyectos** (2026-11-25, al
   arreglar H1 de la auditoría de ADR-0007). Síntoma: `npx vitest run --hookTimeout=1` sale
   en 0 aunque un hook con base no lleve presupuesto. Causa: Vitest 5.1.1 pasa a cada
@@ -595,6 +630,15 @@ git check-ignore -q .secrets/crm-agent-key; echo $?      # D21: 0
 git grep -n -E "DROP DATABASE|RENAME TO" -- ':(glob)database/*.ts'   # D4: solo la línea de restore.ts
 git diff --exit-code 52e015d -- database/migrations database/test/migration-hashes.ts database/schema.sql apps/crm/src/db/schema.ts package-lock.json compose.yaml   # D23: 0
 bash guards/check-secrets.test.sh                        # D21: 0 si los 33 casos pasan
+```
+
+Verificados el 2026-11-26 en PowerShell (enmiendas A1–A7 de ADR-0009), con el mutante de cada
+una en rojo en su prueba y restaurado por hash:
+
+```powershell
+npx vitest run --project database hook-budget seed-failure   # A1: el presupuesto de cada prueba pesada y la sesión cortada (2 archivos, 8 pruebas)
+npx vitest run --project database scenario seed              # A2–A7: 7 archivos, 124 pruebas (una solo en Linux)
+Get-ChildItem $env:TEMP -Directory -Filter 'circuit-*'      # A6: ninguna, después de npm run check
 ```
 
 ## 10. Dónde está todo lo demás

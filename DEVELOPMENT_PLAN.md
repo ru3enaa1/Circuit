@@ -221,6 +221,16 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   también restauró (4 migraciones y las 8 tablas de `crm`), en una base que se borró. Lo que
   falta para cerrar F1: la auditoría de ADR-0009, el push y la integración a `main`, que
   decide el dueño.
+  Auditada el 2026-11-26: BLOQUEAR (`docs/reviews/ADR-0009-audit-2026-11-26.md`), por la suite
+  y no por el código: `npm run check` salía con 1 en 2 de 5 vueltas, con pruebas que siembran o
+  llaman a docker sin presupuesto y un error no manejado de una sesión cortada (H1). Mayores: el
+  correo del paquete sin `storable` (H2), el segundo paquete de D7 sin prueba (H3) y dos ramas
+  de D19 sin prueba (H4). El dueño pidió aplicar los arreglos con lo que más asegura: las
+  enmiendas A1–A7 de la ADR, en tres commits (`03177b5`, `39c11cc` y `321c0d3`), con 648
+  pruebas, el mutante de cada una en rojo y 10 vueltas seguidas de `npm run check` en 0.
+  Queda abierto H10, de `db:keys`. Para cerrar F1: el
+  push, que pide el dueño, CI en verde en Linux con la prueba del modo `0600`, y la integración
+  a `main`.
 
 ### F2 · Circuito y mapa
 

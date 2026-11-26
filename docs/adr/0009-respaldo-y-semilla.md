@@ -4,7 +4,9 @@
 - **Estado:** aceptada el 2026-11-25. El dueño aceptó las diez recomendaciones de
   «Preguntas abiertas» tal como están escritas («vamos con lo recomendado»). Al aceptarla se
   corrigieron dos chequeos de D4 y D7 que, como estaban escritos, no leían lo que decían
-  (ver «Notas de implementación»).
+  (ver «Notas de implementación»). Auditada el 2026-11-26: BLOQUEAR
+  (`docs/reviews/ADR-0009-audit-2026-11-26.md`), por una regresión del portón y no del código;
+  sus enmiendas, al final.
 - **Tarea:** F1.5 de `DEVELOPMENT_PLAN.md`, con R6 como primer paso. El pedido del dueño, tal
   cual: «un script de respaldo de la base de desarrollo (pg_dump dentro del contenedor, no
   por la tubería de PowerShell) con una restauración probada; después, una semilla
@@ -483,3 +485,81 @@ cada ASUNCIÓN queda como decisión.
 10. **¿Se restaura una vez el respaldo de antes de `0004`, para cerrar lo que la auditoría de
     ADR-0006 dejó sin verificar?** Recomendación: sí, dentro de D26, en una base que después se
     borra (D26).
+
+## Auditoría y enmiendas (2026-11-26)
+
+La auditoría de `adr-guard`, en una sesión aparte, dio BLOQUEAR: 1 bloqueante, 3 mayores, 3
+menores y 4 notas, con 21 cláusulas en CUMPLE, 4 en PARCIAL (D7, D8, D17 y D24) y el modo
+`0600` de D20 sin verificar (`docs/reviews/ADR-0009-audit-2026-11-26.md`). El bloqueo venía
+de la suite: `npm run check` salía con 1 en 2 de 5 vueltas. El 2026-11-26 el dueño pidió
+aplicar los arreglos con las recomendaciones que más aseguran. Entran A1 a A5 tal como las
+propuso la auditoría, y además A6 y A7, que cierran H8 y H9, y H11. Queda abierto H10 (`db:keys
+list` ordena el id como texto): es de ADR-0008 D8 y cambia una conducta de `db:keys`, así que
+va en la fase que toque ese comando. El texto de las cláusulas no cambia; cambian los chequeos y
+el cerco, como dice cada enmienda.
+
+- **A1 · El portón, estable (H1).** Dos causas, y las dos se arreglan.
+  - **El tiempo.** Cada prueba que siembra lleva `SEED_TEST_TIMEOUT_MS` (`seed-tools.ts`), y
+    cada una que llama a docker, `DOCKER_TEST_TIMEOUT_MS` (`docker-tools.ts`), los dos de 60 s,
+    con la misma razón que el de los hooks. Entra también `schema-dump-db.test.ts`, una prueba
+    de antes: el cerco suma su último argumento, nada más. `hook-budget.test.ts` suma una regla:
+    todo archivo de prueba que importa `seed-tools.ts` o `docker-tools.ts` lleva un presupuesto
+    con nombre en cada prueba. Sus mutantes: sin el presupuesto de `schema-dump-db`, en rojo.
+    `compose.test.ts` no entra: llama a docker al recolectar las pruebas, fuera de su tiempo.
+  - **La conexión cortada.** El «Connection terminated unexpectedly» no manejado de la vuelta 1
+    no era solo de la prueba. Cuando el servidor termina una sesión, `pg` 8.23 rechaza las
+    consultas pendientes y además emite `'error'` en el cliente (`lib/client.js`,
+    `_handleErrorEvent`). Sin oyente, Node lo lanza: en la suite, la vuelta sale con 1; en la
+    terminal, `db:seed` muere con una traza. La semilla y la restauración usan ahora
+    `adminClient` (`command.ts`), que escucha el evento sin hacer nada más, y la falla llega
+    por la consulta. `seed-failure-db.test.ts` termina la sesión de una semilla desde el
+    servidor en dos momentos: esperando su candado y dentro de su transacción, con un `INSERT`
+    detenido por una fila sin confirmar. Las dos salen con 1 y «db:seed falló (SQLSTATE
+    57P01).», sin filas ni llave. El mutante sin el oyente queda en rojo por «Vitest caught 1
+    unhandled error». Solo el segundo momento lo mostraba siempre: en el primero la semilla
+    cierra el cliente antes de que llegue el fin del socket, y la primera versión de la prueba,
+    con ese momento solo, dejó vivo al mutante.
+- **A2 · El correo del paquete, guardable (H2, H6).** `storable` (sin U+0000 y sin un
+  sustituto UTF-16 suelto, como `input.ts`) vale ahora para todo texto del paquete, el correo
+  incluido. Tres casos nuevos: un NUL y un sustituto en el correo, y un sustituto en un nombre.
+  Sus caracteres se arman con `String.fromCharCode`. Corren por el formato y por la semilla, con
+  0 conexiones. Sin `storable` en el correo, y sin `isWellFormed` (X8 de la auditoría), en rojo.
+- **A3 · Las pruebas que faltaban (H3, H4).** D7 tiene su tercer chequeo en `seed-db.test.ts`.
+  Un paquete de prueba se siembra sin cambiar el código, con otras cuentas y otras etapas, y la
+  base lo sigue. Su cuenta del agente es la segunda, así que una semilla que tomara la primera
+  pondría la llave en otra cuenta; ese mutante queda en rojo. D19 tiene las cuatro ramas en
+  `seed-key-db.test.ts`: un archivo con otra forma, una llave con forma de llave que esta base
+  no emitió, la llave del agente revocada con `db:keys revoke` y la llave viva de `mentor`. En
+  cada una queda una sola llave `agente` viva, la del archivo. X1 (conservar una llave revocada)
+  y X2 (aceptar cualquier llave viva con ese hash), en rojo.
+- **A4 · Una clave desconocida no se repite (H5).** El rechazo la nombra solo si tiene forma de
+  campo (`^[A-Za-z_][A-Za-z0-9_]{0,40}$`); si no, «(clave desconocida)». Dos casos: una clave
+  con forma de correo y una de 10 000 caracteres. Nombrar toda clave tal como viene, en rojo.
+- **A5 · `ORDER BY` calificados (H7).** `ORDER BY api_keys.id` en la rotación de la semilla, y
+  `companies.id` y `contacts.id` en `seed-db.test.ts`. Hoy no cambia ningún resultado, así que
+  no tiene una prueba que muerda.
+- **A6 · Las llaves de las pruebas no se quedan (H8).** `newKeyFile` anota cada carpeta y
+  `removeKeyFiles` las borra en el `afterAll` de cada archivo. Se borraron también las 251
+  carpetas `circuit-seed-…` que dejaron las corridas de antes en `%TEMP%`, 113 con una llave de
+  una base ya borrada. Después de `npm run check`, `%TEMP%` no tiene ninguna `circuit-…`.
+- **A7 · Las fallas raras, con su motivo (H9, H11).** Si la llave no se puede escribir después
+  del `COMMIT`, la salida lo dice: la base quedó sembrada, la llave anterior quedó revocada, y
+  correr otra vez emite otra. Si otra sesión revoca la llave mientras la semilla la rota, el
+  `KeysError` del emisor sale con su mensaje («No hay una llave viva con el id N.») y la semilla
+  no cambia nada. Para eso `keys.ts` exporta también `KeysError`: el cerco de D18 suma el error
+  que lanzan los dos pasos que ya exportaba. H11: lo común de los tres comandos queda en
+  `database/command.ts` y las órdenes a docker en `database/docker.ts`. Fue el primer commit,
+  sin cambio de conducta, y la semilla ya no depende del módulo del respaldo. Las dos
+  enmiendas tienen su mutante en rojo: sin el mensaje del archivo y sin el de `KeysError`.
+
+Pruebas: 627 → 648, una (el modo `0600`) solo en Linux. Cobertura 95,62 / 86,6 / 96,72 / 97,71.
+Commits: `03177b5` (H11), `39c11cc` (A2 y A4) y `321c0d3` (A1, A3, A5–A7). La condición de
+cierre de A1, en el clon: 10 vueltas seguidas de `npm run check`, todas en 0 y con 648 pruebas,
+de 50 a 131 s. Después: ninguna `circuit_test_…`, el `/tmp` del contenedor vacío y ninguna
+carpeta `circuit-…` en `%TEMP%`.
+
+**Un tropiezo durante las enmiendas, ya reparado.** Para mirar por qué fallaba un mutante, se
+plantó a mano en PowerShell con `Get-Content -Raw` y `WriteAllText`. PowerShell 5.1 leyó
+`command.ts`, que no tiene BOM, como ANSI, y al restaurarlo dejó `Â«`, `â€¦` y `fallÃ³` en
+lugar de `«`, `…` y `falló`. El hash no volvió, y así se vio. Se reconstruyó desde `HEAD` más
+el único bloque nuevo, y ningún otro archivo quedó tocado (CLAUDE.md §8).
