@@ -1,5 +1,10 @@
-// Public face of the circuit core (ADR-0001, ADR-0003). Other code imports it only from here.
-// The core orders the seven stations and declares the ports it needs (model, CRM, clock);
-// it imports no other module and no package (test/architecture/module-map.ts).
-// The stations, branches and events arrive in F2.1.
-export {};
+// The core's public face (ADR-0003 M1): other modules import only from here.
+export * from './actions.ts';
+export * from './decision.ts';
+export * from './definition.ts';
+export * from './engine.ts';
+export * from './filter.ts';
+export * from './knowledge.ts';
+export * from './ports.ts';
+export * from './stations.ts';
+export * from './validate.ts';

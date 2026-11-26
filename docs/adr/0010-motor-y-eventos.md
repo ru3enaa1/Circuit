@@ -228,6 +228,20 @@ Cada uno se planta a mano, se comprueba en rojo en su prueba y se restaura compr
 - Con el simulador no hay tokens ni costo: el tablero mostrará «—» hasta las corridas grabadas
   de F3.
 
+## Notas de implementación
+
+- **Las estaciones 6 y 7 en esta ADR (2026-11-26, al empezar F2.1).** D7, D14 y D15 piden la
+  ruta normal 1–7 y que solo la 7 reciba el `CrmWriter`; el cerco deja «la decisión del
+  mentor, la estación 7 y el cliente HTTP» para ADR-0012. Se lee así: esta ADR trae
+  `decideRun` (`decision.ts`), que guarda la decisión como el único evento de la 6 y corre la
+  7 leyendo sus acciones de ese evento en el almacén, nunca de la memoria, con un `CrmWriter`
+  falso en las pruebas. ADR-0012 le agrega el tipo `Approval`, la reserva `apply_claims`, la
+  ruta HTTP y `crm-client`, sin deshacer nada de aquí.
+- **Lo que el núcleo agregó sin cláusula:** `decidedBy` en cada estación (`code`, `model` o
+  `person`), para que el motor se detenga antes de la 6 sin comparar su id; un texto de entrada
+  de 1 a 4000 caracteres, sin NUL (la 1 falla con otro); una cita de 20 a 500 caracteres
+  (`QUOTE_MIN_LENGTH`: más corta no prueba nada); y hasta cinco acciones por propuesta.
+
 ## Preguntas abiertas
 
 Cada una tiene su **ASUNCIÓN** escrita en la cláusula. Respondidas el 2026-11-26: el dueño
