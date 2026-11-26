@@ -124,7 +124,9 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   personal en los registros.
 - **Trampas:** pruebas de permisos que pasan porque el recurso no existe; semillas que se
   ejecutan dos veces; migraciones que no se probaron desde una base vacía.
-- **Estado:** abierta el 2026-11-24 en `feat/f1-crm`, que sale de `main` (`4b79aa3`).
+- **Estado:** **cerrada e integrada a `main` el 2026-11-26** (fast-forward a `f72aa15`; el
+  detalle, al final de esta sección). Abierta el 2026-11-24 en `feat/f1-crm`, que sale de
+  `main` (`4b79aa3`).
   F1.1 hecha el 2026-11-24; el dueño pidió los commits y seguir con F1.2 (su prueba:
   `docker compose up -d --wait db; npm run db:migrate; npm run check; echo $LASTEXITCODE`,
   que debe dar 0). ADR-0005 aceptada ese día: el dueño delegó en Claude sus siete
@@ -230,7 +232,9 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   pruebas, el mutante de cada una en rojo y 10 vueltas seguidas de `npm run check` en 0.
   Queda abierto H10, de `db:keys`. Empujada el 2026-11-26 (CI en verde en `4e833d5`, corrida
   45842358302): las 648 pruebas corrieron en Linux, ninguna saltada, con la del modo `0600`
-  (D20). Para cerrar F1: la integración a `main`, que decide el dueño.
+  (D20). **F1 cerrada e integrada a `main` el 2026-11-26** con el sí del dueño: fast-forward de
+  `4b79aa3` a `f72aa15`, sin commit de merge, con CI en verde en la rama (45845613390) y en
+  `main` (45845951453).
 
 ### F2 · Circuito y mapa
 
@@ -260,7 +264,8 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   nada se aplica sin aprobación; el tablero no muestra datos personales tachados en la estación 2.
 - **Trampas:** una animación que no sale de los eventos; un mapa que se ve bien en el GIF
   pero no a la mitad del ancho; casos dorados que pasan con cualquier salida.
-- **Estado:** pendiente.
+- **Estado:** abierta el 2026-11-26 en `feat/f2-circuito`, que sale de `main` (`f72aa15`).
+  F2.0 en curso: el dueño hace los bocetos y Claude lo ayuda con los prompts.
 
 ### F3 · Modelo
 

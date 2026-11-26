@@ -157,8 +157,11 @@ vueltas seguidas de `npm run check` en 0 (de 50 a 131 s). H10 (`db:keys list` or
 como texto) queda abierto, para la fase que toque `db:keys`. **Empujada el 2026-11-26 a
 pedido del dueño (CI en verde en `4e833d5`, corrida 45842358302):** en Linux corrieron las 648
 pruebas, ninguna saltada, D20 (el modo `0600`) entre ellas; cobertura 95,71 / 87,2 / 96,72 /
-97,82. Siguiente: integrar F1 a `main`, con el sí del dueño. Pedido al dueño, como insumo de
-F2: el material del programa que citará la estación 4.
+97,82. **F1 cerrada e integrada a `main` el 2026-11-26** con el sí del dueño (fast-forward
+de `4b79aa3` a `f72aa15`, sin commit de merge; CI en verde en la rama, corrida 45845613390, y
+en `main`, 45845951453, con 648 pruebas). **F2 · Circuito y mapa abierta el 2026-11-26 en `feat/f2-circuito`**, que sale de `main`
+(`f72aa15`). Primero F2.0: los bocetos del dueño y el brief `docs/diseno.md`.
+Pedido al dueño, como insumo de F2: el material del programa que citará la estación 4.
 
 ## 3. Reglas de producto que gobiernan el código
 
