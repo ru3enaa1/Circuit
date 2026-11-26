@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { REPO_ROOT } from '../config.ts';
 import { createDisposableDatabase, DATABASE_HOOK_TIMEOUT_MS, runMigrations, type DisposableDatabase } from './disposable-db.ts';
+import { DOCKER_TEST_TIMEOUT_MS } from './docker-tools.ts';
 
 // R8 and ADR-0005 D16: database/schema.sql is not written by hand. It is the schema-only dump
 // of a freshly migrated disposable database, grants and policies included, and this test
@@ -76,5 +77,5 @@ describe('database/schema.sql', () => {
       HEADER + dump,
       `database/schema.sql no coincide con las migraciones. Regenéralo con ${REGENERATE}.`,
     ).toMatchFileSnapshot(SCHEMA_FILE);
-  });
+  }, DOCKER_TEST_TIMEOUT_MS);
 });

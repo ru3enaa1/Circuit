@@ -53,3 +53,52 @@ describe('the hooks of the tests with a database', () => {
     expect(short, 'cada beforeAll y afterAll lleva DATABASE_HOOK_TIMEOUT_MS como último argumento').toEqual([]);
   });
 });
+
+// ADR-0009 A1 (audit H1): every test of a file that seeds or calls docker runs with a named
+// budget, never with Vitest's 5 s. A seed test went past them once in five runs, and so did
+// schema-dump-db, with docker busy with the backup tests; the run went red, and the database the
+// test left behind was dropped under a seed still connected to it.
+
+/** A file that imports either of these seeds the package or orders docker inside its tests. */
+const HEAVY = /from '[^']*\/(seed-tools|docker-tools)\.ts'/;
+/** A test, opened at the start of a line: it(, it.each( or it.skipIf(. */
+const TEST_CALL = /^\s*it(?:\.\w+)?\(/gm;
+/** A test budget as the last argument, on the closing line or on its own line. */
+const TEST_BUDGET = /,\s*(?:DOCKER|SEED|PROCESS)_TEST_TIMEOUT_MS\s*,?\s*\)/g;
+const KNOWN_HEAVY_FILES = [
+  'apps/crm/test/seed-agent-key-db.test.ts',
+  'database/test/backup-db.test.ts',
+  'database/test/schema-dump-db.test.ts',
+  'database/test/seed-db.test.ts',
+];
+
+interface TestCount {
+  readonly file: string;
+  readonly tests: number;
+  readonly withBudget: number;
+}
+
+function heavyTestFiles(): TestCount[] {
+  return TEST_DIRS.flatMap((dir) =>
+    readdirSync(join(REPO_ROOT, dir))
+      .filter((name) => name.endsWith('.test.ts'))
+      .map((name) => `${dir}/${name}`)
+      .map((file) => ({ file, text: readFileSync(join(REPO_ROOT, file), 'utf8') }))
+      .filter(({ text }) => HEAVY.test(text))
+      .map(({ file, text }) => ({ file, tests: text.match(TEST_CALL)?.length ?? 0, withBudget: text.match(TEST_BUDGET)?.length ?? 0 })),
+  );
+}
+
+describe('the tests that seed or call docker', () => {
+  const files = heavyTestFiles();
+
+  it('are found where they are expected (control)', () => {
+    expect(files.map(({ file }) => file)).toEqual(expect.arrayContaining(KNOWN_HEAVY_FILES));
+    expect(files.every(({ tests }) => tests > 0)).toBe(true);
+  });
+
+  it('each carry a named test budget as their timeout', () => {
+    const short = files.filter(({ tests, withBudget }) => tests !== withBudget);
+    expect(short, 'cada prueba que siembra o llama a docker lleva DOCKER_, SEED_ o PROCESS_TEST_TIMEOUT_MS como último argumento').toEqual([]);
+  });
+});

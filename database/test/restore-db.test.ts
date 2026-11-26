@@ -133,13 +133,14 @@ describe('D4 · only into a new database', () => {
       expect(run.err).toContain('--into');
       expect(recording.runs).toEqual([]);
     },
+    DOCKER_TEST_TIMEOUT_MS,
   );
 
   it('a file that does not exist exits with 1', async () => {
     const run = await restore(join(root, 'no-existe.dump'), newTarget(), recordingDocker(unreachableDocker));
     expect(run.code).toBe(1);
     expect(run.err).toContain('No existe el respaldo');
-  });
+  }, DOCKER_TEST_TIMEOUT_MS);
 });
 
 describe('D5 · all or nothing', () => {

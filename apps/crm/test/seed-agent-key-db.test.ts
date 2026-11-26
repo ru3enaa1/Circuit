@@ -5,7 +5,7 @@ import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createDisposableDatabase, DATABASE_HOOK_TIMEOUT_MS, runMigrations, type DisposableDatabase } from '../../../database/test/disposable-db.ts';
-import { newKeyFile, seed, seedEnv, tableCounts } from '../../../database/test/seed-tools.ts';
+import { newKeyFile, seed, seedEnv, SEED_TEST_TIMEOUT_MS, tableCounts } from '../../../database/test/seed-tools.ts';
 import { createOrUpdateCrmApp, readCrmPassword } from '../../../database/users.ts';
 import { readLocalEnv } from '../../../database/env.ts';
 import { CRM_DB_USER } from '../src/config.ts';
@@ -68,7 +68,7 @@ describe("D22 · the seeded agent's key, against the real server", () => {
     const id = await firstContactOf('escuela-andamio');
     const response = await app!.inject({ method: 'GET', url: `/accounts/escuela-andamio/contacts/${id}`, headers: bearer(key) });
     expect(response.statusCode, response.body).toBe(200);
-  });
+  }, SEED_TEST_TIMEOUT_MS);
 
   it('archiving is 403 «borrado», and no row changes', async () => {
     const id = await firstContactOf('escuela-andamio');
@@ -77,13 +77,13 @@ describe("D22 · the seeded agent's key, against the real server", () => {
     );
     expectRefused(response, 'sin_permiso', 'La llave no tiene permiso de borrado.');
     expect(after).toEqual(before);
-  });
+  }, SEED_TEST_TIMEOUT_MS);
 
   it('exporting is 403 «exportación», and no row changes', async () => {
     const { response, before, after } = await counted(() => app!.inject({ method: 'GET', url: '/accounts/escuela-andamio/export', headers: bearer(key) }));
     expectRefused(response, 'sin_permiso', 'La llave no tiene permiso de exportación.');
     expect(after).toEqual(before);
-  });
+  }, SEED_TEST_TIMEOUT_MS);
 
   it('cuenta-vecina, which exists and has contacts, is 403 cuenta_ajena to read and to write, and no row changes', async () => {
     const id = await firstContactOf('cuenta-vecina');
@@ -95,7 +95,7 @@ describe("D22 · the seeded agent's key, against the real server", () => {
       expectRefused(response, 'cuenta_ajena', 'La llave no es de esta cuenta.');
       expect(after).toEqual(before);
     }
-  });
+  }, SEED_TEST_TIMEOUT_MS);
 
   it('writes a note in escuela-andamio (201), and D13: seeding again keeps it and changes no count', async () => {
     const id = await firstContactOf('escuela-andamio');
@@ -112,5 +112,5 @@ describe("D22 · the seeded agent's key, against the real server", () => {
     expect(await tableCounts(db!.pool)).toEqual(before);
     const note = await db!.pool.query('SELECT 1 FROM crm.notes WHERE id = $1 AND body = $2', [noteId, 'Nota del agente, aprobada']);
     expect(note.rowCount).toBe(1);
-  });
+  }, SEED_TEST_TIMEOUT_MS);
 });

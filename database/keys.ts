@@ -41,8 +41,11 @@ const ID_SHAPE = /^[1-9][0-9]{0,14}$/;
 /** D5, H2 (a) made a rule: every key this issues can read, so none sees only what it writes. */
 const REQUIRED_PERMISSION = 'read';
 
-/** A refusal of ours: its message is safe to print as it is, and some come with the usage. */
-class KeysError extends Error {
+/**
+ * A refusal of ours: its message is safe to print as it is, and some come with the usage. The
+ * seed tells it the same way when the steps it shares fail (audit of ADR-0009, H9).
+ */
+export class KeysError extends Error {
   override readonly name = 'KeysError';
   readonly withUsage: boolean;
 

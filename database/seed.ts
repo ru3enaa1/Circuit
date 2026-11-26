@@ -1,16 +1,14 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, isAbsolute, join } from 'node:path';
 
-import pg from 'pg';
-
 import { SLUG_PATTERN } from '../apps/crm/src/db/schema.ts';
 import { API_KEY_SHAPE, generateApiKey, hashApiKey } from '../apps/crm/src/keys.ts';
 import { parseScenario, ScenarioError, type Scenario, type ScenarioAccount } from '../apps/crm/src/scenario.ts';
-import { CommandError, describeFailure, randomSuffix, shown } from './command.ts';
+import { adminClient, CommandError, describeFailure, randomSuffix, shown, systemCodeOf } from './command.ts';
 import { REPO_ROOT } from './config.ts';
 import { readAdminConnection } from './connection.ts';
 import { readLocalEnv, type Env } from './env.ts';
-import { insertKey, revokeKey, type AdminClient, type ConnectAdmin } from './keys.ts';
+import { insertKey, KeysError, revokeKey, type AdminClient, type ConnectAdmin } from './keys.ts';
 
 // `npm run db:seed` (ADR-0009 D11–D21): loads the CRM part of the scenario that CIRCUIT_SCENARIO
 // names, scenarios/<id>/crm.json, into the database of POSTGRES_DB, as the admin of .env and in
@@ -27,7 +25,8 @@ export const AGENT_KEY_PERMISSIONS = ['read', 'write'] as const;
 /** ADR-0005 answer 7 and H13: who proposes and approves what the seed writes. */
 export const SEED_AUTHOR = 'seed';
 /** D16: serialises two seeds of one database; a session lock, released when the session ends. */
-const SEED_LOCK = "SELECT pg_advisory_lock(hashtext('circuit.db-seed'))";
+export const SEED_LOCK_NAME = 'circuit.db-seed';
+const SEED_LOCK = `SELECT pg_advisory_lock(hashtext('${SEED_LOCK_NAME}'))`;
 const SCENARIOS_DIR = join(REPO_ROOT, 'scenarios');
 const PACKAGE_FILE = 'crm.json';
 const SLUG = new RegExp(SLUG_PATTERN);
@@ -76,7 +75,7 @@ function seedConnector(env: Env): ConnectAdmin {
     } catch (error) {
       throw new CommandError(error instanceof Error ? error.message : 'Falta la conexión de .env.');
     }
-    const client = new pg.Client(connection);
+    const client = adminClient(connection);
     await client.connect();
     return client;
   };
@@ -186,7 +185,7 @@ async function convergeAgentKey(client: AdminClient, slug: string, inFile: strin
     const same = await client.query(`${live} AND key_hash = $3 AND permissions = $4::text[]`, [accountId, AGENT_KEY_LABEL, hashApiKey(inFile), [...AGENT_KEY_PERMISSIONS]]);
     if (same.rowCount === 1) return undefined;
   }
-  for (const row of (await client.query<{ id: string }>(`${live} ORDER BY id`, [accountId, AGENT_KEY_LABEL])).rows) await revokeKey(client, row.id);
+  for (const row of (await client.query<{ id: string }>(`${live} ORDER BY api_keys.id`, [accountId, AGENT_KEY_LABEL])).rows) await revokeKey(client, row.id);
   const key = generateApiKey();
   await insertKey(client, { order: 'issue', account: slug, label: AGENT_KEY_LABEL, permissions: AGENT_KEY_PERMISSIONS }, key);
   return key;
@@ -243,7 +242,15 @@ async function seedUnderLock(client: AdminClient, scenario: Scenario, keyFile: s
   await client.query(SEED_LOCK);
   const outcome = await inOneTransaction(client, () => seedAll(client, scenario, readKeyFile(keyFile)));
   if (outcome.newKey === undefined) return [...outcome.lines, `Llave del agente sin cambios, en ${shown(keyFile)}.`];
-  writeKeyFile(keyFile, outcome.newKey);
+  try {
+    writeKeyFile(keyFile, outcome.newKey);
+  } catch (error) {
+    // After the COMMIT: the rows are in and the old key is revoked, so the next run issues another (H9).
+    const code = systemCodeOf(error) ?? 'sin código';
+    throw new CommandError(
+      `La base quedó sembrada, pero no se pudo escribir la llave en ${shown(keyFile)} (${code}); la anterior, si había, quedó revocada. Corre npm run db:seed otra vez y emitirá otra.`,
+    );
+  }
   return [...outcome.lines, `Llave del agente nueva, en ${shown(keyFile)}; la que había antes, si había, quedó revocada.`];
 }
 
@@ -254,8 +261,10 @@ export interface SeedDeps {
   readonly out?: Pick<Console, 'log' | 'error'>;
 }
 
+/** Our refusals, the format's and the issuer's, as they are: none of them carries a value (ADR-0008 D6). */
 function describe(error: unknown): string {
-  return error instanceof ScenarioError ? `db:seed: ${error.message}` : describeFailure('db:seed', error);
+  if (error instanceof ScenarioError || error instanceof KeysError) return `db:seed: ${error.message}`;
+  return describeFailure('db:seed', error);
 }
 
 /** D17: the lines name accounts by slug and the file by its path; the key is never printed. */

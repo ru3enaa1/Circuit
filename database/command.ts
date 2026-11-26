@@ -42,6 +42,21 @@ export function adminUserOf(env: Env): string {
   return user;
 }
 
+/**
+ * A client of the admin whose lost connection is a failure the command reports, not a crash
+ * (audit of ADR-0009, H1). When the server ends a session (a restart, or a database dropped WITH
+ * FORCE), pg 8.23 rejects every pending query and also emits 'error' on the client; with no
+ * listener, Node throws it as an unhandled error, which ends the process with a stack trace and
+ * turns a test run red. The listener only swallows that event: the same error still reaches the
+ * command through the query that was waiting, and a later query is refused because the client is
+ * no longer queryable.
+ */
+export function adminClient(config: pg.ClientConfig): pg.Client {
+  const client = new pg.Client(config);
+  client.on('error', () => undefined);
+  return client;
+}
+
 /** The system code of an error (ENOENT, ECONNREFUSED…), never its message, which can carry a path or the connection. */
 export function systemCodeOf(error: unknown): string | undefined {
   const code = typeof error === 'object' && error !== null && 'code' in error ? error.code : undefined;

@@ -91,6 +91,7 @@ describe('D1–D3 · db:backup', () => {
     () => {
       expect(folderStamp(NOW)).toBe('20261125-180405Z');
     },
+    DOCKER_TEST_TIMEOUT_MS,
   );
 
   it(
@@ -119,6 +120,7 @@ describe('D1–D3 · db:backup', () => {
       expect(run.recording.runs).toEqual([]);
       expect(readdirSync(dir)).toEqual([]);
     },
+    DOCKER_TEST_TIMEOUT_MS,
   );
 
   it(

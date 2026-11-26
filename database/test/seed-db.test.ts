@@ -1,4 +1,5 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
 import type pg from 'pg';
@@ -8,8 +9,22 @@ import { parseScenario } from '../../apps/crm/src/scenario.ts';
 import { REPO_ROOT } from '../config.ts';
 import { AGENT_KEY_LABEL } from '../seed.ts';
 import { sha256 } from './crm-fixture.ts';
-import { createDisposableDatabase, DATABASE_HOOK_TIMEOUT_MS, runMigrations, type DisposableDatabase } from './disposable-db.ts';
-import { CRM_TABLES, interceptingConnector, newKeyFile, REAL_SCENARIO, seed, seedEnv, slowCommitConnector, tableCounts, type SeedRun } from './seed-tools.ts';
+import { validPackage } from './scenario-cases.ts';
+import { DATABASE_HOOK_TIMEOUT_MS } from './disposable-db.ts';
+import {
+  CRM_TABLES,
+  interceptingConnector,
+  newKeyFile,
+  REAL_SCENARIO,
+  removeKeyFiles,
+  seed,
+  seedEnv,
+  SEED_TEST_TIMEOUT_MS,
+  slowCommitConnector,
+  tableCounts,
+  type SeedRun,
+  useMigratedDatabase,
+} from './seed-tools.ts';
 
 /** Long enough for the second seed to connect and reach its check; short enough for the test. */
 const SLOW_COMMIT_MS = 1_500;
@@ -29,21 +44,7 @@ const SEEDED = (() => {
   };
 })();
 
-/** A migrated disposable database, made in beforeAll and dropped in afterAll of the calling describe. */
-function useMigratedDatabase(migrate = true): () => DisposableDatabase {
-  let db: DisposableDatabase | undefined;
-  beforeAll(async () => {
-    db = await createDisposableDatabase();
-    if (migrate) await runMigrations(db.pool);
-  }, DATABASE_HOOK_TIMEOUT_MS);
-  afterAll(async () => {
-    await db?.drop();
-  }, DATABASE_HOOK_TIMEOUT_MS);
-  return () => {
-    if (db === undefined) throw new Error('La base desechable no se creó: falló el beforeAll.');
-    return db;
-  };
-}
+afterAll(removeKeyFiles, DATABASE_HOOK_TIMEOUT_MS);
 
 /** Every row of every crm table, as JSON and ordered by id, without the columns that are not the package's (D15). */
 async function allRows(pool: pg.Pool): Promise<Record<string, unknown[]>> {
@@ -65,7 +66,7 @@ describe('D11 · on a database that was never migrated', () => {
     expect(run.code).toBe(1);
     expect(run.err).toContain('corre npm run db:migrate antes');
     expect(readdirSync(dirname(keyFile))).toEqual([]);
-  });
+  }, SEED_TEST_TIMEOUT_MS);
 });
 
 describe('D12, D13, D15 · seeding the real package', () => {
@@ -83,7 +84,7 @@ describe('D12, D13, D15 · seeding the real package', () => {
     expect(first?.out).toContain('escuela-andamio: sembrada (6 etapas, 5 empresas');
     expect(first?.out).toContain('cuenta-vecina: sembrada (1 etapa, 0 empresas, 1 contacto, 1 nota, 0 tareas).');
     expect(first?.out).toContain(`Llave del agente nueva, en ${keyFile}`);
-  });
+  }, SEED_TEST_TIMEOUT_MS);
 
   it('D12: one audit row per company, contact, note and task, each an insert signed seed, without a key or an approval', async () => {
     const audit = await db().pool.query<{ table_name: string; n: number }>(
@@ -93,7 +94,7 @@ describe('D12, D13, D15 · seeding the real package', () => {
     );
     expect(Object.fromEntries(audit.rows.map((row) => [row.table_name, row.n]))).toEqual(SEEDED);
     expect((await tableCounts(db().pool))['audit_log']).toBe(SEEDED.companies + SEEDED.contacts + SEEDED.notes + SEEDED.tasks);
-  });
+  }, SEED_TEST_TIMEOUT_MS);
 
   it('D13: a second run changes no count of the eight tables, says «ya estaba» for each account and keeps the key', async () => {
     const before = await tableCounts(db().pool);
@@ -103,27 +104,27 @@ describe('D12, D13, D15 · seeding the real package', () => {
     expect(second.out).toContain('cuenta-vecina: ya estaba; no se tocó');
     expect(second.out).toContain('Llave del agente sin cambios');
     expect(await tableCounts(db().pool)).toEqual(before);
-  });
+  }, SEED_TEST_TIMEOUT_MS);
 
   it('D15: a second database seeded with the same package has the same rows, ids included, but for three columns', async () => {
     const run = await seed(seedEnv(other().name, newKeyFile()));
     expect(run.code, run.err).toBe(0);
     // The first database was seeded twice; the second run wrote nothing, so the rows still compare.
     expect(await allRows(other().pool)).toEqual(await allRows(db().pool));
-  });
+  }, SEED_TEST_TIMEOUT_MS);
 
   it("D15: the first company of the package has the lowest id, and each date is the package's", async () => {
-    const companies = await db().pool.query<{ id: string; name: string }>('SELECT id::text AS id, name FROM crm.companies ORDER BY id');
+    const companies = await db().pool.query<{ id: string; name: string }>('SELECT id::text AS id, name FROM crm.companies ORDER BY companies.id');
     expect(companies.rows[0]?.name).toBe(scenario.accounts[0]?.companies[0]?.name);
     const dated = await db().pool.query<{ email: string; created: string }>(
-      `SELECT email, to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created FROM crm.contacts ORDER BY id`,
+      `SELECT email, to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created FROM crm.contacts ORDER BY contacts.id`,
     );
     const expected = [...contactsOf('escuela-andamio'), ...contactsOf('cuenta-vecina')].map((row) => ({
       email: row.email,
       created: row.createdAt ?? scenario.createdAt,
     }));
     expect(dated.rows).toEqual(expected);
-  });
+  }, SEED_TEST_TIMEOUT_MS);
 });
 
 describe('D14 · all or nothing', () => {
@@ -139,7 +140,7 @@ describe('D14 · all or nothing', () => {
     expect(run.code).toBe(1);
     expect(Object.values(await tableCounts(db().pool))).toEqual(CRM_TABLES.map(() => 0));
     expect(readdirSync(dirname(keyFile))).toEqual([]);
-  });
+  }, SEED_TEST_TIMEOUT_MS);
 });
 
 describe('D16 · two seeds at once', () => {
@@ -158,5 +159,33 @@ describe('D16 · two seeds at once', () => {
     expect(live.rowCount).toBe(1);
     expect(existsSync(keyFile)).toBe(true);
     expect(sha256(readFileSync(keyFile, 'utf8').trimEnd()).equals(live.rows[0]?.hash ?? Buffer.alloc(0))).toBe(true);
-  });
+  }, SEED_TEST_TIMEOUT_MS);
+});
+
+describe('D7 · a second package, with other accounts and other stages, and no change to the code', () => {
+  const db = useMigratedDatabase();
+  const scenarios = mkdtempSync(join(tmpdir(), 'circuit-seed-otro-'));
+  afterAll(() => rmSync(scenarios, { recursive: true, force: true }), DATABASE_HOOK_TIMEOUT_MS);
+
+  it('the database follows that package, and the key goes to its agent account, the second one', async () => {
+    const pkg = validPackage();
+    // The agent's account is not the first, so a seed that took the first one would put the key elsewhere.
+    pkg.agentAccount = 'cuenta-b';
+    mkdirSync(join(scenarios, 'otro'));
+    writeFileSync(join(scenarios, 'otro', 'crm.json'), JSON.stringify(pkg));
+    const run = await seed({ ...seedEnv(db().name, newKeyFile()), CIRCUIT_SCENARIO: 'otro' }, { scenariosDir: scenarios });
+    expect(run.code, run.err).toBe(0);
+    const stages = await db().pool.query<{ slug: string; key: string }>(
+      'SELECT a.slug, s.key FROM crm.pipeline_stages AS s JOIN crm.accounts AS a ON a.id = s.account_id ORDER BY s.id',
+    );
+    expect(stages.rows).toEqual([
+      { slug: 'cuenta-a', key: 'nueva' },
+      { slug: 'cuenta-a', key: 'otra' },
+      { slug: 'cuenta-b', key: 'nueva' },
+    ]);
+    const keys = await db().pool.query<{ slug: string; label: string }>(
+      'SELECT a.slug, k.label FROM crm.api_keys AS k JOIN crm.accounts AS a ON a.id = k.account_id WHERE k.revoked_at IS NULL',
+    );
+    expect(keys.rows).toEqual([{ slug: 'cuenta-b', label: AGENT_KEY_LABEL }]);
+  }, SEED_TEST_TIMEOUT_MS);
 });

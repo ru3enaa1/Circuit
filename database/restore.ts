@@ -5,7 +5,7 @@ import { parseArgs } from 'node:util';
 import pg from 'pg';
 
 import { DATABASE_NAME, HASH_SUFFIX } from './backup.ts';
-import { adminUserOf, CommandError, describeFailure, hashFile, SHA256_HEX, shown } from './command.ts';
+import { adminClient, adminUserOf, CommandError, describeFailure, hashFile, SHA256_HEX, shown } from './command.ts';
 import { readAdminConnection } from './connection.ts';
 import { composeDocker, containerPath, containerTemp, hashInside, inside, mustRun, removeInside, RESTORE_TEMP_PREFIX, type Docker } from './docker.ts';
 import { readLocalEnv, type Env } from './env.ts';
@@ -96,7 +96,7 @@ export interface RestoreDeps {
 
 function maintenanceConnector(env: Env): () => Promise<AdminSession> {
   return async () => {
-    const client = new pg.Client({ ...readAdminConnection(env), database: MAINTENANCE_DB });
+    const client = adminClient({ ...readAdminConnection(env), database: MAINTENANCE_DB });
     await client.connect();
     return client;
   };

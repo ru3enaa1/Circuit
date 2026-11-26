@@ -1,14 +1,16 @@
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import pg from 'pg';
+import { afterAll, beforeAll } from 'vitest';
 
 import type { Scenario } from '../../apps/crm/src/scenario.ts';
 import { readAdminConnection } from '../connection.ts';
 import { readLocalEnv, type Env } from '../env.ts';
 import type { AdminClient, ConnectAdmin } from '../keys.ts';
 import { runSeed, runSeedCommand, type SeedDeps } from '../seed.ts';
+import { createDisposableDatabase, DATABASE_HOOK_TIMEOUT_MS, runMigrations, type DisposableDatabase } from './disposable-db.ts';
 
 // What the tests of db:seed (ADR-0009 D11–D22) share. Every key file goes to a temporary folder
 // of the system, never to .secrets/, and every database is a disposable one.
@@ -16,12 +18,31 @@ import { runSeed, runSeedCommand, type SeedDeps } from '../seed.ts';
 /** The real package; the tests may name it, the code may not (D7). */
 export const REAL_SCENARIO = 'escuela';
 export const CRM_TABLES = ['accounts', 'api_keys', 'pipeline_stages', 'companies', 'contacts', 'notes', 'tasks', 'audit_log'] as const;
+/**
+ * The time every test that seeds gets, as its last argument (audit of ADR-0009, H1). Vitest's
+ * 5 s ran out: with every file running at once, coverage on and docker busy with the backup
+ * tests, a seed of the real package and the reading of its rows took 5 124 ms once in five runs.
+ * A seed takes well under a second when warm, so the budget is generous, as the hooks' is; a
+ * test that really hangs still fails, a minute later. hook-budget.test.ts proves each such test
+ * carries it.
+ */
+export const SEED_TEST_TIMEOUT_MS = 60_000;
 /** A key anywhere in a text, written here and not taken from API_KEY_SHAPE. */
 export const KEY_IN_TEXT = /crmk_[A-Za-z0-9_-]{43}/;
 
+/** Every folder newKeyFile made in this test file, so removeKeyFiles leaves none behind (audit of ADR-0009, H8). */
+const keyFolders: string[] = [];
+
 /** A key file in a folder of its own, so a test can check that nothing else is left beside it. */
 export function newKeyFile(): string {
-  return join(mkdtempSync(join(tmpdir(), 'circuit-seed-')), 'crm-agent-key');
+  const folder = mkdtempSync(join(tmpdir(), 'circuit-seed-'));
+  keyFolders.push(folder);
+  return join(folder, 'crm-agent-key');
+}
+
+/** For each file's afterAll: the keys in them open databases that are gone, but they are still keys. */
+export function removeKeyFiles(): void {
+  for (const folder of keyFolders.splice(0)) rmSync(folder, { recursive: true, force: true });
 }
 
 export function seedEnv(database: string, keyFile: string): Env {
@@ -75,6 +96,19 @@ export function slowCommitConnector(env: Env, ms: number): ConnectAdmin {
   };
 }
 
+/** The admin of `env`, with `before` awaited ahead of each statement: how a test makes another session act at a chosen moment. */
+export function hookedConnector(env: Env, before: (text: string, values: readonly unknown[]) => Promise<void>): ConnectAdmin {
+  return async () => {
+    const client = new pg.Client(readAdminConnection(env));
+    await client.connect();
+    const query = async (text: string, values?: unknown[]) => {
+      await before(text, values ?? []);
+      return client.query(text, values);
+    };
+    return { query, end: () => client.end() } as AdminClient;
+  };
+}
+
 /**
  * The admin of `env`, with every statement shown to `fails` first: when it says so, that statement
  * fails on purpose and never reaches the database. Each error the database itself raises is kept
@@ -92,5 +126,21 @@ export function interceptingConnector(env: Env, fails: (text: string, values: re
       });
     };
     return { query, end: () => client.end() } as AdminClient;
+  };
+}
+
+/** A migrated disposable database, made in beforeAll and dropped in afterAll of the calling describe. */
+export function useMigratedDatabase(migrate = true): () => DisposableDatabase {
+  let db: DisposableDatabase | undefined;
+  beforeAll(async () => {
+    db = await createDisposableDatabase();
+    if (migrate) await runMigrations(db.pool);
+  }, DATABASE_HOOK_TIMEOUT_MS);
+  afterAll(async () => {
+    await db?.drop();
+  }, DATABASE_HOOK_TIMEOUT_MS);
+  return () => {
+    if (db === undefined) throw new Error('La base desechable no se creó: falló el beforeAll.');
+    return db;
   };
 }
