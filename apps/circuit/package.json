@@ -4,5 +4,9 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "drizzle-orm": "0.45.4",
+    "pg": "8.23.1"
   }
 }

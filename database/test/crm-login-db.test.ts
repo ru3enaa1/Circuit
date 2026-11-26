@@ -1,6 +1,7 @@
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { CIRCUIT_DB_USER } from '../../apps/circuit/src/config.ts';
 import { CRM_DB_USER } from '../../apps/crm/src/config.ts';
 import { OWNER_ROLES, SERVICE_ROLES } from '../config.ts';
 import { readLocalEnv } from '../env.ts';
@@ -126,10 +127,12 @@ describe('D4 · crm_app logs in with its own password', () => {
     expect(await crmAppRole(db!.pool)).toEqual(CLEAN_CRM_APP);
   });
 
-  it('is the only member of crm_service, and crm_owner and circuit_service have none (H10)', async () => {
+  // ADR-0010 D11: circuit_service gets one member, circuit_app. Roles belong to the whole server,
+  // so whether it is there yet depends on which test ran first; nobody else may be.
+  it('is the only member of crm_service, crm_owner has none, and circuit_service none but circuit_app (H10)', async () => {
     expect(await membersOf(SERVICE_ROLES.crm)).toEqual([CRM_DB_USER]);
     expect(await membersOf(OWNER_ROLES.crm)).toEqual([]);
-    expect(await membersOf(SERVICE_ROLES.circuit)).toEqual([]);
+    expect((await membersOf(SERVICE_ROLES.circuit)).filter((member) => member !== CIRCUIT_DB_USER)).toEqual([]);
   });
 
   it('is stored as a SCRAM-SHA-256 verifier', async () => {

@@ -64,7 +64,7 @@ const HEAVY = /from '[^']*\/(seed-tools|docker-tools)\.ts'/;
 /** A test, opened at the start of a line: it(, it.each( or it.skipIf(. */
 const TEST_CALL = /^\s*it(?:\.\w+)?\(/gm;
 /** A test budget as the last argument, on the closing line or on its own line. */
-const TEST_BUDGET = /,\s*(?:DOCKER|SEED|PROCESS)_TEST_TIMEOUT_MS\s*,?\s*\)/g;
+const TEST_BUDGET = /,\s*(?:DOCKER|SEED|PROCESS|MIGRATION)_TEST_TIMEOUT_MS\s*,?\s*\)/g;
 const KNOWN_HEAVY_FILES = [
   'apps/crm/test/seed-agent-key-db.test.ts',
   'database/test/backup-db.test.ts',
@@ -100,5 +100,70 @@ describe('the tests that seed or call docker', () => {
   it('each carry a named test budget as their timeout', () => {
     const short = files.filter(({ tests, withBudget }) => tests !== withBudget);
     expect(short, 'cada prueba que siembra o llama a docker lleva DOCKER_, SEED_ o PROCESS_TEST_TIMEOUT_MS como último argumento').toEqual([]);
+  });
+});
+
+
+// ADR-0010 D20: a test that applies the migrations in its own body carries a named budget too.
+// «two disposable databases migrating at once» ran out of the 5 s in 1 of 2 runs of the
+// baseline, and every migration makes it slower. Read test by test: from each it( to the next
+// test, hook or describe, which is where a test's body ends in these files.
+
+const MIGRATES = /\brunMigrations\(/;
+const NEXT_BLOCK = /^\s*(?:it(?:\.\w+)?|describe|beforeAll|afterAll|beforeEach|afterEach)\(/gm;
+const IS_TEST = /^\s*it/;
+const KNOWN_MIGRATING_TESTS = ['database/test/migrations-db.test.ts'];
+
+/** The text of each test of a file, from its it( to the start of the next block. */
+function testBodies(text: string): string[] {
+  const starts = [...text.matchAll(NEXT_BLOCK)].map((match) => ({ at: match.index, isTest: IS_TEST.test(match[0]) }));
+  return starts.flatMap((start, index) => (start.isTest ? [text.slice(start.at, starts[index + 1]?.at ?? text.length)] : []));
+}
+
+const hasBudget = (body: string): boolean => (body.match(TEST_BUDGET)?.length ?? 0) > 0;
+
+function migratingTests(): { readonly file: string; readonly test: string }[] {
+  return TEST_DIRS.flatMap((dir) =>
+    readdirSync(join(REPO_ROOT, dir))
+      .filter((name) => name.endsWith('.test.ts') && name !== 'hook-budget.test.ts')
+      .map((name) => `${dir}/${name}`)
+      .flatMap((file) =>
+        testBodies(readFileSync(join(REPO_ROOT, file), 'utf8'))
+          .filter((body) => MIGRATES.test(body))
+          .map((test) => ({ file, test })),
+      ),
+  );
+}
+
+describe('the tests that apply the migrations in their own body (ADR-0010 D20)', () => {
+  const found = migratingTests();
+
+  it('are found where they are expected (control)', () => {
+    expect(found.map(({ file }) => file)).toEqual(expect.arrayContaining(KNOWN_MIGRATING_TESTS));
+  });
+
+  it('each carry a named test budget as their timeout', () => {
+    const short = found.filter(({ test }) => !hasBudget(test)).map(({ file, test }) => `${file}: ${test.split('\n')[0]?.trim()}`);
+    expect(short, 'cada prueba que llama a runMigrations lleva MIGRATION_TEST_TIMEOUT_MS (u otro presupuesto con nombre) como último argumento').toEqual([]);
+  });
+
+  it('reads a file test by test (control)', () => {
+    const text = [
+      "it('a', async () => {",
+      '  await runMigrations(pool);',
+      '}, MIGRATION_TEST_TIMEOUT_MS);',
+      '',
+      "it('b', async () => {",
+      '  await runMigrations(pool);',
+      '});',
+      '',
+      "it('c', () => {});",
+    ].join('\n');
+    const bodies = testBodies(text);
+    expect(bodies.map((body) => [MIGRATES.test(body), hasBudget(body)])).toEqual([
+      [true, true],
+      [true, false],
+      [false, false],
+    ]);
   });
 });

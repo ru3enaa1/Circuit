@@ -242,6 +242,19 @@ Cada uno se planta a mano, se comprueba en rojo en su prueba y se restaura compr
   de 1 a 4000 caracteres, sin NUL (la 1 falla con otro); una cita de 20 a 500 caracteres
   (`QUOTE_MIN_LENGTH`: más corta no prueba nada); y hasta cinco acciones por propuesta.
 
+- **Dos pruebas de antes cambian, a la fuerza (D11, D10).** D11 pide que las pruebas de
+  `crm_app` sigan «sin cambios», pero dos de ellas afirmaban que `circuit_service` no tiene
+  miembros ni ve su esquema, y los roles son de todo el servidor: en cuanto una prueba o
+  `db:users` crea `circuit_app`, lo tiene. «H10» de `crm-login-db.test.ts` pasa a admitir solo
+  a `circuit_app`, y «D13» de `crm-structure-db.test.ts`, el `USAGE` de `circuit_service` en
+  `circuit`. La guarda de `db:users` cambia igual: cada rol de servicio, solo con su usuario.
+- **Sin permiso en las secuencias (D10).** D10 decía «y el uso de sus secuencias»; no hace falta:
+  una columna de identidad saca su id sin `USAGE`, como las de `crm_service` (ADR-0005 D5).
+  `circuit_service` queda con `SELECT` e `INSERT` en las dos tablas y nada más.
+- **Las pruebas con base de circuit viven en `database/test/`.** La prueba de arquitectura no
+  deja que `apps/circuit/test` salga de la app, así que D10, D11 y la ida y vuelta del almacén
+  (`event-store-db.test.ts`) importan desde `database/test` el código de `apps/circuit`.
+
 ## Preguntas abiertas
 
 Cada una tiene su **ASUNCIÓN** escrita en la cláusula. Respondidas el 2026-11-26: el dueño

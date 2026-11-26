@@ -36,6 +36,13 @@
       "when": 1795565880354,
       "tag": "0004_crm_owner",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795724998383,
+      "tag": "0005_circuit_events",
+      "breakpoints": true
     }
   ]
 }

@@ -6,7 +6,14 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { MIGRATIONS_SCHEMA, MIGRATIONS_TABLE, OWNER_ROLES, SERVICE_ROLES, SERVICE_SCHEMAS } from '../config.ts';
 import { inTransaction, sqlErrorOf } from './crm-fixture.ts';
-import { createDisposableDatabase, DATABASE_HOOK_TIMEOUT_MS, MIGRATIONS_PATH, runMigrations, type DisposableDatabase } from './disposable-db.ts';
+import {
+  createDisposableDatabase,
+  DATABASE_HOOK_TIMEOUT_MS,
+  MIGRATION_TEST_TIMEOUT_MS,
+  MIGRATIONS_PATH,
+  runMigrations,
+  type DisposableDatabase,
+} from './disposable-db.ts';
 import { readMigrationFolder } from './migration-rules.ts';
 
 // Each run creates its own databases, migrates them and drops them (disposable-db.ts).
@@ -52,6 +59,7 @@ async function serviceRolesIn(pool: pg.Pool): Promise<{ rolname: string; risky: 
 }
 
 const CLEAN_ROLES = [
+  { rolname: OWNER_ROLES.circuit, risky: false },
   { rolname: SERVICE_ROLES.circuit, risky: false },
   { rolname: OWNER_ROLES.crm, risky: false },
   { rolname: SERVICE_ROLES.crm, risky: false },
@@ -95,7 +103,7 @@ describe('migrations on a disposable database', () => {
 
     await runMigrations(pool);
     expect(await appliedMigrationCount(pool)).toBe(expectedCount);
-  });
+  }, MIGRATION_TEST_TIMEOUT_MS);
 });
 
 // ADR-0005 D14: roles belong to the whole server, so two databases migrating at the same
@@ -126,7 +134,7 @@ describe('two disposable databases migrating at once', () => {
     for (const db of databases) {
       expect(await appliedMigrationCount(db.pool)).toBe(expectedCount);
     }
-  });
+  }, MIGRATION_TEST_TIMEOUT_MS);
 
   it('leaves the service roles without login, admin attributes or memberships', async () => {
     expect(await serviceRolesIn(databases[0]!.pool)).toEqual(CLEAN_ROLES);

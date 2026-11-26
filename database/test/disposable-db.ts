@@ -32,6 +32,14 @@ export const MIGRATIONS_PATH = join(REPO_ROOT, MIGRATIONS_DIR);
  */
 export const DATABASE_HOOK_TIMEOUT_MS = 60_000;
 
+/**
+ * The same budget for a test that applies the migrations inside its own body (ADR-0010 D20).
+ * «two disposable databases migrating at once» ran out of Vitest's 5 s in 1 of 2 runs of the
+ * baseline of ADR-0010, with every file at once and coverage on, and each migration adds time.
+ * hook-budget.test.ts proves every such test carries it.
+ */
+export const MIGRATION_TEST_TIMEOUT_MS = 60_000;
+
 /** The only identifier this module puts into SQL text; anything but a test database is refused. */
 function testDatabase(name: string): string {
   if (!TEST_DB_NAME.test(name)) {

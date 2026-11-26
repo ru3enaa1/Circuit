@@ -6,7 +6,7 @@
  * adapters depend on the core, never the reverse (ADR-0001 D2, ADR-0003 M2).
  */
 
-export const MODULE_NAMES = ['circuit', 'model', 'crm-client', 'approval', 'scenario'] as const;
+export const MODULE_NAMES = ['circuit', 'model', 'crm-client', 'approval', 'scenario', 'event-store'] as const;
 
 export type ModuleName = (typeof MODULE_NAMES)[number];
 
@@ -29,6 +29,8 @@ export const MODULE_RULES: Readonly<Record<ModuleName, ModuleRule>> = {
   approval: { modules: ['circuit'], packages: [] },
   // Loads the scenario package (synthetic data and documents) from scenarios/.
   scenario: { modules: ['circuit'], packages: [] },
+  // The core's EventStore over PostgreSQL, as circuit_app (ADR-0010 D10, D17).
+  'event-store': { modules: ['circuit'], packages: ['drizzle-orm', 'pg'] },
 };
 
 /**

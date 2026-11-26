@@ -149,6 +149,76 @@ $$;
 
 
 --
+-- Name: runs; Type: TABLE; Schema: circuit; Owner: -
+--
+
+CREATE TABLE circuit.runs (
+    id bigint NOT NULL,
+    scenario text NOT NULL,
+    input_sha256 text NOT NULL,
+    started_at timestamp(3) with time zone NOT NULL,
+    CONSTRAINT runs_input_sha256_shape CHECK ((input_sha256 ~ '^[0-9a-f]{64}$'::text)),
+    CONSTRAINT runs_scenario_shape CHECK ((scenario ~ '^[a-z0-9-]{1,40}$'::text))
+);
+
+
+--
+-- Name: runs_id_seq; Type: SEQUENCE; Schema: circuit; Owner: -
+--
+
+ALTER TABLE circuit.runs ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME circuit.runs_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: station_events; Type: TABLE; Schema: circuit; Owner: -
+--
+
+CREATE TABLE circuit.station_events (
+    id bigint NOT NULL,
+    run_id bigint NOT NULL,
+    seq integer NOT NULL,
+    station text NOT NULL,
+    outcome text NOT NULL,
+    status text NOT NULL,
+    started_at timestamp(3) with time zone NOT NULL,
+    duration_ms integer NOT NULL,
+    tokens_in integer,
+    tokens_out integer,
+    cost_micro_usd bigint,
+    model text NOT NULL,
+    detail jsonb NOT NULL,
+    CONSTRAINT station_events_detail_object CHECK ((jsonb_typeof(detail) = 'object'::text)),
+    CONSTRAINT station_events_measures_not_negative CHECK (((duration_ms >= 0) AND ((tokens_in IS NULL) OR (tokens_in >= 0)) AND ((tokens_out IS NULL) OR (tokens_out >= 0)) AND ((cost_micro_usd IS NULL) OR (cost_micro_usd >= 0)))),
+    CONSTRAINT station_events_model_length CHECK (((char_length(model) >= 1) AND (char_length(model) <= 80))),
+    CONSTRAINT station_events_outcome_known CHECK ((outcome = ANY (ARRAY['ok'::text, 'injection'::text, 'complaint'::text, 'out_of_scope'::text, 'low_confidence'::text, 'no_source'::text, 'approved'::text, 'corrected'::text, 'rejected'::text, 'done'::text, 'error'::text]))),
+    CONSTRAINT station_events_seq_positive CHECK ((seq >= 1)),
+    CONSTRAINT station_events_station_known CHECK ((station = ANY (ARRAY['intake'::text, 'filter'::text, 'classification'::text, 'knowledge'::text, 'crm'::text, 'person'::text, 'close'::text]))),
+    CONSTRAINT station_events_status_known CHECK ((status = ANY (ARRAY['completed'::text, 'stopped'::text, 'failed'::text])))
+);
+
+
+--
+-- Name: station_events_id_seq; Type: SEQUENCE; Schema: circuit; Owner: -
+--
+
+ALTER TABLE circuit.station_events ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME circuit.station_events_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: accounts_id_seq; Type: SEQUENCE; Schema: crm; Owner: -
 --
 
@@ -411,6 +481,38 @@ ALTER TABLE ONLY drizzle.__drizzle_migrations ALTER COLUMN id SET DEFAULT nextva
 
 
 --
+-- Name: runs runs_pkey; Type: CONSTRAINT; Schema: circuit; Owner: -
+--
+
+ALTER TABLE ONLY circuit.runs
+    ADD CONSTRAINT runs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: station_events station_events_pkey; Type: CONSTRAINT; Schema: circuit; Owner: -
+--
+
+ALTER TABLE ONLY circuit.station_events
+    ADD CONSTRAINT station_events_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: station_events station_events_run_seq; Type: CONSTRAINT; Schema: circuit; Owner: -
+--
+
+ALTER TABLE ONLY circuit.station_events
+    ADD CONSTRAINT station_events_run_seq UNIQUE (run_id, seq);
+
+
+--
+-- Name: station_events station_events_run_station; Type: CONSTRAINT; Schema: circuit; Owner: -
+--
+
+ALTER TABLE ONLY circuit.station_events
+    ADD CONSTRAINT station_events_run_station UNIQUE (run_id, station);
+
+
+--
 -- Name: accounts accounts_pkey; Type: CONSTRAINT; Schema: crm; Owner: -
 --
 
@@ -600,6 +702,14 @@ CREATE TRIGGER notes_audit AFTER INSERT OR UPDATE ON crm.notes FOR EACH ROW EXEC
 --
 
 CREATE TRIGGER tasks_audit AFTER INSERT OR UPDATE ON crm.tasks FOR EACH ROW EXECUTE FUNCTION crm.write_audit_log();
+
+
+--
+-- Name: station_events station_events_run_id_runs_id_fk; Type: FK CONSTRAINT; Schema: circuit; Owner: -
+--
+
+ALTER TABLE ONLY circuit.station_events
+    ADD CONSTRAINT station_events_run_id_runs_id_fk FOREIGN KEY (run_id) REFERENCES circuit.runs(id);
 
 
 --
@@ -852,6 +962,13 @@ CREATE POLICY tasks_update_own ON crm.tasks FOR UPDATE TO crm_service USING ((ac
 
 
 --
+-- Name: SCHEMA circuit; Type: ACL; Schema: -; Owner: -
+--
+
+GRANT USAGE ON SCHEMA circuit TO circuit_service;
+
+
+--
 -- Name: SCHEMA crm; Type: ACL; Schema: -; Owner: -
 --
 
@@ -886,6 +1003,20 @@ GRANT ALL ON FUNCTION crm.resolve_api_key(presented_hash bytea) TO crm_service;
 --
 
 REVOKE ALL ON FUNCTION crm.write_audit_log() FROM PUBLIC;
+
+
+--
+-- Name: TABLE runs; Type: ACL; Schema: circuit; Owner: -
+--
+
+GRANT SELECT,INSERT ON TABLE circuit.runs TO circuit_service;
+
+
+--
+-- Name: TABLE station_events; Type: ACL; Schema: circuit; Owner: -
+--
+
+GRANT SELECT,INSERT ON TABLE circuit.station_events TO circuit_service;
 
 
 --

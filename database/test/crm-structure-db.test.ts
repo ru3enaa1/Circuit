@@ -355,6 +355,7 @@ describe('D12, D13 · functions and schemas', () => {
        ORDER BY 1`,
       [[SERVICE_ROLES.crm, SERVICE_ROLES.circuit]],
     );
-    expect(reach.map((row) => row.grant)).toEqual([`${SERVICE_ROLES.crm} crm USAGE`]);
+    // ADR-0010 D10: circuit_service reaches its own schema since 0005, and still nothing of crm.
+    expect(reach.map((row) => row.grant)).toEqual([`${SERVICE_ROLES.circuit} circuit USAGE`, `${SERVICE_ROLES.crm} crm USAGE`]);
   });
 });
