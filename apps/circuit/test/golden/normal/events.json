@@ -1,0 +1,169 @@
+[
+  {
+    "costMicroUsd": 0,
+    "detail": {
+      "length": 347
+    },
+    "durationMs": 10,
+    "model": "code",
+    "outcome": "ok",
+    "runId": 1,
+    "seq": 1,
+    "startedAt": "2026-11-26T09:00:00.010Z",
+    "station": "intake",
+    "status": "completed",
+    "tokensIn": 0,
+    "tokensOut": 0
+  },
+  {
+    "costMicroUsd": 0,
+    "detail": {
+      "documents": 1,
+      "hasEmail": true,
+      "phones": 1
+    },
+    "durationMs": 10,
+    "model": "code",
+    "outcome": "ok",
+    "runId": 1,
+    "seq": 2,
+    "startedAt": "2026-11-26T09:00:00.030Z",
+    "station": "filter",
+    "status": "completed",
+    "tokensIn": 0,
+    "tokensOut": 0
+  },
+  {
+    "costMicroUsd": null,
+    "detail": {
+      "confidence": 0.7,
+      "intent": "request",
+      "topic": "radiografia-operacion",
+      "urgency": "medium"
+    },
+    "durationMs": 10,
+    "model": "simulator",
+    "outcome": "ok",
+    "runId": 1,
+    "seq": 3,
+    "startedAt": "2026-11-26T09:00:00.050Z",
+    "station": "classification",
+    "status": "completed",
+    "tokensIn": null,
+    "tokensOut": null
+  },
+  {
+    "costMicroUsd": null,
+    "detail": {
+      "answer": "Para empezar le sirve Radiografía de la operación: en cuatro sesiones dibuja cómo funciona hoy su empresa y marca en qué se va su tiempo, antes de proponer cambios.",
+      "documentId": "radiografia-operacion",
+      "quote": "El programa empieza por dibujar cómo funciona hoy la empresa, proceso por proceso, antes de proponer cualquier cambio."
+    },
+    "durationMs": 10,
+    "model": "simulator",
+    "outcome": "ok",
+    "runId": 1,
+    "seq": 4,
+    "startedAt": "2026-11-26T09:00:00.070Z",
+    "station": "knowledge",
+    "status": "completed",
+    "tokensIn": null,
+    "tokensOut": null
+  },
+  {
+    "costMicroUsd": null,
+    "detail": {
+      "actions": [
+        {
+          "body": "Pide un programa para entender su operación: cada pedido grande pasa por ella. Se le propone Radiografía de la operación.",
+          "type": "add_note"
+        },
+        {
+          "stage": "programa-propuesto",
+          "type": "move_stage"
+        },
+        {
+          "dueOn": "2026-12-01",
+          "title": "Agendar la conversación sobre Radiografía de la operación",
+          "type": "create_task"
+        }
+      ],
+      "contactId": 1
+    },
+    "durationMs": 10,
+    "model": "simulator",
+    "outcome": "ok",
+    "runId": 1,
+    "seq": 5,
+    "startedAt": "2026-11-26T09:00:00.090Z",
+    "station": "crm",
+    "status": "completed",
+    "tokensIn": null,
+    "tokensOut": null
+  },
+  {
+    "costMicroUsd": 0,
+    "detail": {
+      "actions": [
+        {
+          "body": "Pide un programa para entender su operación: cada pedido grande pasa por ella. Se le propone Radiografía de la operación.",
+          "type": "add_note"
+        },
+        {
+          "stage": "programa-propuesto",
+          "type": "move_stage"
+        },
+        {
+          "dueOn": "2026-12-01",
+          "title": "Agendar la conversación sobre Radiografía de la operación",
+          "type": "create_task"
+        }
+      ],
+      "approvedBy": "mentor",
+      "contactId": 1,
+      "decision": "approved"
+    },
+    "durationMs": 10,
+    "model": "person",
+    "outcome": "approved",
+    "runId": 1,
+    "seq": 6,
+    "startedAt": "2026-11-26T09:00:00.110Z",
+    "station": "person",
+    "status": "completed",
+    "tokensIn": 0,
+    "tokensOut": 0
+  },
+  {
+    "costMicroUsd": 0,
+    "detail": {
+      "results": [
+        {
+          "id": 101,
+          "result": "applied",
+          "type": "add_note"
+        },
+        {
+          "id": 102,
+          "result": "applied",
+          "type": "move_stage"
+        },
+        {
+          "id": 103,
+          "result": "applied",
+          "type": "create_task"
+        }
+      ]
+    },
+    "durationMs": 10,
+    "model": "code",
+    "outcome": "done",
+    "runId": 1,
+    "seq": 7,
+    "startedAt": "2026-11-26T09:00:00.130Z",
+    "station": "close",
+    "status": "completed",
+    "tokensIn": 0,
+    "tokensOut": 0
+  }
+]

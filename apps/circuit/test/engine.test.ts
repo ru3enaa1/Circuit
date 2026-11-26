@@ -306,6 +306,19 @@ describe('station 5 only reads the CRM and proposes from a closed list (ADR-0010
     });
   });
 
+  // Audit of ADR-0010, H3: an email the stored proposal could not be read back with would leave
+  // the run at station 6 for good, so station 5 refuses it before anything is stored.
+  it('fails station 5 on a create_contact whose email is longer than the CRM takes', async () => {
+    const longEmail = `${'a'.repeat(300)}@hiloverde.test`;
+    const model = scriptedModel({ ...NORMAL_REPLIES, proposeCrm: { actions: [{ type: 'create_contact', fullName: 'Lucía Restrepo' }] } });
+
+    const run = await startRun(engineDeps({ model, crmReader: fakeCrm() }), `Escribo desde ${longEmail}. ${NORMAL_TEXT}`);
+
+    expect(run.events.at(-1)).toMatchObject({ station: 'crm', status: 'failed', detail: { reason: 'invalid', field: 'actions[0].email' } });
+    expect(run.at).toBe('end');
+    expect(JSON.stringify(run.events)).not.toContain(longEmail);
+  });
+
   it('refuses an action on no contact at all: without an email, nothing can be created or noted', async () => {
     const model = scriptedModel({ ...NORMAL_REPLIES, proposeCrm: { actions: [{ type: 'add_note', body: 'Sin contacto.' }] } });
 

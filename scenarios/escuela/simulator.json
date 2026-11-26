@@ -1,0 +1,31 @@
+{
+  "replies": [
+    {
+      "case": "normal",
+      "requestSha256": "b5309d2330df942a6d43275293734b86a1b4616024781eb6e26df49f04155043",
+      "classify": { "intent": "request", "topic": "radiografia-operacion", "urgency": "medium", "confidence": 0.7 },
+      "answer": {
+        "answer": "Para empezar le sirve Radiografía de la operación: en cuatro sesiones dibuja cómo funciona hoy su empresa y marca en qué se va su tiempo, antes de proponer cambios.",
+        "documentId": "radiografia-operacion",
+        "quote": "El programa empieza por dibujar cómo funciona hoy la empresa, proceso por proceso, antes de proponer cualquier cambio."
+      },
+      "proposeCrm": {
+        "actions": [
+          { "type": "add_note", "body": "Pide un programa para entender su operación: cada pedido grande pasa por ella. Se le propone Radiografía de la operación." },
+          { "type": "move_stage", "stage": "programa-propuesto" },
+          { "type": "create_task", "title": "Agendar la conversación sobre Radiografía de la operación", "dueOn": "2026-12-01" }
+        ]
+      }
+    },
+    {
+      "case": "complaint",
+      "requestSha256": "19d28559f3cbf7bf4c003ae388451a3f9186e7e2a4798d7e00c5182cd08baab2",
+      "classify": { "intent": "complaint", "topic": null, "urgency": "high", "confidence": 0.95 }
+    },
+    {
+      "case": "low-confidence",
+      "requestSha256": "327993073aa222fb71e1fab4851083eb08681cd36b35d6f5a70535a6e73a3573",
+      "classify": { "intent": "request", "topic": "escalar-con-sistemas", "urgency": "low", "confidence": 0.55 }
+    }
+  ]
+}

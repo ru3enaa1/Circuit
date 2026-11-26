@@ -1,0 +1,6 @@
+{
+  "text": "Hola, soy Lucía Restrepo, de Confecciones Hilo Verde. Les escribo desde lucia@hiloverde.test; mi celular es 300 123 4567 y mi cédula 52.345.678, por si la necesitan para inscribirme. La empresa factura bien, pero cada pedido grande pasa por mí y no sé en qué se me va la semana. ¿Qué programa me sirve para entender cómo funciona hoy la operación?",
+  "contact": { "id": 1, "fullName": "Lucía Restrepo Arango", "stage": "diagnostico" },
+  "decision": { "decision": "approved" },
+  "personal": ["lucia@hiloverde.test", "300 123 4567", "52.345.678"]
+}

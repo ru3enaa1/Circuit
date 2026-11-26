@@ -73,9 +73,10 @@ npm ci
 cp .env.example .env
 ```
 
-Abrir `.env` y poner una contraseña en `POSTGRES_PASSWORD` y otra en `CRM_DB_PASSWORD` (de 16 a
-128 letras, dígitos, `-`, `_`, `.` o `~`; `.env.example` trae un comando para generarla). Se
-guarda en UTF-8 sin BOM. Si otro PostgreSQL ya usa el puerto 5432, cambiar `DB_PORT`.
+Abrir `.env` y poner una contraseña distinta en cada una de `POSTGRES_PASSWORD`,
+`CRM_DB_PASSWORD` y `CIRCUIT_DB_PASSWORD` (de 16 a 128 letras, dígitos, `-`, `_`, `.` o `~`;
+`.env.example` trae un comando para generarlas). Se guarda en UTF-8 sin BOM. Si otro
+PostgreSQL ya usa el puerto 5432, cambiar `DB_PORT`.
 
 ```sh
 docker compose up -d --wait db
@@ -85,7 +86,9 @@ npm run check
 ```
 
 `npm run check` corre los tipos y las pruebas con cobertura: sale con 0 si todo pasa.
-`npm run db:users` crea el usuario `crm_app` con la contraseña de `CRM_DB_PASSWORD`.
+`npm run db:users` crea el usuario `crm_app` con la contraseña de `CRM_DB_PASSWORD`, y
+`circuit_app` con la de `CIRCUIT_DB_PASSWORD`; sin alguna de las dos, sale con 1 y nombra la
+variable.
 
 `npm run crm:start` levanta el CRM en `http://127.0.0.1:4010`: `/health` responde 200, y una
 ruta sin llave, 401. Las cuentas y la llave del agente llegan con la semilla (la sección

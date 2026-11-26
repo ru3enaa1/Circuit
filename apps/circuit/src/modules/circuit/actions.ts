@@ -4,8 +4,8 @@ import { InvalidInput, isRecord, requireIsoDate, requireOneOf, requirePattern, r
  * The CRM actions station 5 may propose and the mentor may correct (ADR-0010 D14, ADR-0012
  * A8). The list is closed: there is no delete, no archive and no export, which the agent's key
  * could not do anyway (ADR-0005). The limits are the CRM API's (ADR-0007 D9), repeated here
- * because apps/circuit never imports the CRM's code (ADR-0003 M3); `crm-limits.test.ts` reads
- * them from the CRM's schema and fails if they drift apart.
+ * because apps/circuit never imports the CRM's code (ADR-0003 M3); `database/test/crm-limits.test.ts`
+ * reads them from the CRM's schema and fails if they drift apart.
  */
 
 export const SHORT_TEXT_MAX_LENGTH = 200;
@@ -68,7 +68,10 @@ export function validateActions(value: unknown, context: ActionContext): CrmActi
       // Only first, only once, only when the CRM has no contact for that email, and only with
       // an email to give it: otherwise it would make a duplicate or a contact nobody can reach.
       if (index !== 0 || context.contactKnown || context.email === null) throw new InvalidInput(`${field}.type`);
-      return { type, fullName: requireText(raw['fullName'], `${field}.fullName`, SHORT_TEXT_MAX_LENGTH), email: context.email };
+      // The same check parseStoredActions makes: a proposal it could not read back would leave
+      // the run at station 6 for good (audit of ADR-0010, H3).
+      const email = requireStorableEmail(context.email, `${field}.email`);
+      return { type, fullName: requireText(raw['fullName'], `${field}.fullName`, SHORT_TEXT_MAX_LENGTH), email };
     }
     if (!context.contactKnown && !startsWithCreate(value)) throw new InvalidInput(`${field}.type`);
     return actionOn(type, raw, field);
@@ -99,6 +102,12 @@ function actionOn(type: Exclude<ActionType, 'create_contact'>, raw: Readonly<Rec
 const EMAIL_SHAPE = /^[^@\s]+@[^@\s]+$/;
 export const EMAIL_MAX_LENGTH = 254;
 
+function requireStorableEmail(value: unknown, field: string): string {
+  const email = requireText(value, field, EMAIL_MAX_LENGTH);
+  if (!EMAIL_SHAPE.test(email)) throw new InvalidInput(field);
+  return email;
+}
+
 /**
  * Actions read back from a stored event (station 5's proposal, or the mentor's decision).
  * They passed validateActions before they were stored; this checks them again, because what
@@ -112,8 +121,7 @@ export function parseStoredActions(value: unknown): CrmAction[] {
     const type = requireOneOf(raw['type'], `${field}.type`, ACTION_TYPES);
     if (type !== 'create_contact') return actionOn(type, raw, field);
     if (index !== 0) throw new InvalidInput(`${field}.type`);
-    const email = requireText(raw['email'], `${field}.email`, EMAIL_MAX_LENGTH);
-    if (!EMAIL_SHAPE.test(email)) throw new InvalidInput(`${field}.email`);
+    const email = requireStorableEmail(raw['email'], `${field}.email`);
     return { type, fullName: requireText(raw['fullName'], `${field}.fullName`, SHORT_TEXT_MAX_LENGTH), email };
   });
 }

@@ -1,0 +1,90 @@
+[
+  {
+    "costMicroUsd": 0,
+    "detail": {
+      "length": 192
+    },
+    "durationMs": 10,
+    "model": "code",
+    "outcome": "ok",
+    "runId": 1,
+    "seq": 1,
+    "startedAt": "2026-11-26T09:00:00.010Z",
+    "station": "intake",
+    "status": "completed",
+    "tokensIn": 0,
+    "tokensOut": 0
+  },
+  {
+    "costMicroUsd": 0,
+    "detail": {
+      "documents": 0,
+      "hasEmail": true,
+      "phones": 1
+    },
+    "durationMs": 10,
+    "model": "code",
+    "outcome": "ok",
+    "runId": 1,
+    "seq": 2,
+    "startedAt": "2026-11-26T09:00:00.030Z",
+    "station": "filter",
+    "status": "completed",
+    "tokensIn": 0,
+    "tokensOut": 0
+  },
+  {
+    "costMicroUsd": null,
+    "detail": {
+      "confidence": 0.95,
+      "intent": "complaint",
+      "topic": null,
+      "urgency": "high"
+    },
+    "durationMs": 10,
+    "model": "simulator",
+    "outcome": "complaint",
+    "runId": 1,
+    "seq": 3,
+    "startedAt": "2026-11-26T09:00:00.050Z",
+    "station": "classification",
+    "status": "completed",
+    "tokensIn": null,
+    "tokensOut": null
+  },
+  {
+    "costMicroUsd": 0,
+    "detail": {
+      "actions": [],
+      "approvedBy": "mentor",
+      "contactId": null,
+      "decision": "approved"
+    },
+    "durationMs": 10,
+    "model": "person",
+    "outcome": "approved",
+    "runId": 1,
+    "seq": 4,
+    "startedAt": "2026-11-26T09:00:00.070Z",
+    "station": "person",
+    "status": "completed",
+    "tokensIn": 0,
+    "tokensOut": 0
+  },
+  {
+    "costMicroUsd": 0,
+    "detail": {
+      "results": []
+    },
+    "durationMs": 10,
+    "model": "code",
+    "outcome": "done",
+    "runId": 1,
+    "seq": 5,
+    "startedAt": "2026-11-26T09:00:00.090Z",
+    "station": "close",
+    "status": "completed",
+    "tokensIn": 0,
+    "tokensOut": 0
+  }
+]

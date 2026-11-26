@@ -1,0 +1,34 @@
+[
+  {
+    "costMicroUsd": 0,
+    "detail": {
+      "length": 132
+    },
+    "durationMs": 10,
+    "model": "code",
+    "outcome": "ok",
+    "runId": 1,
+    "seq": 1,
+    "startedAt": "2026-11-26T09:00:00.010Z",
+    "station": "intake",
+    "status": "completed",
+    "tokensIn": 0,
+    "tokensOut": 0
+  },
+  {
+    "costMicroUsd": 0,
+    "detail": {
+      "pattern": "ignora-instrucciones"
+    },
+    "durationMs": 10,
+    "model": "code",
+    "outcome": "injection",
+    "runId": 1,
+    "seq": 2,
+    "startedAt": "2026-11-26T09:00:00.030Z",
+    "station": "filter",
+    "status": "stopped",
+    "tokensIn": 0,
+    "tokensOut": 0
+  }
+]

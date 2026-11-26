@@ -33,8 +33,12 @@ export const INJECTION_PATTERNS: readonly InjectionPattern[] = Object.freeze([
   { id: 'rol-al-inicio', pattern: /^\s*(?:system|assistant)\s*:/m },
 ]);
 
-/** Zero-width characters and the soft hyphen: invisible, and a classic way to split a word. */
-const INVISIBLE = /[\u00AD\u180E\u200B-\u200F\u2060-\u2064\uFEFF]/g;
+/**
+ * Every invisible format character (the whole \p{Cf} class): zero-width characters, the soft
+ * hyphen, bidirectional controls and tags. Any of them is a classic way to split a word, and a
+ * list of a few left the others through (audit of ADR-0010, H2).
+ */
+const INVISIBLE = /\p{Cf}/gu;
 const COMBINING_MARKS = /\p{M}/gu;
 const HORIZONTAL_SPACE = /[^\S\n]+/g;
 // U+2028 and U+2029 by their Unicode categories, so the source holds no invisible line break.
@@ -58,14 +62,61 @@ export function findInjection(text: string): string | null {
   return INJECTION_PATTERNS.find((entry) => entry.pattern.test(normalized))?.id ?? null;
 }
 
-const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+/g;
+const NON_ASCII = /\P{ASCII}/gu;
+const ONE_ASCII_CHARACTER = /^\p{ASCII}$/u;
+const DECIMAL_DIGIT = /^\p{Nd}$/u;
+/** Unicode lays out every decimal digit in runs of ten, from 0 to 9. */
+const DIGITS_PER_RUN = 10;
+
+/**
+ * The value of a decimal digit of any script. Its run starts where the digits before it end; runs
+ * that touch are each ten long, so the distance from the start, modulo ten, is the value.
+ */
+function digitValue(character: string): number {
+  const codePoint = character.codePointAt(0) ?? 0;
+  let start = codePoint;
+  while (DECIMAL_DIGIT.test(String.fromCodePoint(start - 1))) start -= 1;
+  return (codePoint - start) % DIGITS_PER_RUN;
+}
+
+/**
+ * Full-width digits, signs and letters, and other compatibility forms, folded into the plain
+ * character NFKC gives (audit of ADR-0010, H1): "３００ １２３ ４５６７" is a phone like any
+ * other. Digits of other scripts become the ASCII digit of their value, since NFKC keeps them
+ * and `\d` does not see them (second audit, R2). Only a character that folds into exactly one
+ * ASCII character changes, so "…" or "½" stay as they were and the model reads the rest of the
+ * text untouched.
+ */
+function foldCompatibilityForms(text: string): string {
+  return text.replace(NON_ASCII, (character) => {
+    const folded = character.normalize('NFKC');
+    if (ONE_ASCII_CHARACTER.test(folded)) return folded;
+    return DECIMAL_DIGIT.test(character) ? String(digitValue(character)) : character;
+  });
+}
+
+// Letters and digits of any script on both sides of the at sign: the CRM accepts «lucía@…», and
+// an ASCII-only pattern cut it to «a@…», another address (second audit, R3).
+const EMAIL = /[\p{L}\p{N}._%+-]+@[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)+/gu;
 // An identity number is only blanked after a word that names it: a bare dotted number is far
-// more often an amount ("1.500.000"), and the model needs amounts.
-const DOCUMENT =
-  /\b(c\.?\s?c\.?|c[eé]dula(?:\s+de\s+ciudadan[ií]a)?|documento(?:\s+de\s+identidad)?|nit|pasaporte|identificaci[oó]n)(\s*(?:n[oº°.]*|#|:)?\s*)(\d{1,3}(?:\.\d{3}){1,3}|\d{6,10})\b/gi;
+// more often an amount ("1.500.000"), and the model needs amounts. Between the label and the
+// number may sit any short stretch without digits (words, a comma, a bracket, a dash, quotes)
+// and at most one line break, so «Cédula:» with the number below is blanked too (second audit,
+// R1). A number that follows a label that closely is blanked even if it was an amount, the
+// cheaper mistake.
+const MAX_GAP_AFTER_LABEL = 30;
+const DOCUMENT = new RegExp(
+  String.raw`\b(c\.?\s?c\.?|c[eé]dula|documento|nit|pasaporte|identificaci[oó]n)` +
+    String.raw`([^\d\n]{0,${MAX_GAP_AFTER_LABEL}}(?:\n[^\S\n]*)?)` +
+    String.raw`(\d{1,3}(?:\.\d{3}){1,3}|\d{6,10})\b`,
+  'giu',
+);
 // Seven to twelve digits, in groups split by spaces, dashes or parentheses, with an optional
-// country code. Dots are left out for the same reason as above. "35 personas" has two digits.
-const PHONE = /(?<![\d.])(?:\+\d{1,3}[\s-]?)?(?:\(\d{1,4}\)[\s-]?)?\d(?:[\s-]?\d){6,11}(?![\d.])/g;
+// country code. Dots count only in groups of 3-3-4, which no amount has, since an amount's
+// last group always has three digits (the owner's choice, 2026-11-26). A dot right before or
+// after is fine unless a digit follows it: a phone may close a sentence. "35 personas" has two.
+const PHONE =
+  /(?<!\d|\d\.)(?:\+\d{1,3}[\s-]?)?(?:\d{3}\.\d{3}\.\d{4}|(?:\(\d{1,4}\)[\s-]?)?\d(?:[\s-]?\d){6,11})(?!\d|\.\d)/g;
 
 export interface Redaction {
   readonly text: string;
@@ -75,12 +126,15 @@ export interface Redaction {
   readonly documents: number;
 }
 
-/** Emails first (they may hold digits), then identity numbers, then phones. */
+/**
+ * NFC first, so an accent written apart («cédula» in NFD) joins its letter and the labels match
+ * (second audit, R1). Then compatibility forms, emails (they may hold digits), documents, phones.
+ */
 export function redact(text: string): Redaction {
   let email: string | null = null;
   let phones = 0;
   let documents = 0;
-  const withoutEmails = text.replace(EMAIL, (found) => {
+  const withoutEmails = foldCompatibilityForms(text.normalize('NFC')).replace(EMAIL, (found) => {
     email ??= found.toLowerCase();
     return EMAIL_MARK;
   });
