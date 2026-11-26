@@ -151,12 +151,14 @@ llama a docker, vigilado por `hook-budget.test.ts`, y `adminClient`, que escucha
 de una sesión cortada; el correo del paquete con `storable`; las pruebas de D7 y de las ramas
 de D19; una clave desconocida que no se repite; `ORDER BY` calificados; las carpetas de llaves
 de las pruebas, borradas; mensajes propios para las fallas raras de la semilla; y
-`database/command.ts` y `docker.ts` (H11). Commits `03177b5`, `39c11cc` y `321c0d3`, sin
-empujar. 648 pruebas, cobertura 95,62 / 86,6 / 96,72 / 97,71; los mutantes de cada enmienda,
-en rojo; 10 vueltas seguidas de `npm run check` en 0 (de 50 a 131 s). H10 (`db:keys list` ordena el id como texto) queda abierto, para la fase que toque
-`db:keys`. Siguiente: el push, que pide el dueño, y CI en verde en Linux, con la prueba del
-modo `0600` (D20); después, integrar F1 a `main`. Pedido al dueño, como insumo de F2: el
-material del programa que citará la estación 4.
+`database/command.ts` y `docker.ts` (H11). Commits `03177b5`, `39c11cc` y `321c0d3`. 648
+pruebas, cobertura 95,62 / 86,6 / 96,72 / 97,71; los mutantes de cada enmienda, en rojo; 10
+vueltas seguidas de `npm run check` en 0 (de 50 a 131 s). H10 (`db:keys list` ordena el id
+como texto) queda abierto, para la fase que toque `db:keys`. **Empujada el 2026-11-26 a
+pedido del dueño (CI en verde en `4e833d5`, corrida 45842358302):** en Linux corrieron las 648
+pruebas, ninguna saltada, D20 (el modo `0600`) entre ellas; cobertura 95,71 / 87,2 / 96,72 /
+97,82. Siguiente: integrar F1 a `main`, con el sí del dueño. Pedido al dueño, como insumo de
+F2: el material del programa que citará la estación 4.
 
 ## 3. Reglas de producto que gobiernan el código
 

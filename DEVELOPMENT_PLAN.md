@@ -228,9 +228,9 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   de D19 sin prueba (H4). El dueño pidió aplicar los arreglos con lo que más asegura: las
   enmiendas A1–A7 de la ADR, en tres commits (`03177b5`, `39c11cc` y `321c0d3`), con 648
   pruebas, el mutante de cada una en rojo y 10 vueltas seguidas de `npm run check` en 0.
-  Queda abierto H10, de `db:keys`. Para cerrar F1: el
-  push, que pide el dueño, CI en verde en Linux con la prueba del modo `0600`, y la integración
-  a `main`.
+  Queda abierto H10, de `db:keys`. Empujada el 2026-11-26 (CI en verde en `4e833d5`, corrida
+  45842358302): las 648 pruebas corrieron en Linux, ninguna saltada, con la del modo `0600`
+  (D20). Para cerrar F1: la integración a `main`, que decide el dueño.
 
 ### F2 · Circuito y mapa
 
