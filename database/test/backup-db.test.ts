@@ -4,7 +4,9 @@ import { join } from 'node:path';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { composeDocker, DUMP_FILE, folderStamp, hashFile, HASH_SUFFIX, runBackupCommand, type Docker } from '../backup.ts';
+import { DUMP_FILE, folderStamp, HASH_SUFFIX, runBackupCommand } from '../backup.ts';
+import { hashFile } from '../command.ts';
+import { composeDocker, type Docker } from '../docker.ts';
 import { readLocalEnv } from '../env.ts';
 import { createOrUpdateCrmApp, readCrmPassword } from '../users.ts';
 import { seedReadFixture } from './crm-fixture.ts';

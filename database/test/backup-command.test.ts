@@ -5,7 +5,9 @@ import { join } from 'node:path';
 import pg from 'pg';
 import { afterAll, describe, expect, it } from 'vitest';
 
-import { CommandError, describeFailure, runBackupCommand, type Docker } from '../backup.ts';
+import { runBackupCommand } from '../backup.ts';
+import { CommandError, describeFailure } from '../command.ts';
+import type { Docker } from '../docker.ts';
 import { runRestoreCommand } from '../restore.ts';
 
 // ADR-0009 D1, D4: what db:backup and db:restore refuse before docker or the database, and how

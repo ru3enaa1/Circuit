@@ -1,4 +1,3 @@
-import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, isAbsolute, join } from 'node:path';
 
@@ -7,7 +6,7 @@ import pg from 'pg';
 import { SLUG_PATTERN } from '../apps/crm/src/db/schema.ts';
 import { API_KEY_SHAPE, generateApiKey, hashApiKey } from '../apps/crm/src/keys.ts';
 import { parseScenario, ScenarioError, type Scenario, type ScenarioAccount } from '../apps/crm/src/scenario.ts';
-import { CommandError, describeFailure, shown } from './backup.ts';
+import { CommandError, describeFailure, randomSuffix, shown } from './command.ts';
 import { REPO_ROOT } from './config.ts';
 import { readAdminConnection } from './connection.ts';
 import { readLocalEnv, type Env } from './env.ts';
@@ -32,8 +31,8 @@ const SEED_LOCK = "SELECT pg_advisory_lock(hashtext('circuit.db-seed'))";
 const SCENARIOS_DIR = join(REPO_ROOT, 'scenarios');
 const PACKAGE_FILE = 'crm.json';
 const SLUG = new RegExp(SLUG_PATTERN);
-const BYTE_ORDER_MARK = /^﻿/;
-const TEMP_SUFFIX_BYTES = 6;
+/** A package saved by Windows PowerShell 5.1 starts with one, and JSON.parse refuses it. */
+const BYTE_ORDER_MARK = /^\uFEFF/;
 /** D20: only its owner reads or writes it. NTFS keeps only the read-only bit (ADR-0009, «Restricciones»). */
 const KEY_FILE_MODE = 0o600;
 const KEY_DIR_MODE = 0o700;
@@ -229,7 +228,7 @@ function readKeyFile(path: string): string | undefined {
 /** D20: a temporary beside it and a rename, so the file is always whole; the key and a newline only. */
 function writeKeyFile(path: string, key: string): void {
   mkdirSync(dirname(path), { recursive: true, mode: KEY_DIR_MODE });
-  const temp = join(dirname(path), `.${basename(path)}.${randomBytes(TEMP_SUFFIX_BYTES).toString('hex')}.tmp`);
+  const temp = join(dirname(path), `.${basename(path)}.${randomSuffix()}.tmp`);
   try {
     writeFileSync(temp, `${key}\n`, { mode: KEY_FILE_MODE, flag: 'wx' });
     renameSync(temp, path);

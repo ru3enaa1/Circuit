@@ -6,7 +6,8 @@ import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { CRM_DB_USER } from '../../apps/crm/src/config.ts';
-import { DUMP_FILE, hashFile, HASH_SUFFIX, runBackupCommand } from '../backup.ts';
+import { DUMP_FILE, HASH_SUFFIX, runBackupCommand } from '../backup.ts';
+import { hashFile } from '../command.ts';
 import { readLocalEnv } from '../env.ts';
 import { runRestoreCommand } from '../restore.ts';
 import { createOrUpdateCrmApp, readCrmPassword } from '../users.ts';

@@ -4,25 +4,10 @@ import { parseArgs } from 'node:util';
 
 import pg from 'pg';
 
-import {
-  adminUserOf,
-  CommandError,
-  composeDocker,
-  containerPath,
-  containerTemp,
-  DATABASE_NAME,
-  describeFailure,
-  hashFile,
-  hashInside,
-  HASH_SUFFIX,
-  inside,
-  mustRun,
-  removeInside,
-  RESTORE_TEMP_PREFIX,
-  shown,
-  type Docker,
-} from './backup.ts';
+import { DATABASE_NAME, HASH_SUFFIX } from './backup.ts';
+import { adminUserOf, CommandError, describeFailure, hashFile, SHA256_HEX, shown } from './command.ts';
 import { readAdminConnection } from './connection.ts';
+import { composeDocker, containerPath, containerTemp, hashInside, inside, mustRun, removeInside, RESTORE_TEMP_PREFIX, type Docker } from './docker.ts';
 import { readLocalEnv, type Env } from './env.ts';
 
 // `npm run db:restore` (ADR-0009 D4, D5): restores a backup of db:backup into a new database
@@ -35,7 +20,6 @@ import { readLocalEnv, type Env } from './env.ts';
 /** Roles and databases belong to the server; CREATE DATABASE is issued from this one. */
 const MAINTENANCE_DB = 'postgres';
 const DUPLICATE_DATABASE = '42P04';
-const SHA256_HEX = /^([0-9a-f]{64})\b/;
 const OPTIONS = { file: { type: 'string' }, into: { type: 'string' } } as const;
 
 interface RestoreRequest {

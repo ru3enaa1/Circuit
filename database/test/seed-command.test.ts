@@ -54,7 +54,7 @@ describe('D8, D9 · a broken package is refused before connecting', () => {
   });
 
   it('the valid package, saved with a BOM as PowerShell 5.1 saves it, gets to connect (control)', async () => {
-    const result = await run(envFor('valido'), packageDir('valido', `﻿${JSON.stringify(validPackage())}`));
+    const result = await run(envFor('valido'), packageDir('valido', `\uFEFF${JSON.stringify(validPackage())}`));
     expect(result.code).toBe(1);
     expect(connections).toBe(1);
   });

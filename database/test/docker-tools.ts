@@ -1,8 +1,8 @@
 import { execFileSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 
-import { composeDocker, type Docker, type DockerRun } from '../backup.ts';
 import { REPO_ROOT } from '../config.ts';
+import { composeDocker, type Docker, type DockerRun } from '../docker.ts';
 
 // What the tests of db:backup and db:restore (ADR-0009 D1–D6) share: a docker that records
 // every order it runs, and the views of the container a test needs to check a result. Each
