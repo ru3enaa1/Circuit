@@ -23,21 +23,33 @@ export const FICTITIOUS_MARK = '(ficticio)';
 const YEAR_ZERO = /^0000-/;
 /** How many problems a refusal names, so a broken package is fixed in few rounds without a wall of text. */
 const MAX_REPORTED_PATHS = 5;
+/**
+ * An unknown key is named only if it looks like a field name: short, and nothing that could be
+ * a person's address or a pasted value (audit of ADR-0009, H5). Any other is named by this.
+ */
+const NAMEABLE_KEY = /^[A-Za-z_][A-Za-z0-9_]{0,40}$/;
+const UNNAMED_KEY = '(clave desconocida)';
 
+/**
+ * What PostgreSQL keeps as it was sent, as input.ts checks it: no U+0000, refused with SQLSTATE
+ * 22021, and no lone UTF-16 surrogate, stored as U+FFFD without a word. Every text of a package
+ * passes it, the address included (audit of ADR-0009, H2).
+ */
+const storable = (value: string): boolean => !value.includes(NUL) && value.isWellFormed();
 /** Stored as it is written: no transform, so the seed writes exactly what the package says. */
 const text = (max: number) =>
   z
     .string()
     .min(1)
     .max(max)
-    .refine((value) => !value.includes(NUL) && value.isWellFormed() && value.trim() === value);
+    .refine((value) => storable(value) && value.trim() === value);
 const shortText = text(SHORT_TEXT_MAX_LENGTH);
 const slug = z.string().regex(SLUG);
 const email = z
   .string()
   .max(EMAIL_MAX_LENGTH)
   .regex(EMAIL_SHAPE)
-  .refine((value) => value === value.toLowerCase() && RESERVED_DOMAIN.test(value));
+  .refine((value) => storable(value) && value === value.toLowerCase() && RESERVED_DOMAIN.test(value));
 /** ISO 8601 with Z, the only form zod's datetime takes by default (ADR-0009, «Restricciones»). */
 const instant = z.iso.datetime().refine((value) => !YEAR_ZERO.test(value));
 const day = z.iso.date().refine((value) => !YEAR_ZERO.test(value));
@@ -140,11 +152,11 @@ function shownPath(path: readonly PropertyKey[]): string {
 
 /**
  * `accounts[0].contacts[2].email`. zod reports every unknown key of an object in one issue, so
- * each is named on its own, by its name: a key of the package and not a value.
+ * each is named on its own: by its name when it looks like a field, or else as an unknown key.
  */
 function pathsOf(issue: z.core.$ZodIssue): string[] {
-  if (issue.code === 'unrecognized_keys') return issue.keys.map((key) => shownPath([...issue.path, key]));
-  return [shownPath(issue.path)];
+  if (issue.code !== 'unrecognized_keys') return [shownPath(issue.path)];
+  return issue.keys.map((key) => shownPath([...issue.path, NAMEABLE_KEY.test(key) ? key : UNNAMED_KEY]));
 }
 
 /** D8: the whole package, or a ScenarioError that names up to five places to look. */

@@ -51,6 +51,12 @@ function broken(rule: string, path: string, value: string, change: (pkg: Json) =
   return { rule, json: JSON.stringify(pkg), path, value };
 }
 
+/** Built from their code points, so no editor or tool can turn them into something else in this file. */
+const NUL = String.fromCharCode(0);
+const LONE_SURROGATE = String.fromCharCode(0xdc00);
+/** How the format names an unknown key that is not a field name (scenario.ts). */
+const UNNAMED_KEY = '(clave desconocida)';
+
 const first = (pkg: Json): Json => pkg.accounts[0];
 const contact = (pkg: Json): Json => pkg.accounts[0].contacts[0];
 
@@ -100,4 +106,13 @@ export const BROKEN_PACKAGES: readonly BrokenPackage[] = [
   broken('no account', 'accounts', '', (pkg) => (pkg.accounts = [])),
   broken('an account without stages', 'accounts[1].stages', '', (pkg) => (pkg.accounts[1].stages = [])),
   broken('a negative position', 'accounts[0].stages[0].position', '', (pkg) => (first(pkg).stages[0].position = -1)),
+  // Audit of ADR-0009, H2 and H6: what PostgreSQL would refuse or change, in the address and in a name.
+  broken('a NUL in an address', 'accounts[0].contacts[0].email', `uno${NUL}x@empresa.test`, (pkg) => (contact(pkg).email = `uno${NUL}x@empresa.test`)),
+  broken('a lone surrogate in an address', 'accounts[0].contacts[0].email', `uno${LONE_SURROGATE}x@empresa.test`, (pkg) => {
+    contact(pkg).email = `uno${LONE_SURROGATE}x@empresa.test`;
+  }),
+  broken('a lone surrogate in a name', 'accounts[0].contacts[0].fullName', `Persona${LONE_SURROGATE}Uno`, (pkg) => (contact(pkg).fullName = `Persona${LONE_SURROGATE}Uno`)),
+  // Audit of ADR-0009, H5: an unknown key that is not a field name is not repeated, whatever it holds.
+  broken('an unknown key shaped like an address', UNNAMED_KEY, 'persona.real@gmail.com', (pkg) => (pkg['persona.real@gmail.com'] = 1)),
+  broken('an unknown key of 10 000 characters', UNNAMED_KEY, 'k'.repeat(10_000), (pkg) => (pkg['k'.repeat(10_000)] = 1)),
 ];
