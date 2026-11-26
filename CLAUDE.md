@@ -167,6 +167,19 @@ ADR-0010 (motor, eventos y simulador: F2.1 y F2.2) y ADR-0012 (aprobación y cie
 base (`docs/reviews/ADR-0010-baseline.md`, sobre `8edc7d8`). ADR-0011 (el tablero, F2.3),
 propuesta con sus respuestas elegidas: se acepta cuando el dueño apruebe `docs/diseno.md`. Se
 implementan en orden, 0010 → 0011 → 0012, con una auditoría por ADR.
+**F2.1 hecha el 2026-11-26, sin empujar:** el núcleo (`46d4558`: la tabla, el filtro, las
+estaciones 1 a 5 y `decideRun`, que guarda la decisión como el único evento de la 6 y corre la
+7 desde el almacén; M1–M5, M8, M10 y M11 en rojo) y la base (`6cbf768`: `0005`, `circuit_owner`,
+`circuit_app` en `db:users` con `CIRCUIT_DB_PASSWORD`, `PgEventStore`, D20; M6, M7, MU1, MU2 y
+M20 en rojo). La base de desarrollo, respaldada (`database/backups/20261126-204043Z-antes-0005/`),
+migrada a `0005` y con `circuit_app`; la `.env` del dueño ya trae `CIRCUIT_DB_PASSWORD`.
+**F2.2 a medias:** el simulador y el cargador, en `a51bb1b` (D12). Los tres documentos del
+programa (`scenarios/escuela/documents/`, sintéticos, escritos por Claude por la pregunta 8),
+`simulator.json` y los cuatro casos dorados están escritos y en verde, pero **sin commit hasta
+que el dueño apruebe los documentos**. Con ellos: 852 pruebas, cobertura 95,6 / 88,22 / 96,82
+/ 97,99; M1, M2, M3, M9 y M11 ponen en rojo un caso dorado. Las desviaciones de la ADR, en sus
+«Notas de implementación». 10 vueltas seguidas de `npm run check` en 0 (de 56 a 73 s), con
+los archivos sin commit en el árbol. Falta, después: la auditoría de ADR-0010.
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -182,9 +195,18 @@ Decidida en F0: ADR-0001 (el código ordena el circuito) y ADR-0003 (monolito mo
 el CRM aparte).
 
 - `apps/circuit`: un proceso con módulos (`circuit`, `model`, `crm-client`, `approval`,
-  `scenario`). Cada módulo se usa solo por su `index.ts`. El núcleo (`circuit`) declara sus
-  puertos y no importa ningún módulo ni paquete; los demás solo importan el núcleo. El SDK
-  de Anthropic solo entra en `model`.
+  `scenario`, `event-store`). Cada módulo se usa solo por su `index.ts`. El núcleo (`circuit`)
+  declara sus puertos y no importa ningún módulo ni paquete; los demás solo importan el núcleo.
+  El SDK de Anthropic solo entra en `model`. El núcleo (ADR-0010): `definition.ts` (la tabla
+  `CIRCUIT`), `filter.ts` (la estación 2), `stations.ts` (1 a 5), `engine.ts` (`startRun`),
+  `decision.ts` (`decideRun`: la 6 y la 7, leídas del almacén), `actions.ts`, `knowledge.ts`
+  y `validate.ts`. `event-store` guarda los eventos en `circuit.runs` y
+  `circuit.station_events` como `circuit_app` (`0005`, dueño `circuit_owner`); su esquema de
+  drizzle está en `apps/circuit/src/modules/event-store/schema.ts`. `model` trae el simulador,
+  que responde desde `scenarios/<id>/simulator.json`; `scenario` carga los documentos. Las
+  pruebas con base de circuit viven en `database/test/`, porque `apps/circuit/test` no sale de
+  la app. Los casos dorados: `apps/circuit/test/golden/`, y solo `npm run golden:update` los
+  reescribe.
 - `apps/crm`: el CRM simulado, un proceso aparte. Circuit no importa su código; solo le
   habla por HTTP con la llave del agente, y su usuario de base no ve el esquema del CRM.
   El CRM es dueño de sus tablas (`apps/crm/src/db/schema.ts`); lo que drizzle-kit no
@@ -232,6 +254,8 @@ al 0.25.12 que ya usa; se quita cuando drizzle-kit suelte esa dependencia.
 más drizzle-orm 0.45.4 y pg 8.23.1. **Sin compilar** (ADR-0006 D1): Node 24 quita los
 tipos, así que toda importación relativa termina en `.ts`, y `erasableSyntaxOnly` prohíbe
 `enum`, `namespace` y las propiedades de parámetro (TS1294).
+`apps/circuit` declara drizzle-orm 0.45.4 y pg 8.23.1 (ADR-0010 D18), comprobadas en el
+registro el 2026-11-26, las mismas que `apps/crm`; zod todavía no le hizo falta.
 CI (`.github/workflows/ci.yml`): `ubuntu-24.04`, Node 24.20.0, actions/checkout v7.0.1 y
 actions/setup-node v7.1.0 fijadas por SHA, comprobados contra sus etiquetas el 2026-11-24.
 
@@ -385,12 +409,30 @@ Se registran con el formato de pitfall-log: regla, síntoma, causa, chequeo y fe
   siempre. Regla: todo cliente de un comando se crea con `adminClient` (`database/command.ts`).
   Chequeo: «A1 · a seed whose session the server ends» de `seed-failure-db.test.ts`, en rojo sin
   el oyente.
+- **`jsonb` no guarda el orden de las claves** (2026-11-26, D16 de ADR-0010). Síntoma: el
+  caso dorado leído de `circuit.station_events` no era igual byte a byte a su `events.json`,
+  con los mismos valores. Causa: `jsonb` ordena las claves a su manera (las cortas primero).
+  Regla: lo que se compara byte a byte se escribe con las claves ordenadas (`serialize` del
+  arnés dorado). Chequeo: `golden-db.test.ts`.
+- **La intercalación del servidor pone `r` antes que `S`** (2026-11-26, en una prueba de
+  ADR-0010). Síntoma: un `ORDER BY` de `relkind` dio `r` antes que `S`, y `ORDER BY 1 COLLATE
+  "C"` falla con «collations are not supported by type integer». Regla: ordenar en la prueba,
+  por punto de código, o con el nombre de la columna. Chequeo: «circuit_owner owns…» de
+  `circuit-events-db.test.ts`.
 - **`SELECT id::text … ORDER BY id` ordena como texto** (2026-11-25, en una prueba de F1.3).
   Síntoma: `'9'` antes que `'15'`. Causa: `ORDER BY` busca primero entre las columnas de
   salida, y la salida `id` ya es texto. Regla: calificar la columna (`ORDER BY tabla.id`).
   Chequeo: `idsInDatabase` de `audit-read-db.test.ts`.
 
 **Herramientas:**
+- **La herramienta Write de Claude Code convierte `\uXXXX` en el carácter** (2026-11-26, al
+  escribir el filtro de ADR-0010). Síntoma: `filter.ts` no compiló («Unterminated regular
+  expression») porque U+2028 quedó literal dentro de una expresión regular; en otros archivos,
+  U+200B y U+00AD quedaron invisibles en el código. No pasa siempre: `'\u0000'` quedó escrito
+  como escape. Un `node -e` desde el Bash de Claude Code también se come barras. Regla: después
+  de escribir un archivo con escapes, buscar `[\p{Cf}\p{Zl}\p{Zp}]` con Node y volverlos escape
+  con un script que no lleve `\u` en su texto; U+2028 y U+2029 se nombran `\p{Zl}` y `\p{Zp}`.
+  Chequeo: ese barrido da 0 en `apps/` y `database/`.
 - **`vitest --update` se come el filtro** (2026-11-24). Síntoma: `vitest run --update x`
   corre todos los archivos. Causa: `-u, --update [type]` acepta un valor y toma `x` como tal.
   Regla: el filtro va antes y el valor explícito (`--update=all`). Chequeo:
@@ -649,6 +691,23 @@ una en rojo en su prueba y restaurado por hash:
 npx vitest run --project database hook-budget seed-failure   # A1: el presupuesto de cada prueba pesada y la sesión cortada (2 archivos, 8 pruebas)
 npx vitest run --project database scenario seed              # A2–A7: 7 archivos, 124 pruebas (una solo en Linux)
 Get-ChildItem $env:TEMP -Directory -Filter 'circuit-*'      # A6: ninguna, después de npm run check
+```
+
+Verificados el 2026-11-26 en PowerShell (F2.1 y F2.2, ADR-0010), con M1–M11, MU1, MU2 y M20,
+cada uno en rojo en su prueba y restaurado por hash. Las pruebas de D10, D11 y D16 necesitan
+`CIRCUIT_DB_PASSWORD` en `.env`:
+
+```powershell
+npx vitest run --project '@circuit/circuit'                    # el núcleo, el simulador y los casos dorados (11 archivos)
+npx vitest run --project database circuit-events circuit-login event-store golden-db   # D10, D11 y D16, como circuit_app
+npm run golden:update                                          # reescribe los cuatro events.json; leer el diff antes del commit
+npm run db:users                                               # crm_app y circuit_app en una transacción; sin CIRCUIT_DB_PASSWORD, 1 y su nombre
+```
+
+```sh
+git grep -nE "Math\.random|Date\.now|new Date|randomUUID|randomBytes" -- ':(glob)apps/circuit/src/modules/model/**' | wc -l   # D12: 0
+git grep -n "writeFile" -- apps/circuit/test/golden.test.ts | wc -l                                                          # D15 (M12): 0
+git diff --exit-code 8edc7d8 -- apps/crm database/migrations/0000_init.sql database/migrations/0001_crm_tables.sql database/migrations/0002_crm_security.sql database/migrations/0003_audit_author_format.sql database/migrations/0004_crm_owner.sql   # D19: 0
 ```
 
 ## 10. Dónde está todo lo demás

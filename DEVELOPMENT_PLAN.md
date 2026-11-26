@@ -266,6 +266,11 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   pero no a la mitad del ancho; casos dorados que pasan con cualquier salida.
 - **Estado:** abierta el 2026-11-26 en `feat/f2-circuito`, que sale de `main` (`f72aa15`).
   F2.0 en curso: el dueño hace los bocetos y Claude lo ayuda con los prompts.
+  ADR-0010 y ADR-0012 aceptadas el 2026-11-26; ADR-0011, propuesta hasta `docs/diseno.md`.
+  F2.1 hecha el 2026-11-26 sin empujar (`46d4558`, `6cbf768`): el núcleo, `0005` y `circuit_app`.
+  F2.2 a medias: el simulador y el cargador, en `a51bb1b`; los tres documentos del programa,
+  `simulator.json` y los cuatro casos dorados, escritos y en verde, esperan el sí del dueño
+  (ADR-0010, pregunta 8) antes del commit.
 
 ### F3 · Modelo
 
