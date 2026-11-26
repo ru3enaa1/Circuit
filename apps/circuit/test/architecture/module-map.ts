@@ -22,13 +22,14 @@ export const MODULE_RULES: Readonly<Record<ModuleName, ModuleRule>> = {
   // and testable with the simulator alone.
   circuit: { modules: [], packages: [] },
   // Implements the core's model port: the simulator, and in F3 the Anthropic adapter.
-  model: { modules: ['circuit'], packages: [] },
+  // node:crypto: the simulator looks replies up by the SHA-256 of the request (ADR-0010 D12).
+  model: { modules: ['circuit'], packages: ['node:crypto'] },
   // Implements the core's CRM port over HTTP, with the agent's key (ADR-0003 M3).
   'crm-client': { modules: ['circuit'], packages: [] },
   // Station 6: the mentor approves, corrects or rejects what station 5 proposed.
   approval: { modules: ['circuit'], packages: [] },
   // Loads the scenario package (synthetic data and documents) from scenarios/.
-  scenario: { modules: ['circuit'], packages: [] },
+  scenario: { modules: ['circuit'], packages: ['node:fs', 'node:path'] },
   // The core's EventStore over PostgreSQL, as circuit_app (ADR-0010 D10, D17).
   'event-store': { modules: ['circuit'], packages: ['drizzle-orm', 'pg'] },
 };

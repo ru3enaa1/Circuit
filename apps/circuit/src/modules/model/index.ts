@@ -1,4 +1,3 @@
-// Public face of the model module: implementations of the core's model port. The simulator
-// arrives in F2.2 and the Anthropic adapter in F3; this module is the only place allowed to
-// import the SDK (ADR-0001 D2).
-export {};
+// The model module's public face (ADR-0003 M1): the simulator today, the Anthropic adapter in F3.
+export { createSimulator, DEFAULT_REPLIES, InvalidSimulatorFile, parseSimulatorFile, requestSha256, SIMULATOR_NAME } from './simulator.ts';
+export type { SimulatedReplies } from './simulator.ts';

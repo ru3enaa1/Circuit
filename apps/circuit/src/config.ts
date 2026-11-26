@@ -11,3 +11,20 @@ export const CIRCUIT_DB_USER = 'circuit_app';
  */
 export const DB_PASSWORD_PATTERN = /^[A-Za-z0-9._~-]{16,128}$/;
 export const DB_PASSWORD_RULE = 'de 16 a 128 letras, dígitos, «-», «_», «.» o «~»';
+
+/** The models circuit can run with. Only the simulator until F3 (ADR-0010 D12, ADR-0001 D3). */
+export const MODEL_CHOICES = ['simulator'] as const;
+export type ModelChoice = (typeof MODEL_CHOICES)[number];
+
+/**
+ * CIRCUIT_MODEL, unset or `simulator`. Any other value stops the start-up naming the variable
+ * and never quoting what it held: turning the real model on is a configuration change, and a
+ * typo must not fall back to something else in silence.
+ */
+export function readModelChoice(env: Readonly<Record<string, string | undefined>>): ModelChoice {
+  const value = env['CIRCUIT_MODEL'];
+  if (value === undefined || value === '') return 'simulator';
+  const found = MODEL_CHOICES.find((choice) => choice === value);
+  if (found === undefined) throw new Error(`CIRCUIT_MODEL debe ser uno de: ${MODEL_CHOICES.join(', ')}.`);
+  return found;
+}
