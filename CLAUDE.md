@@ -162,6 +162,11 @@ de `4b79aa3` a `f72aa15`, sin commit de merge; CI en verde en la rama, corrida 4
 en `main`, 45845951453, con 648 pruebas). **F2 · Circuito y mapa abierta el 2026-11-26 en `feat/f2-circuito`**, que sale de `main`
 (`f72aa15`). Primero F2.0: los bocetos del dueño y el brief `docs/diseno.md`.
 Pedido al dueño, como insumo de F2: el material del programa que citará la estación 4.
+ADR-0010 (motor, eventos y simulador: F2.1 y F2.2) y ADR-0012 (aprobación y cierre: F2.4)
+**aceptadas el 2026-11-26** (el dueño aceptó sus nueve y cinco recomendaciones), con su línea
+base (`docs/reviews/ADR-0010-baseline.md`, sobre `8edc7d8`). ADR-0011 (el tablero, F2.3),
+propuesta con sus respuestas elegidas: se acepta cuando el dueño apruebe `docs/diseno.md`. Se
+implementan en orden, 0010 → 0011 → 0012, con una auditoría por ADR.
 
 ## 3. Reglas de producto que gobiernan el código
 
