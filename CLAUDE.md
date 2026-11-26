@@ -38,6 +38,20 @@ de una empresa real.
   circuito con el simulador o con corridas reales grabadas. No hay despliegue en la nube.
 - **Alcance congelado** hasta la primera entrega (F0–F3 y F6), ver `DEVELOPMENT_PLAN.md`.
 
+## 1b. Forma de trabajo (el dueño, 2026-11-26)
+
+- **Sin auditorías.** Quien recibe la demostración no es técnico: quiere verla funcionar y bien
+  hecha. No se corre ni se recomienda `/coderachnid:adr-guard` (ni plan ni audit), ni se
+  escribe su bloque «adr-guard · NEEDED» al cerrar. Se mantienen las pruebas, la prueba en rojo
+  antes de arreglar un error, `npm run check` en 0 antes de cada commit, las guardas y CI.
+- **Claude corre las fases en orden** (las de `DEVELOPMENT_PLAN.md`), con commits por paso,
+  sin pedir permiso para cada uno. Las ADR se siguen escribiendo, más cortas, como registro
+  de la decisión; Claude elige las recomendaciones que no son críticas y las anota.
+- **Solo se detiene** cuando el chat está muy largo (escribe el relevo con
+  `/coderachnid:handoff`) o cuando hace falta una decisión crítica del dueño: arquitectura,
+  rumbo del producto, algo que sale del repositorio (push, integración a `main`) o algo que
+  no se deshace. Los innegociables de §1 siguen valiendo igual.
+
 ## 2. Dónde estamos de verdad
 
 2026-11-24: **F0 cerrada e integrada a `main`** con el sí del dueño (fast-forward a
@@ -160,13 +174,16 @@ pruebas, ninguna saltada, D20 (el modo `0600`) entre ellas; cobertura 95,71 / 87
 97,82. **F1 cerrada e integrada a `main` el 2026-11-26** con el sí del dueño (fast-forward
 de `4b79aa3` a `f72aa15`, sin commit de merge; CI en verde en la rama, corrida 45845613390, y
 en `main`, 45845951453, con 648 pruebas). **F2 · Circuito y mapa abierta el 2026-11-26 en `feat/f2-circuito`**, que sale de `main`
-(`f72aa15`). Primero F2.0: los bocetos del dueño y el brief `docs/diseno.md`.
+(`f72aa15`). Primero F2.0: los bocetos del dueño y el brief `docs/diseno.md`. Los bocetos
+(B0–B8, más sus referencias y los prompts) están listos desde el 2026-11-26 en
+`docs/privado/bocetos/Mockups_completados.zip`, que git ignora; el dueño eligió el logo
+**4a** de B8. `docs/diseno.md` aún no existe.
 Pedido al dueño, como insumo de F2: el material del programa que citará la estación 4.
 ADR-0010 (motor, eventos y simulador: F2.1 y F2.2) y ADR-0012 (aprobación y cierre: F2.4)
 **aceptadas el 2026-11-26** (el dueño aceptó sus nueve y cinco recomendaciones), con su línea
 base (`docs/reviews/ADR-0010-baseline.md`, sobre `8edc7d8`). ADR-0011 (el tablero, F2.3),
 propuesta con sus respuestas elegidas: se acepta cuando el dueño apruebe `docs/diseno.md`. Se
-implementan en orden, 0010 → 0011 → 0012, con una auditoría por ADR.
+implementan en orden, 0010 → 0011 → 0012 (sin auditoría por ADR desde el 2026-11-26, §1b).
 **F2.1 hecha el 2026-11-26, sin empujar:** el núcleo (`46d4558`: la tabla, el filtro, las
 estaciones 1 a 5 y `decideRun`, que guarda la decisión como el único evento de la 6 y corre la
 7 desde el almacén; M1–M5, M8, M10 y M11 en rojo) y la base (`6cbf768`: `0005`, `circuit_owner`,
@@ -175,11 +192,24 @@ M20 en rojo). La base de desarrollo, respaldada (`database/backups/20261126-2040
 migrada a `0005` y con `circuit_app`; la `.env` del dueño ya trae `CIRCUIT_DB_PASSWORD`.
 **F2.2 a medias:** el simulador y el cargador, en `a51bb1b` (D12). Los tres documentos del
 programa (`scenarios/escuela/documents/`, sintéticos, escritos por Claude por la pregunta 8),
-`simulator.json` y los cuatro casos dorados están escritos y en verde, pero **sin commit hasta
-que el dueño apruebe los documentos**. Con ellos: 852 pruebas, cobertura 95,6 / 88,22 / 96,82
+`simulator.json` y los cuatro casos dorados están escritos y en verde; con §1b entran a commit
+sin esperar la aprobación de los documentos (2026-11-26). Con ellos: 852 pruebas, cobertura 95,6 / 88,22 / 96,82
 / 97,99; M1, M2, M3, M9 y M11 ponen en rojo un caso dorado. Las desviaciones de la ADR, en sus
 «Notas de implementación». 10 vueltas seguidas de `npm run check` en 0 (de 56 a 73 s), con
-los archivos sin commit en el árbol. Falta, después: la auditoría de ADR-0010.
+los archivos sin commit en el árbol. **Auditada el 2026-11-26: APROBAR CON CONDICIONES**
+(`docs/reviews/ADR-0010-audit-2026-11-26.md`; 1 mayor, 4 menores). Ese día, a pedido del dueño,
+H1–H5 arreglados sin commit, cada uno con su prueba en rojo primero (las «Notas de
+implementación» de la ADR): el filtro tacha más formas de documento, las cifras de ancho
+completo, los teléfonos 3-3-4 con puntos (lo eligió el dueño) y el teléfono que cierra una
+oración; quita toda `\p{Cf}`; la 5 revisa el correo como la 6; y `crm-limits.test.ts`. 880
+pruebas (una solo en Linux), cobertura 95,63 / 88,25 / 96,85 / 98; un mutante por arreglo,
+en rojo. **Segunda auditoría el 2026-11-26: APROBAR CON CONDICIONES**
+(`docs/reviews/ADR-0010-audit-2026-11-26-2.md`). R1–R4 arreglados ese día, con 15 pruebas en rojo
+primero (NFC, el tramo de hasta 30 caracteres y un salto de línea entre etiqueta y número, las
+cifras de otros sistemas y el correo con tildes); EA1 y EA2 aplicadas en la ADR. Es la última
+auditoría: el dueño las apagó (§1b). Con eso, 896 pruebas (una solo en Linux), cobertura
+95,66 / 88,18 / 96,85 / 98,01; **F2.2 hecha**, en commits locales, sin empujar. Sigue F2.0
+(`docs/diseno.md`), que acepta ADR-0011 y abre F2.3.
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -729,7 +759,5 @@ git diff --exit-code 8edc7d8 -- apps/crm database/migrations/0000_init.sql datab
 ### Cómo termina cada respuesta
 
 Toda respuesta de desarrollo cierra con el bloque de cinco puntos: siguiente fase · claves ·
-cuidados · pruebas recomendadas · implementación recomendada. Si el trabajo tocó
-autenticación, dinero, datos personales, un esquema, una API pública, seguridad o código que
-va a otra persona, y no hay auditoría registrada, la implementación recomendada nombra el
-comando `/coderachnid:adr-guard`.
+cuidados · pruebas recomendadas · implementación recomendada. Desde el 2026-11-26 la
+implementación recomendada nunca nombra `/coderachnid:adr-guard` (§1b).
