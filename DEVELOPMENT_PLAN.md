@@ -355,7 +355,14 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   color según el estado, y el equipo llega caminando por las dos líneas o por una puerta, y uno se va
   en tobogán al cerrar; el GIF guarda solo lo que cambia (0,92 MB). `docker compose up` de un comando,
   hecho ese día (ADR-0020): sin `.env`, sin Node y sin llave, con un trabajo de CI que lo levanta en
-  limpio y recorre las siete estaciones. Siguen el video, la página del caso y el mensaje corto.
+  limpio y recorre las siete estaciones. Empujada el 2026-11-27 (CI en verde en `60127b1`, corrida
+  46080546415: el trabajo `compose`, en Linux, construyó y levantó todo en 32 s). Ese día, la página
+  del caso (`docs/caso.md`: cuatro recorridos de los casos dorados y las medidas con su fuente; los
+  tiempos del simulador y sus tokens se dicen como tales) y el README rehecho como presentación (un
+  recorrido guiado y la referencia plegada). El mensaje corto está en `docs/privado/` (local). El
+  video de 90 s lo graba el dueño con su voz, sobre la app real (Claude, §1b: sin ffmpeg, y una voz
+  generada pasaría por la del autor); el guion está en `docs/privado/video-guion.md`. Falta: el
+  video (el dueño) e integrar a `main` (el dueño).
 
 ### Segunda ronda (después del hito)
 

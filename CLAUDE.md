@@ -311,7 +311,11 @@ desde cero, el recorrido entero y el tablero en el navegador. 1551 pruebas (una 
 cobertura 93,85 / 87,02 / 93,91 / 96,02; Q1–Q8 en rojo. La base del dueño,
 respaldada (`database/backups/20261127-222421Z-antes-compose/`) y recreada con el `compose.yaml`
 nuevo. Si el dueño corre todo Compose sobre su base, la semilla rota la llave de su `.secrets/`.
-Sigue el resto de F6: el video de 90 s, la página del caso y el mensaje corto.
+**Empujada el 2026-11-27 a pedido del dueño (CI en verde en `60127b1`, corrida 46080546415;
+el trabajo `compose`, en Linux, en 32 s con la imagen construida).** Ese día, `docs/caso.md` (la
+página del caso, con cada cifra y su fuente) y el README rehecho como presentación, sin empujar. El
+mensaje corto y el guion del video, en `docs/privado/` (local). Falta el video de 90 s, que graba el
+dueño con su voz, y la integración a `main`.
 
 ## 3. Reglas de producto que gobiernan el código
 
