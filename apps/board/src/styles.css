@@ -1,0 +1,316 @@
+/*
+ * The board's look (docs/diseno.md §4, §5, §14). Flat: no shadows or gradients but the yellow
+ * halo of what is active. Every state has a shape and a text as well as its color. The movement
+ * is CSS transitions between two projected views (ADR-0011 B2); none of them creates a state.
+ */
+
+:root {
+  --bg: #0a0a0b;
+  --bone: #f3f1ec;
+  --text-2: #bdbab2;
+  --label: #9a978f;
+  --off: #7d7b75;
+  --yellow: #ffd23f;
+  --pink: #ff5fa2;
+  --dock: #161618;
+  --sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+  --ease: 240ms ease;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--bone);
+  font-family: var(--sans);
+}
+
+.board {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}
+
+.board--empty {
+  display: grid;
+  place-items: center;
+}
+
+.board__message {
+  color: var(--text-2);
+  font-size: 15px;
+}
+
+.orbit {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+/* Necks: bone at rest, yellow once an event took them, dashed while the next station waits. */
+.edge path {
+  fill: none;
+  stroke: var(--bone);
+  stroke-width: 1.5;
+  opacity: 0.55;
+  transition: stroke var(--ease), opacity var(--ease);
+}
+
+.edge.is-taken path {
+  stroke: var(--yellow);
+  stroke-width: 2.5;
+  opacity: 1;
+}
+
+.edge.is-waiting path {
+  stroke-dasharray: 7 6;
+}
+
+.edge.is-off path {
+  stroke: var(--off);
+  stroke-dasharray: 2 5;
+  opacity: 0.8;
+}
+
+.edge--entry path,
+.edge--exit path {
+  stroke-width: 1;
+}
+
+.edge--stop path {
+  stroke-dasharray: 4 4;
+}
+
+.edge--stop.is-taken path {
+  stroke: var(--pink);
+}
+
+.edge__stop circle {
+  fill: var(--bg);
+  stroke: var(--label);
+  stroke-width: 1.5;
+}
+
+.edge__stop rect {
+  fill: var(--label);
+}
+
+.edge--stop.is-taken .edge__stop circle {
+  stroke: var(--pink);
+}
+
+.edge--stop.is-taken .edge__stop rect {
+  fill: var(--pink);
+}
+
+.edge__label {
+  fill: var(--label);
+  font: 10.5px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.edge--branch.is-taken .edge__label {
+  fill: var(--yellow);
+}
+
+/* A station: a bubble with a ring of marks (§5). */
+.station {
+  outline: none;
+}
+
+.station__ball {
+  fill: var(--bg);
+  stroke: var(--bone);
+  stroke-width: 2;
+  transition: fill var(--ease), stroke var(--ease);
+}
+
+.station__ticks {
+  fill: none;
+  stroke: var(--label);
+  stroke-width: 3;
+  stroke-dasharray: 1 6;
+  opacity: 0.6;
+}
+
+.station__time {
+  fill: none;
+  stroke: var(--yellow);
+  stroke-width: 2;
+}
+
+.station__name {
+  fill: var(--bone);
+  font: 600 15px var(--sans);
+}
+
+.station__tag {
+  fill: var(--text-2);
+  font: 10.5px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.station__state {
+  fill: var(--label);
+  font: 500 13px var(--sans);
+}
+
+.station--completed .station__ball {
+  fill: var(--bone);
+}
+
+.station__dot {
+  fill: var(--bg);
+}
+
+.station--waiting .station__ball {
+  fill: var(--yellow);
+  stroke: var(--yellow);
+  filter: drop-shadow(0 0 6px rgba(255, 210, 63, 0.7));
+}
+
+.station--waiting .station__ticks {
+  stroke: var(--yellow);
+  opacity: 1;
+}
+
+.station--waiting .station__state {
+  fill: var(--yellow);
+}
+
+/* Persona waiting: a thick pink ring, hollow, with a pink dot (§5). */
+.station--person.station--waiting .station__ball {
+  fill: var(--bg);
+  stroke: var(--pink);
+  stroke-width: 6;
+  filter: none;
+}
+
+.station--person.station--waiting .station__ticks {
+  stroke: var(--pink);
+}
+
+.station__dot--person {
+  fill: var(--pink);
+}
+
+.station--person.station--waiting .station__state {
+  fill: var(--pink);
+}
+
+.station--skipped .station__ball {
+  stroke: var(--off);
+  stroke-dasharray: 3 5;
+}
+
+.station--skipped .station__name {
+  fill: var(--off);
+  text-decoration: line-through;
+}
+
+.station--skipped .station__state {
+  fill: var(--off);
+}
+
+.station__slash {
+  stroke: var(--off);
+  stroke-width: 1.5;
+}
+
+.station--stopped .station__ball {
+  stroke: var(--pink);
+  stroke-dasharray: 8 5;
+}
+
+.station--failed .station__ball {
+  stroke: var(--pink);
+}
+
+.station__icon {
+  fill: var(--pink);
+}
+
+.station__icon--line {
+  fill: none;
+  stroke: var(--pink);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.station--stopped .station__state,
+.station--failed .station__state {
+  fill: var(--pink);
+}
+
+.station:focus-visible .station__ticks {
+  stroke: var(--yellow);
+  stroke-width: 1.5;
+  stroke-dasharray: none;
+  opacity: 1;
+}
+
+/* Instruments and nodes: data only, never larger than the circuit (principle 1). */
+.telemetry {
+  fill: var(--text-2);
+  font: 10.5px var(--mono);
+}
+
+.node text {
+  fill: var(--text-2);
+  font: 13px var(--sans);
+}
+
+.node__dot {
+  fill: var(--bg);
+  stroke: var(--label);
+  stroke-width: 1.2;
+}
+
+.node.is-filled .node__dot {
+  fill: var(--bone);
+  stroke: var(--bone);
+}
+
+.node.is-filled text {
+  fill: var(--bone);
+}
+
+.station--waiting .node__dot {
+  stroke: var(--pink);
+}
+
+.confidence__track {
+  fill: none;
+  stroke: var(--off);
+  stroke-width: 1;
+  opacity: 0.6;
+}
+
+.confidence__value {
+  fill: none;
+  stroke: var(--bone);
+  stroke-width: 2.5;
+}
+
+.confidence__threshold {
+  stroke: var(--pink);
+  stroke-width: 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}

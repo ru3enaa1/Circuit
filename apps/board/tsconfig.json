@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  // The board runs in the browser: the DOM's types and React's JSX. Node's types stay for the
+  // tests and vite.config.ts, which run in Node.
+  "compilerOptions": {
+    "lib": ["es2024", "dom", "dom.iterable"],
+    "jsx": "react-jsx",
+    "types": ["node"]
+  },
+  "include": ["src", "test", "vite.config.ts"]
+}

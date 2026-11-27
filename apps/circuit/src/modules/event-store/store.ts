@@ -61,9 +61,9 @@ export class PgEventStore implements EventStore {
   }
 }
 
-type EventRow = typeof stationEvents.$inferSelect;
+export type EventRow = typeof stationEvents.$inferSelect;
 
-function eventOfRow(row: EventRow): StationEvent {
+export function eventOfRow(row: EventRow): StationEvent {
   if (!isStationId(row.station) || !isOutcome(row.outcome) || !STATUSES.includes(row.status) || !isRecord(row.detail)) {
     throw new Error(`El evento ${row.id} no tiene la forma de un evento del circuito.`);
   }

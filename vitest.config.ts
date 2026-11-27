@@ -15,7 +15,10 @@ export default defineConfig({
       provider: 'v8',
       // Production code only, listed explicitly so a source file no test imports shows up
       // at 0% instead of silently staying out of the report. Tests live under test/.
-      include: ['apps/*/src/**/*.ts', 'database/*.ts'],
+      // The board's .tsx count too (ADR-0004 H6, ADR-0011 B11), with the same floor.
+      include: ['apps/*/src/**/*.{ts,tsx}', 'database/*.ts'],
+      // Declarations only: nothing in them runs.
+      exclude: ['**/*.d.ts'],
       // Text only: the CI log is the report, and nothing is written to the repository.
       reporter: ['text'],
       thresholds: {

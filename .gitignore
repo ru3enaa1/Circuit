@@ -24,6 +24,9 @@ docs/privado/
 database/dev/
 database/backups/
 
+# Capturas del tablero para la revisión del dueño (ADR-0011 B10, npm run board:shots)
+.shots/
+
 # Dependencias y compilados
 node_modules/
 dist/

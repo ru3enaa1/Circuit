@@ -1,0 +1,230 @@
+/*
+ * What surrounds the circuit (docs/diseno.md §6, §9): the request, the clock, the dock and the
+ * CRM's tools. The variables come from styles.css, imported first.
+ */
+
+/* The request, on the top left (§6). */
+.request {
+  position: absolute;
+  top: 28px;
+  left: 36px;
+  max-width: 60ch;
+}
+
+.request__brand {
+  margin: 0 0 6px;
+  color: var(--label);
+  font: 500 13px var(--sans);
+}
+
+.runs summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.runs summary::-webkit-details-marker {
+  display: none;
+}
+
+.request__title {
+  display: inline;
+  margin: 0;
+  font: 600 clamp(26px, 3.2vw, 44px) / 1.1 var(--sans);
+}
+
+.runs__list {
+  position: absolute;
+  z-index: 2;
+  margin: 8px 0 0;
+  padding: 8px;
+  list-style: none;
+  background: var(--dock);
+  border: 1px solid var(--off);
+  border-radius: 10px;
+}
+
+.runs__item {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  color: var(--text-2);
+  font: 13px var(--mono);
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.runs__item:hover,
+.runs__item:focus-visible,
+.runs__item.is-current {
+  color: var(--bg);
+  background: var(--yellow);
+  outline: none;
+}
+
+.runs__empty {
+  padding: 6px 10px;
+  color: var(--label);
+  font-size: 13px;
+}
+
+.request__state {
+  margin: 6px 0 0;
+  color: var(--yellow);
+  font: 500 15px var(--sans);
+}
+
+.request__text {
+  display: -webkit-box;
+  margin: 10px 0 0;
+  overflow: hidden;
+  color: var(--text-2);
+  font: 13px / 1.5 var(--sans);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+/* The run's clock, on the top right (§6, §7). */
+.clock {
+  position: absolute;
+  top: 28px;
+  right: 36px;
+  text-align: right;
+}
+
+.clock p {
+  margin: 0;
+}
+
+.clock__time {
+  font: 500 26px var(--mono);
+}
+
+.clock__label,
+.clock__spent,
+.clock__runs {
+  margin-top: 4px;
+  color: var(--label);
+  font: 13px var(--mono);
+}
+
+/* The dock, at the bottom center (§6). */
+.dock {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px;
+  background: var(--dock);
+  border-radius: 999px;
+}
+
+.dock ol {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pill {
+  position: relative;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 14px;
+  color: var(--text-2);
+  font: 500 13px var(--sans);
+  white-space: nowrap;
+  border-radius: 999px;
+  transition: color var(--ease), background var(--ease);
+}
+
+.pill__number {
+  display: inline-grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  font: 500 10.5px var(--mono);
+  border: 1px solid currentColor;
+  border-radius: 50%;
+}
+
+.pill--completed {
+  color: var(--bone);
+}
+
+.pill--skipped {
+  color: var(--off);
+  text-decoration: line-through;
+}
+
+.pill--stopped,
+.pill--failed {
+  color: var(--pink);
+}
+
+.pill.is-current {
+  color: var(--bg);
+  background: var(--yellow);
+}
+
+.pill.is-current::before {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  content: '';
+  background: var(--yellow);
+  border-radius: 50%;
+  transform: translateX(-50%);
+}
+
+/* The CRM's tools, small, on the bottom left. */
+.tools {
+  position: absolute;
+  bottom: 24px;
+  left: 36px;
+  color: var(--label);
+  font: 10.5px var(--mono);
+}
+
+.tools p {
+  margin: 0 0 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tools ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tool--write {
+  color: var(--text-2);
+}
+
+/* Half a screen: the header and the clock share a band of two lines on top (§9). */
+.board.is-narrow .request {
+  top: 16px;
+  left: 20px;
+  max-width: calc(100vw - 180px);
+}
+
+.board.is-narrow .clock {
+  top: 16px;
+  right: 20px;
+}
+
+.board.is-narrow .clock__time {
+  font-size: 18px;
+}
+
+.board.is-narrow .pill {
+  padding: 6px;
+}

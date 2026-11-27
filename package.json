@@ -22,7 +22,10 @@
     "db:restore": "node database/restore.ts",
     "db:seed": "node database/seed.ts",
     "crm:start": "node --env-file-if-exists=.env apps/crm/src/main.ts",
-    "golden:update": "node apps/circuit/test/golden/update.ts"
+    "golden:update": "node apps/circuit/test/golden/update.ts",
+    "circuit:start": "node --env-file-if-exists=.env apps/circuit/src/main.ts",
+    "board:build": "npm run build -w @circuit/board",
+    "board:shots": "npm run board:build && node apps/circuit/test/shots/board-shots.ts"
   },
   "devDependencies": {
     "@types/node": "24.19.2",
