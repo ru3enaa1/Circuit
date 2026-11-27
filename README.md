@@ -99,7 +99,7 @@ siguiente). `docker compose stop db` detiene la base y conserva sus datos.
 ```sh
 npm run board:build    # compila apps/board en apps/board/dist
 npm run circuit:start  # el tablero y su API de lectura en http://127.0.0.1:4020; Ctrl+C lo detiene
-npm run board:shots    # capturas a 1536×864, 768×864, 720×900 y 2560×1080 en .shots/, con Chrome
+npm run board:shots    # capturas a 1536×864, 768×864, 720×900 y 2560×1080 en .shots/, con Chrome (el circuito y cuatro salas)
 ```
 
 El tablero dibuja el circuito solo con los eventos guardados
@@ -107,6 +107,13 @@ El tablero dibuja el circuito solo con los eventos guardados
 y los eventos se revelan de a uno cada 700 ms. Circuit responde solo a `127.0.0.1` y
 `localhost` con su puerto, nunca responde CORS y sirve solo los archivos de su compilación.
 `board:shots` no necesita la base: usa los casos dorados en memoria.
+
+Un clic en una estación, o en su píldora del muelle, entra a su sala: la estación en grande, lo
+que guardó con el texto entero y sus salidas, con la tomada en amarillo. Desde CRM se entra a
+cada acción propuesta. El portal de la izquierda, la miga de pan o Esc vuelven de a un nivel.
+Lo que se mira vive en la dirección de la página (`#/estacion/crm`, `#/estacion/crm/accion/3`),
+así que «atrás» del navegador también vuelve, y entrar nunca cambia la corrida
+([ADR-0013](docs/adr/0013-entrar-a-una-estacion.md)).
 
 ## Datos de ejemplo: la semilla
 

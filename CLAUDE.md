@@ -219,8 +219,13 @@ auditoría: el dueño las apagó (§1b). Con eso, 896 pruebas (una solo en Linux
 lista fija de `apps/board/dist`; `apps/board` (React, Vite 8.3.8 sin plugin) dibuja la órbita solo
 desde `projectRun`, con siete apariencias, nodos, telemetría, muelle y el revelado de a uno.
 1094 pruebas (una solo en Linux), cobertura 94,21 / 87,09 / 94,67 / 96,44; M1–M6 en rojo; las
-desviaciones, en las «Notas de implementación» de la ADR. **B10 (revisión del dueño de
-`npm run board:shots`) pendiente.** Sigue F2.3b: entrar a una estación, el portal y CRM.
+desviaciones, en las «Notas de implementación» de la ADR. **F2.3b hecha el 2026-11-26, sin empujar (ADR-0013):** cada estación y cada píldora del muelle es
+un enlace a su sala (`#/estacion/<id>`, `#/estacion/crm/accion/<n>`); la sala muestra la estación
+en grande, sus nodos enteros y sus salidas con la tomada; el portal, la miga de pan y Esc vuelven
+de a un nivel. Lo que se mira vive en el fragmento, leído con `useSyncExternalStore`: B1 y B2
+sin cambio. 1161 pruebas (una solo en Linux), cobertura 93,58 / 87,19 / 93,71 / 96,02; M1–M3 en
+rojo. **B10 (revisión del dueño de `npm run board:shots`, ahora con cuatro salas) pendiente.**
+Sigue F2.3c: el logo, el equipo y los paneles de la ultraancha.
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -278,7 +283,9 @@ el CRM aparte).
 - `apps/board`: el tablero, servido por circuit desde `dist`. Su estado sale solo de
   `projectRun` (`src/projection.ts`); `useState`, `useReducer` y los temporizadores, solo en
   `src/use-run-events.ts` (lo vigila `test/source-rules.test.ts`); los textos, en `src/texts.ts`.
-  No importa código de circuit: solo sus pruebas lo hacen (`test/support.ts`).
+  No importa código de circuit: solo sus pruebas lo hacen (`test/support.ts`). Lo que se mira
+  (ADR-0013) es el fragmento de la dirección: `src/route.ts` lo lee y lo resuelve contra la vista,
+  `src/use-route.ts` lo escucha, y `components/Room.tsx` y `Portal.tsx` dibujan la sala.
 
 Lo impone `apps/circuit/test/architecture/`: el mapa de dependencias (`module-map.ts`) y una
 prueba que revisa `src/` y `test/` contra él. Para agregar una dependencia hay que cambiar
@@ -552,7 +559,7 @@ Se registran con el formato de pitfall-log: regla, síntoma, causa, chequeo y fe
   página** (2026-11-26, `board:shots`). Síntoma: `--screenshot` no termina y no deja archivo.
   Causa: sin `--user-data-dir`, Chrome le entrega la orden a la instancia abierta; y
   `execFileSync` bloquea el proceso de Node que es el servidor que Chrome lee. Regla: perfil
-  propio y `execFile` asíncrono con `timeout`. Chequeo: `npm run board:shots` deja 12 archivos.
+  propio y `execFile` asíncrono con `timeout`. Chequeo: `npm run board:shots` deja 28 archivos.
 - **Fastify 5.12 deprecó `disableRequestLogging`** (2026-11-24). Con `logger: false` no hace
   falta: no hay registrador que escriba esas líneas. Chequeo: las pruebas no muestran
   `FSTDEP023`.
@@ -776,7 +783,15 @@ npx vitest run --project '@circuit/circuit' server config        # B5–B8, B13 
 npx vitest run --project database circuit-server                 # B4, B5, B13 sobre PostgreSQL, y el arranque
 npm run board:build                                              # apps/board/dist
 npm run circuit:start                                            # http://127.0.0.1:4020; Ctrl+C lo detiene
-npm run board:shots                                              # B10: 12 capturas en .shots/ (git las ignora)
+npm run board:shots                                              # B10: 28 capturas en .shots/ (git las ignora)
+```
+
+Verificados el 2026-11-26 en PowerShell (F2.3b, ADR-0013), con M1–M3, cada uno en rojo en su
+prueba y restaurado por hash:
+
+```powershell
+npx vitest run --project '@circuit/board' route room-render source-rules   # E1–E6: la ruta, las salas y el corte de movimiento
+node apps/circuit/test/shots/board-shots.ts sala-clasificacion sala-accion # solo algunas capturas (después de board:build)
 ```
 
 ## 10. Dónde está todo lo demás

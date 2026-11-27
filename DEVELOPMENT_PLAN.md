@@ -275,7 +275,11 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   auditorías de ADR-0010. Desde ese día, sin auditorías (el dueño; CLAUDE.md §1b).
   F2.3a hecha el 2026-11-26 sin empujar: el servidor de lectura de circuit en `127.0.0.1:4020`,
   `apps/board` con `projectRun`, la órbita, sus siete apariencias, los nodos, la telemetría, el
-  muelle y el revelado de a uno (ADR-0011). Sigue F2.3b: entrar a una estación y volver.
+  muelle y el revelado de a uno (ADR-0011).
+  F2.3b hecha el 2026-11-26 sin empujar (ADR-0013): entrar a una estación desde la órbita o el
+  muelle, la sala con sus nodos enteros y sus salidas, el portal, la miga de pan, Esc y el
+  segundo nivel de CRM; lo que se mira vive en el fragmento de la dirección. Sigue F2.3c: el
+  logo, el equipo y los paneles de la ultraancha.
 
 ### F3 · Modelo
 

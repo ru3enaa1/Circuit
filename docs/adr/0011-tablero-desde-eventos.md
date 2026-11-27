@@ -5,6 +5,9 @@
   abiertas». Enmiendas del brief: B12 admite `@fontsource/ibm-plex-sans` y
   `@fontsource/jetbrains-mono` (las fuentes en local de B7), y `GET /api/circuit` trae además
   el umbral de confianza y los títulos de los documentos del escenario (§7 del brief).
+- **Enmendada por:** ADR-0013, aceptada el 2026-11-26: entrar a una estación y el portal salen
+  del «Fuera de alcance» del cerco; lo que se mira vive en el fragmento de la dirección, sin
+  estado de React, y B1 y B2 quedan como están.
 - **Tarea:** F2.3 de `DEVELOPMENT_PLAN.md`: «tablero que dibuja el recorrido solo desde los
   eventos». Terminado (parte de F2): el mapa coincide con los eventos guardados.
 - **Retroactiva:** no. No existen `apps/board`, ningún `.tsx`, ni un servidor HTTP en circuit
