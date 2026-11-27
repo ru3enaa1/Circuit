@@ -93,6 +93,21 @@ D14) y ya guarda los tokens y el costo en cada evento (D9).
 - Cambiar el modelo o un precio cambia `recordings.json` solo si se vuelve a grabar; el archivo
   dice con qué modelo se grabó.
 
+## Enmiendas
+
+**A1 (el dueño, 2026-11-27): sin llave y sin corridas reales.** «La llave no la usaremos; es una
+demostración y no quiero gastar tokens». El adaptador se construye entero y se prueba solo con el
+transporte falso, que responde con la forma de la API; nunca se llama a la API. Por eso:
+
+- F3.5 (grabar y reproducir) sale del hito: no hay corridas reales que grabar. `CIRCUIT_MODEL=replay`,
+  `recordings.json`, `npm run model:record`, K12 y K13 no se construyen.
+- El circuito de la demostración corre con el simulador, y sus medidas siguen nulas (ADR-0010 D9):
+  ninguna pantalla, ni el README, ni F6 muestran tokens, costos o tiempos del modelo como si fueran
+  reales. Lo que el transporte falso responde nunca se guarda como corrida.
+- F3 termina cuando el simulador y el adaptador (con el transporte falso) pasan la misma batería.
+- Encender el modelo real sigue siendo configuración: `CIRCUIT_MODEL=anthropic` y la llave. Queda
+  hecho y probado, pero apagado.
+
 ## Notas de implementación
 
 **F3.1 (2026-11-27, sobre `71d0fcf`).** `test/model-contract/cases.ts` (los casos: cada muestra de
@@ -106,3 +121,17 @@ simulador, cada uno en rojo y restaurado por hash: X1 (un token negativo) y X2 (
 decimales) para K2, X3 (la salida compartida) para K5, X4 (el nombre vacío) para K1, X5 (escribe en
 los documentos) para K4 y X6 (busca con otra clave) para K3. `npm run check` en 0: 1393 pruebas
 (una solo en Linux), cobertura 93,53 / 87,07 / 93,64 / 95,7, la misma, porque no se tocó `src/`.
+
+**F3.2 (2026-11-27, con A1).** `@anthropic-ai/sdk` 1.14.0 exacto en `apps/circuit` (su `zod` se
+comparte con el 4.6.7; `npm audit` en 0) y en la lista de `model` de `module-map.ts`.
+`modules/model/anthropic.ts` (`createAnthropicModel`: la clasificación con salida estructurada,
+esfuerzo `low` y los programas del escenario como únicos `topic`; `answer` y `proposeCrm` lanzan
+hasta F3.3 y F3.4) y `prices.ts` (la tabla de Opus 5.5, en centavos por millón de tokens, leída
+el 2026-11-27 de la página de precios, que no trae fecha; `usageOf`). Dos diferencias con la
+decisión: el adaptador recibe los programas al crearse (`topics`), porque `classify` del puerto
+solo recibe la solicitud; y el `model` del evento es el nombre fijo del puerto, mientras que el
+costo se calcula con el `model` de la respuesta (sin modelos de respaldo, son el mismo; si
+difieren, el costo es nulo). El SDK 1.14.0 manda la llave como `Authorization: Bearer`, no como
+`x-api-key`. Pruebas: `test/anthropic-model.test.ts` sobre el transporte falso
+`test/support/fake-anthropic.ts` (13); Y1–Y7 en rojo y restaurados por hash. `npm run check` en 0:
+1406 pruebas (una solo en Linux), cobertura 93,6 / 86,96 / 93,64 / 95,73.

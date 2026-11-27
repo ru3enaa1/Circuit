@@ -24,7 +24,9 @@
 **Hito (primera entrega):** demostración **local** que se levanta con un comando, más un
 paquete corto para captar atención (visuales y tres líneas) que lleva al repositorio, donde
 está la profundidad. Una solicitud recorre las siete estaciones en el mapa, contra el CRM
-simulado, con un mentor que aprueba y **corridas reales del modelo grabadas**. Sin
+simulado, con un mentor que aprueba y el modelo detrás de su interfaz: el simulador responde y el
+adaptador de Anthropic queda hecho y probado, apagado (sin corridas reales: el dueño, 2026-11-27,
+ADR-0015 A1). Sin
 despliegue en la nube ni uso como producción (ADR-0002). Sin fecha fija: se entrega cuando
 muestre valor real.
 
@@ -299,18 +301,20 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
 
 ### F3 · Modelo
 
-- **Lo desbloquea:** F2 integrada y la llave de la API en el `.env` local del autor.
+- **Lo desbloquea:** F2 integrada. La llave ya no hace falta (ADR-0015 A1).
 - **Entrega:** adaptador de Anthropic detrás de la interfaz (clasificación estructurada,
   conocimiento con cita, agente con herramientas que solo propone), apagado por defecto.
-  Modo repetición: las corridas reales quedan guardadas como eventos y el mapa las
-  reproduce sin llave.
+  Sin corridas reales (el dueño, 2026-11-27, ADR-0015 A1): el adaptador se prueba solo con un
+  transporte falso que responde con la forma de la API.
 - **Subpasos:** F3.1 batería de contrato que pasa con el simulador · F3.2 clasificación ·
-  F3.3 conocimiento con cita · F3.4 agente con herramientas · F3.5 grabar y reproducir
-  corridas. Antes de F3.4, se revisa la versión vigente del SDK y del modelo ese día.
-- **Terminado cuando:** el simulador y el adaptador pasan la misma batería de contrato; hay
-  corridas reales grabadas de las tres rutas, con sus medidas, y se reproducen sin llave.
-- **Seguridad:** las corridas grabadas no llevan la llave ni encabezados (lo revisa una
-  guarda); solo datos sintéticos; la salida del modelo se valida con zod antes de usarse.
+  F3.3 conocimiento con cita · F3.4 agente con herramientas. F3.5 (grabar y reproducir
+  corridas) salió del hito con ADR-0015 A1. Antes de F3.4, se revisa la versión vigente del SDK
+  y del modelo ese día.
+- **Terminado cuando:** el simulador y el adaptador, con el transporte falso, pasan la misma batería
+  de contrato, y ninguna prueba ni pantalla muestra medidas del modelo como reales.
+- **Seguridad:** ningún error ni registro del adaptador lleva la llave ni encabezados; solo datos
+  sintéticos; la salida del modelo la valida el núcleo antes de usarse (ADR-0010 D2; ADR-0015
+  explica por qué no con zod).
 - **Trampas:** pruebas que llaman a la API real en CI; una salida del modelo que «pide» otra
   estación (ADR-0001 D1); cifras de costo calculadas con precios sin fecha ni fuente.
 - **Estado:** abierta el 2026-11-27 en `feat/f3-modelo`, que sale de `main` (`71d0fcf`). Sin
@@ -318,14 +322,16 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   para grabar corridas. F3.1 no necesita la llave; la `.env` del dueño aún no la trae.
   ADR-0015 aceptada el 2026-11-27 (Claude eligió sus recomendaciones, §1b). **F3.1 hecha ese día:**
   la batería de contrato del puerto del modelo (`apps/circuit/test/model-contract/`), en verde con
-  el simulador; seis mutantes en rojo.
+  el simulador; seis mutantes en rojo. El mismo día el dueño decidió no usar la llave (ADR-0015 A1):
+  sin corridas reales, F3.5 fuera del hito. **F3.2 hecha:** el adaptador clasifica sobre un
+  transporte falso; 1406 pruebas; Y1–Y7 en rojo.
 
 ### F6 · Demostración
 
-- **Lo desbloquea:** F3 integrada, con corridas reales grabadas.
+- **Lo desbloquea:** F3 integrada.
 - **Entrega:** `docker compose up` levanta todo en local, sin llave; un README cuya primera
   pantalla es un GIF del circuito, una línea y el comando para correrlo; un video de 90
-  segundos; una página del caso con las medidas de las corridas grabadas; el mensaje corto
+  segundos; una página del caso que dice que las medidas son del simulador (sin corridas reales, ADR-0015 A1); el mensaje corto
   de la aplicación.
 - **Terminado cuando:** en una máquina limpia, clonar y un comando recorren el circuito sin
   llave; una persona ajena entiende qué es viendo solo el GIF y las tres líneas.

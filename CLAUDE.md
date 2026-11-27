@@ -259,7 +259,11 @@ ADR-0015 aceptada ese día (Claude, §1b): el adaptador de Anthropic detrás de 
 (`claude-opus-5-5`, SDK 1.14.0, sin red en las pruebas), una batería de contrato común y la
 repetición de corridas grabadas. **F3.1 hecha, sin empujar:** la batería
 (`apps/circuit/test/model-contract/`), en verde con el simulador; 1393 pruebas; X1–X6 en rojo.
-Sigue F3.2 (el adaptador: clasificación).
+**El dueño decidió no usar la llave (2026-11-27, ADR-0015 A1):** sin corridas reales; el adaptador
+se prueba solo con un transporte falso (`test/support/fake-anthropic.ts`); F3.5 sale del hito, y
+nada muestra medidas del modelo como reales. **F3.2 hecha, sin empujar:** `modules/model/anthropic.ts`
+(la clasificación) y `prices.ts` (Opus 5.5, con fuente y fecha); 1406 pruebas; Y1–Y7 en rojo.
+Sigue F3.3 (conocimiento con cita) y F3.4 (CRM con herramientas, que corre la batería).
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -354,7 +358,8 @@ más drizzle-orm 0.45.4 y pg 8.23.1. **Sin compilar** (ADR-0006 D1): Node 24 qui
 tipos, así que toda importación relativa termina en `.ts`, y `erasableSyntaxOnly` prohíbe
 `enum`, `namespace` y las propiedades de parámetro (TS1294).
 `apps/circuit` declara drizzle-orm 0.45.4 y pg 8.23.1 (ADR-0010 D18), comprobadas en el
-registro el 2026-11-26, las mismas que `apps/crm`; desde F2.3a también fastify 5.12.8 y zod 4.6.7.
+registro el 2026-11-26, las mismas que `apps/crm`; desde F2.3a también fastify 5.12.8 y zod 4.6.7,
+y desde F3.2 `@anthropic-ai/sdk` 1.14.0 (verificada el 2026-11-27; solo en `model`).
 `apps/board` (ADR-0011 B12), verificadas el 2026-11-26: react y react-dom 19.3.1, @types/react
 19.3.3, @types/react-dom 19.3.0, @fontsource/ibm-plex-sans y @fontsource/jetbrains-mono 5.3.0, y
 vite 8.3.8 (la que trae Vitest; no la 8.4.0), sin `@vitejs/plugin-react`.
@@ -873,6 +878,7 @@ rojo en la batería y restaurado por hash:
 
 ```powershell
 npx vitest run --project '@circuit/circuit' simulator-contract   # K1–K6: la batería de contrato del modelo, con el simulador (15 pruebas)
+npx vitest run --project '@circuit/circuit' anthropic-model      # F3.2: el adaptador sobre el transporte falso, sin red (13 pruebas; Y1–Y7 en rojo)
 ```
 
 ## 10. Dónde está todo lo demás

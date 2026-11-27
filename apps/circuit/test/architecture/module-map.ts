@@ -23,7 +23,8 @@ export const MODULE_RULES: Readonly<Record<ModuleName, ModuleRule>> = {
   circuit: { modules: [], packages: [] },
   // Implements the core's model port: the simulator, and in F3 the Anthropic adapter.
   // node:crypto: the simulator looks replies up by the SHA-256 of the request (ADR-0010 D12).
-  model: { modules: ['circuit'], packages: ['node:crypto'] },
+  // @anthropic-ai/sdk: the adapter (ADR-0015), which PACKAGE_OWNERS keeps inside this module.
+  model: { modules: ['circuit'], packages: ['node:crypto', '@anthropic-ai/sdk'] },
   // Implements the core's CRM port over HTTP, with the agent's key (ADR-0003 M3).
   // node:fs and node:path: it reads the agent's key from CRM_AGENT_KEY_FILE at start-up (ADR-0012 A9).
   'crm-client': { modules: ['circuit'], packages: ['node:fs', 'node:path'] },
