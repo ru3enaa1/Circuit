@@ -5,3 +5,4 @@
 database/examples/** text eol=lf
 **/golden/** text eol=lf
 guards/hooks/* text eol=lf
+*.gif binary

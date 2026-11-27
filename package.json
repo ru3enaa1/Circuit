@@ -26,7 +26,8 @@
     "circuit:start": "node --env-file-if-exists=.env apps/circuit/src/main.ts",
     "board:build": "npm run build -w @circuit/board",
     "board:favicon": "vitest run favicon --project @circuit/board --update=all",
-    "board:shots": "npm run board:build && node apps/circuit/test/shots/board-shots.ts"
+    "board:shots": "npm run board:build && node apps/circuit/test/shots/board-shots.ts",
+    "board:gif": "npm run board:build && node apps/circuit/test/shots/board-gif.ts"
   },
   "devDependencies": {
     "@types/node": "24.19.2",
@@ -34,7 +35,9 @@
     "@vitest/coverage-v8": "5.1.1",
     "drizzle-kit": "0.31.11",
     "drizzle-orm": "0.45.4",
+    "gifenc": "1.0.3",
     "pg": "8.23.1",
+    "pngjs": "7.0.0",
     "typescript": "7.0.2",
     "vitest": "5.1.1"
   },

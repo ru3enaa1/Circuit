@@ -279,6 +279,10 @@ animación de CSS de `apps/board/src/motion.css` (de 160 a 320 ms, dentro del pa
 ruta se dibuja desde la estación que deja; sin estado ni temporizadores nuevos. `motion.test.ts`
 revisa cada par de cuadros de los casos dorados; T1–T7 en rojo. Revisado con cuadros en tiempo real
 (protocolo de DevTools), porque `board:shots` corre con tiempo virtual (§8).
+**El GIF del README, hecho el 2026-11-27, sin empujar (ADR-0017):** `npm run board:gif` graba en
+tiempo real el caso dorado `normal` y escribe `docs/media/circuito.gif` (1280 × 720, hasta 5 MB,
+vigilado por `readme-gif.test.ts`), con `gifenc` y `pngjs` como dependencias de desarrollo. Sigue
+el README nuevo, con el GIF en su portada.
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -377,6 +381,8 @@ tipos, así que toda importación relativa termina en `.ts`, y `erasableSyntaxOn
 `apps/circuit` declara drizzle-orm 0.45.4 y pg 8.23.1 (ADR-0010 D18), comprobadas en el
 registro el 2026-11-26, las mismas que `apps/crm`; desde F2.3a también fastify 5.12.8 y zod 4.6.7,
 y desde F3.2 `@anthropic-ai/sdk` 1.14.0 (verificada el 2026-11-27; solo en `model`).
+En la raíz, desde F6 (ADR-0017), `gifenc` 1.0.3 y `pngjs` 7.0.0, verificadas el 2026-11-27, sin
+dependencias ni tipos propios: solo las usa `apps/circuit/test/shots/board-gif.ts`.
 `apps/board` (ADR-0011 B12), verificadas el 2026-11-26: react y react-dom 19.3.1, @types/react
 19.3.3, @types/react-dom 19.3.0, @fontsource/ibm-plex-sans y @fontsource/jetbrains-mono 5.3.0, y
 vite 8.3.8 (la que trae Vitest; no la 8.4.0), sin `@vitejs/plugin-react`.
@@ -912,6 +918,14 @@ y restaurado por hash:
 
 ```powershell
 npx vitest run --project '@circuit/board' motion source-rules   # cada cuadro del revelado entra con motion.css; duraciones de 160 a 320 ms
+```
+
+Verificados el 2026-11-27 en PowerShell (el GIF de F6, ADR-0017), con un tope de 1 MB plantado en
+rojo y restaurado por hash:
+
+```powershell
+npm run board:gif                                         # docs/media/circuito.gif y sus cuadros en .shots/gif/; leer los PNG antes del commit
+npx vitest run --project '@circuit/circuit' readme-gif   # el formato, 1280 × 720 y hasta 5 MB
 ```
 
 ## 10. Dónde está todo lo demás

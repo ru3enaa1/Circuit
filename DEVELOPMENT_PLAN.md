@@ -347,7 +347,8 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   cifras que no salen de corridas grabadas (sin fuente, no hay número).
 - **Estado:** abierta el 2026-11-27 en `feat/f6-demostracion`, que sale de `main` (`cf1384a`).
   Primero R11 (las transiciones del tablero), antes del GIF: **hecha el 2026-11-27** (ADR-0016,
-  `motion.css`), sin empujar.
+  `motion.css`), sin empujar. El GIF, hecho ese día (ADR-0017, `npm run board:gif`,
+  `docs/media/circuito.gif`); sigue el README nuevo.
 
 ### Segunda ronda (después del hito)
 

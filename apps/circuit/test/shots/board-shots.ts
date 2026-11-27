@@ -60,7 +60,7 @@ const SETS: Readonly<Record<string, { readonly cases: readonly GoldenCase[]; rea
   'sala-persona': { cases: ['normal'], keep: 5, hash: '#/estacion/person' },
 };
 
-function chrome(): string {
+export function chrome(): string {
   const found = CHROME_CANDIDATES.find((path) => path !== undefined && existsSync(path));
   if (found === undefined) throw new Error('No se encontró Chrome: pon su ruta en CHROME_PATH.');
   return found;
@@ -78,14 +78,13 @@ async function storeOf(cases: readonly GoldenCase[], keep: number | undefined): 
   return store;
 }
 
-async function shoot(set: string, browser: string, profile: string): Promise<void> {
-  const spec = SETS[set];
-  if (spec === undefined) throw new Error(`No hay un juego «${set}». Hay: ${Object.keys(SETS).join(', ')}.`);
+/** The board served from memory with the stored events of the cases (also for board-gif.ts). */
+export async function startBoard(cases: readonly GoldenCase[], keep?: number): Promise<{ readonly port: number; close(): Promise<void> }> {
   const scenario = loadScenario(SCENARIOS_DIR, GOLDEN_SCENARIO);
   const samples = loadTryouts(SCENARIOS_DIR, GOLDEN_SCENARIO).samples;
   const circuit = circuitPayload({ definition: CIRCUIT, scenario: scenario.id, model: SIMULATOR_NAME, lowConfidenceBelow: LOW_CONFIDENCE_BELOW, documents: scenario.documents, samples, mentor: TEST_MENTOR });
   let port = 0;
-  const store = await storeOf(spec.cases, spec.keep);
+  const store = await storeOf(cases, keep);
   const app = buildServer({
     reader: new MemoryRunReader(store),
     // The captures never click; the commands are there so the board draws its buttons.
@@ -98,6 +97,13 @@ async function shoot(set: string, browser: string, profile: string): Promise<voi
   });
   await app.listen({ host: '127.0.0.1', port: 0 });
   port = (app.server.address() as AddressInfo).port;
+  return { port, close: () => app.close() };
+}
+
+async function shoot(set: string, browser: string, profile: string): Promise<void> {
+  const spec = SETS[set];
+  if (spec === undefined) throw new Error(`No hay un juego «${set}». Hay: ${Object.keys(SETS).join(', ')}.`);
+  const { port, close } = await startBoard(spec.cases, spec.keep);
   try {
     for (const [width, height] of SIZES) {
       const file = join(SHOTS_DIR, `${set}-${width}x${height}.png`);
@@ -107,7 +113,7 @@ async function shoot(set: string, browser: string, profile: string): Promise<voi
       process.stdout.write(`${file}\n`);
     }
   } finally {
-    await app.close();
+    await close();
   }
 }
 
