@@ -328,7 +328,9 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   documentos delimitados y en caché; 1417 pruebas; Z1–Z8 en rojo. **F3.4 hecha:** las propuestas
   al CRM como herramientas `strict` que no se ejecutan, y `CIRCUIT_MODEL=anthropic` cableado,
   apagado. La batería corre con el adaptador sobre un transporte falso: **F3 cumple su
-  «terminado cuando»**; 1456 pruebas; W1–W14 en rojo. Falta integrarla a `main` (el dueño).
+  «terminado cuando»**; 1456 pruebas; W1–W14 en rojo. **F3 cerrada e integrada a `main` el
+  2026-11-27** con el sí del dueño (fast-forward de `71d0fcf` a `cf1384a`, sin commit de merge; CI en
+  verde en la rama, corrida 46056206780, y en `main`, 46056514020).
 
 ### F6 · Demostración
 
@@ -343,7 +345,8 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   la imagen.
 - **Trampas:** Docker en Windows y puertos ocupados; un GIF pesado que GitHub no muestra;
   cifras que no salen de corridas grabadas (sin fuente, no hay número).
-- **Estado:** pendiente.
+- **Estado:** abierta el 2026-11-27 en `feat/f6-demostracion`, que sale de `main` (`cf1384a`).
+  Primero R11 (las transiciones del tablero), antes del GIF.
 
 ### Segunda ronda (después del hito)
 

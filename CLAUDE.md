@@ -269,7 +269,11 @@ los textos en `modules/model/prompts.ts`; 1417 pruebas; Z1–Z8 en rojo. **F3.4 
 `CIRCUIT_MODEL=anthropic` con `ANTHROPIC_API_KEY`, apagado (`modelFor` de `main.ts`); la batería
 corre con el adaptador sobre un transporte falso (`test/support/simulated-anthropic.ts`). **F3
 cumple su «terminado cuando»**: 1456 pruebas (una solo en Linux), cobertura 93,74 / 87,07 / 93,91 /
-95,83; W1–W14 en rojo. Falta el push y la integración a `main` (el dueño). Después: R11.
+95,83; W1–W14 en rojo. **F3 cerrada e integrada a `main` el 2026-11-27** con el sí del dueño
+(fast-forward de `71d0fcf` a `cf1384a`, sin commit de merge; CI en verde en la rama, corrida
+46056206780, y en `main`, 46056514020). **F6 · Demostración abierta ese día en
+`feat/f6-demostracion`**, que sale de `main` (`cf1384a`); su primer paso es R11 (transiciones del
+tablero), antes del GIF. El README aún dice «fase F1» en su portada: F6 lo rehace.
 
 ## 3. Reglas de producto que gobiernan el código
 
