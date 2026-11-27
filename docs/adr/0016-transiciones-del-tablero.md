@@ -5,6 +5,9 @@
 - **Tarea:** R11 de `DEVELOPMENT_PLAN.md`, primer paso de F6.
 - **Depende de:** ADR-0011 (B1, B2: el estado y los temporizadores, solo en `use-run-events.ts`),
   ADR-0013 (E6: el corte de «reducir movimiento»), `docs/diseno.md` §8 y §14.
+- **Enmendada por:** ADR-0018, aceptada el 2026-11-27. Los tiempos de `motion.css` pasan a tres
+  tiempos por paso (salir, viajar, llegar), con un pulso por la ruta punteada; el equipo entra por
+  turnos con un saltito, y una figura que cambia de lugar entra de nuevo donde aterriza (punto 7).
 
 ## Contexto
 

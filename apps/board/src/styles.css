@@ -110,6 +110,17 @@ body,
   stroke-dasharray: 6 6;
 }
 
+/* The request on its way (ADR-0018): one short dash with round caps, a capsule, on a path measured in
+   one (a twentieth of the tube, then a gap longer than the path); motion.css moves it once along the
+   tube. Thinner than the tube's core. */
+.edge__pulse {
+  fill: none;
+  stroke: var(--yellow);
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-dasharray: 0.05 2;
+}
+
 .orbit.is-closed .edge__route {
   stroke-opacity: 0.6;
 }

@@ -281,8 +281,14 @@ revisa cada par de cuadros de los casos dorados; T1–T7 en rojo. Revisado con c
 (protocolo de DevTools), porque `board:shots` corre con tiempo virtual (§8).
 **El GIF del README, hecho el 2026-11-27, sin empujar (ADR-0017):** `npm run board:gif` graba en
 tiempo real el caso dorado `normal` y escribe `docs/media/circuito.gif` (1280 × 720, hasta 5 MB,
-vigilado por `readme-gif.test.ts`), con `gifenc` y `pngjs` como dependencias de desarrollo. Sigue
-el README nuevo, con el GIF en su portada.
+vigilado por `readme-gif.test.ts`), con `gifenc` y `pngjs` como dependencias de desarrollo.
+**La coreografía del paso, hecha el 2026-11-27, sin empujar (ADR-0018, enmienda ADR-0016):** el
+dueño seguía viendo diapositivas. Cada revelado es un movimiento de la solicitud en tres tiempos
+dentro de los 700 ms: la estación hecha florece (relleno con clave por estado), un pulso
+(`edge__pulse`) cruza la ruta punteada y la siguiente se enciende al llegar, con el anillo; el equipo
+entra por turnos con un saltito (`crew__body`) y una figura que cambia de lugar entra de nuevo allí
+(`figureKey`). `choreography.test.ts`; U1–U8 en rojo. El GIF, regrabado (4,2 MB). Sigue el README
+nuevo, con el GIF en su portada.
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -353,7 +359,8 @@ el CRM aparte).
   rótulo y telemetría, y sus `obstacles`) e `src/icons.ts`. El equipo: `src/crew-poses.ts` (las
   poses de B7), `src/crew.ts` (semilla del id) y `components/Crew.tsx`; los paneles de la
   ultraancha: `src/side-panels.ts` y `components/SidePanels.tsx`. Todo puro: lee la escena, no
-  guarda nada. El movimiento entre eventos (ADR-0016) es solo CSS, en `src/motion.css`.
+  guarda nada. El movimiento entre eventos (ADR-0016, con los tres tiempos de
+  ADR-0018: salir, viajar, llegar) es solo CSS, en `src/motion.css`.
 
 Lo impone `apps/circuit/test/architecture/`: el mapa de dependencias (`module-map.ts`) y una
 prueba que revisa `src/` y `test/` contra él. Para agregar una dependencia hay que cambiar
@@ -926,6 +933,13 @@ rojo y restaurado por hash:
 ```powershell
 npm run board:gif                                         # docs/media/circuito.gif y sus cuadros en .shots/gif/; leer los PNG antes del commit
 npx vitest run --project '@circuit/circuit' readme-gif   # el formato, 1280 × 720 y hasta 5 MB
+```
+
+Verificados el 2026-11-27 en PowerShell (la coreografía, ADR-0018), con U1–U8, cada uno en rojo en
+su prueba y restaurado por hash, y el movimiento mirado en los cuadros de `board:gif`:
+
+```powershell
+npx vitest run --project '@circuit/board' choreography motion   # el pulso, los tres tiempos, los turnos del equipo y las claves
 ```
 
 ## 10. Dónde está todo lo demás

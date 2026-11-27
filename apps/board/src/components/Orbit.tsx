@@ -60,6 +60,8 @@ function Tube({ from, to, layout, taken, waiting }: { readonly from: Point; read
       <path className="edge__core" d={d} strokeWidth={round(width - 2 * RAIL_WIDTH)} />
       {/* The solid route is measured in one unit, so motion.css draws it from the station left (ADR-0016). */}
       {taken ? <path className={waiting ? 'edge__route is-now' : 'edge__route'} d={d} pathLength={waiting ? undefined : 1} /> : null}
+      {/* The request on its way to the station that waits: a pulse that crosses the tube once, when that event mounts it (ADR-0018). */}
+      {taken && waiting ? <path className="edge__pulse" d={d} pathLength={1} /> : null}
     </>
   );
 }

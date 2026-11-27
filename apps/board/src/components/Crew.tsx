@@ -4,8 +4,8 @@ import { POSE_BOX, type Accent, type Joint, type Pose } from '../crew-poses.ts';
 /**
  * The crew on the tubes (docs/diseno.md §11): each figure as B7 draws it, a short flat shadow,
  * limbs of line, joints of dot and a head of ball, with its props in the palette's colors.
- * Decoration: hidden from assistive technology, and it never walks: a figure only fades in when
- * the run changes its poses (motion.css, ADR-0016).
+ * Decoration: hidden from assistive technology, and it never walks: a figure enters by turns with
+ * a small hop when the run changes its poses or its spot (motion.css, ADR-0016 and ADR-0018).
  */
 
 const COLORS: Readonly<Record<Accent, string>> = {
@@ -44,23 +44,31 @@ function Figure({ figure }: { readonly figure: CrewFigure }) {
   const round = (value: number) => Math.round(value * 100) / 100;
   return (
     <g className="crew__figure" data-pose={pose.id} transform={`translate(${round(figure.x)} ${round(figure.y)}) scale(${round(figure.scale)})`}>
-      {/* A sitting figure casts no shadow on the floor: it sits on the tube. */}
-      {pose.seat === undefined ? <ellipse className="crew__shadow" cx={shadowX} cy={POSE_BOX.feet + 3} rx={Math.abs(right[0] - left[0]) / 2 + SHADOW_EXTRA} ry={SHADOW_HEIGHT} /> : null}
-      <path className="crew__limbs" d={limbs(pose)} />
-      <path className="crew__joints" d={joints(pose)} />
-      {pose.props.map((prop, index) => (
-        <path
-          key={`${pose.id}-${index}`}
-          d={prop.d}
-          fill={prop.fill === null ? 'none' : COLORS[accentOf(prop.fill, figure.pinkAsYellow)]}
-          stroke={prop.stroke === null ? 'none' : COLORS[accentOf(prop.stroke, figure.pinkAsYellow)]}
-          strokeWidth={prop.width === 0 ? undefined : prop.width}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      ))}
+      {/* The body takes the entrance's transform: the figure's own place stays in its attribute (ADR-0018). */}
+      <g className="crew__body">
+        {/* A sitting figure casts no shadow on the floor: it sits on the tube. */}
+        {pose.seat === undefined ? <ellipse className="crew__shadow" cx={shadowX} cy={POSE_BOX.feet + 3} rx={Math.abs(right[0] - left[0]) / 2 + SHADOW_EXTRA} ry={SHADOW_HEIGHT} /> : null}
+        <path className="crew__limbs" d={limbs(pose)} />
+        <path className="crew__joints" d={joints(pose)} />
+        {pose.props.map((prop, index) => (
+          <path
+            key={`${pose.id}-${index}`}
+            d={prop.d}
+            fill={prop.fill === null ? 'none' : COLORS[accentOf(prop.fill, figure.pinkAsYellow)]}
+            stroke={prop.stroke === null ? 'none' : COLORS[accentOf(prop.stroke, figure.pinkAsYellow)]}
+            strokeWidth={prop.width === 0 ? undefined : prop.width}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        ))}
+      </g>
     </g>
   );
+}
+
+/** A figure is the same one only on the same spot: one that moves enters again where it lands, never jumps (ADR-0018). */
+export function figureKey(figure: CrewFigure): string {
+  return `${figure.pose.id}@${Math.round(figure.x)},${Math.round(figure.y)}`;
 }
 
 export function Crew({ figures }: { readonly figures: readonly CrewFigure[] }) {
@@ -68,7 +76,7 @@ export function Crew({ figures }: { readonly figures: readonly CrewFigure[] }) {
   return (
     <g className="crew" aria-hidden="true">
       {figures.map((figure) => (
-        <Figure key={figure.pose.id} figure={figure} />
+        <Figure key={figureKey(figure)} figure={figure} />
       ))}
     </g>
   );

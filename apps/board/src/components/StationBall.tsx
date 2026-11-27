@@ -120,7 +120,8 @@ export function StationBall({ station, r, base, armAngles, threshold, selected =
       {station.id === 'classification' ? <ConfidenceArc station={station} r={r + CONFIDENCE_GAP} threshold={threshold} /> : null}
       {filled ? (
         <>
-          <path className="station__fill" d={shape} />
+          {/* Keyed by the state: a station that completes mounts its fill anew, so its arms bloom out (ADR-0018). */}
+          <path key={station.status} className="station__fill" d={shape} />
           {arms.length === 0 ? null : <path className="station__dots" d={arms.map((arm) => circlePath(arm.center, arm.r * DOT_SCALE)).join('')} />}
         </>
       ) : (
