@@ -309,6 +309,75 @@
   line-clamp: 3;
 }
 
+/* The side panels of an ultrawide window (§9, ADR-0014 G5): quiet columns of data beside Persona. */
+.side-panel {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 18px;
+  overflow: hidden;
+  background: var(--bg);
+  border: 1px solid rgba(243, 241, 236, 0.14);
+  border-radius: 18px;
+}
+
+.side-panel section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.side-panel h3 {
+  margin: 0;
+  color: var(--label);
+  font: 10.5px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.side-panel p,
+.side-panel ul {
+  margin: 0;
+}
+
+.side-panel ul {
+  padding: 0;
+  color: var(--text-2);
+  font: 13px / 1.4 var(--sans);
+  list-style: none;
+}
+
+.side-panel__document {
+  color: var(--bone);
+  font: 500 13px var(--sans);
+}
+
+.side-panel__quote {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--text-2);
+  font: 13px / 1.45 var(--sans);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+}
+
+.side-panel__confidence {
+  flex-direction: row !important;
+  gap: 14px !important;
+  align-items: center;
+}
+
+.side-panel__value {
+  font: 500 26px var(--mono);
+}
+
+.side-panel__totals {
+  color: var(--bone);
+  font: 13px var(--mono);
+}
+
 /* The CRM's tools, small, on the bottom left. */
 .tools {
   position: absolute;

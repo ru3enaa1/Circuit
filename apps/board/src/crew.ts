@@ -147,7 +147,8 @@ function orderFor(pose: Pose, spots: readonly Spot[]): Spot[] {
   return [...spots.filter((spot) => spot.ends.includes(pose.near ?? '')), ...spots.filter((spot) => !spot.ends.includes(pose.near ?? ''))];
 }
 
-export function crewFor(runId: number | null, view: RunView, scene: Scene, layout: Layout): readonly CrewFigure[] {
+/** `avoid`: what else the page draws over the orbit (the side panels), which no figure may cover. */
+export function crewFor(runId: number | null, view: RunView, scene: Scene, layout: Layout, avoid: readonly Box[] = []): readonly CrewFigure[] {
   const next = generator(seedOf(`circuit-crew-${runId ?? 'idle'}`));
   const count = MIN_FIGURES + Math.floor(next() * (MAX_FIGURES - MIN_FIGURES + 1));
   const poses = shuffled(
@@ -156,7 +157,7 @@ export function crewFor(runId: number | null, view: RunView, scene: Scene, layou
   );
   const spots = shuffled(spotsOf(scene, layout), next);
   const scale = (layout.radius * HEIGHT_SCALE) / POSE_HEIGHT;
-  const blocked = [...scene.obstacles, ...framesOf(layout)];
+  const blocked = [...scene.obstacles, ...framesOf(layout), ...avoid];
   const pinkStations = view.stations.filter(isPinkStation);
   const pinkPlaces = pinkStations.flatMap((station) => layout.places[station.id] ?? []);
   const crew: CrewFigure[] = [];

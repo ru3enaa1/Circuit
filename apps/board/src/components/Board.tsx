@@ -4,11 +4,13 @@ import { layoutFor } from '../layout.ts';
 import { idleView, projectRun } from '../projection.ts';
 import { CIRCUIT_ROUTE, resolveRoute, routeHash, type Route } from '../route.ts';
 import { sceneOf } from '../scene.ts';
+import { leftFacts, panelSlots, rightFacts } from '../side-panels.ts';
 import { RUN_TEXTS } from '../texts.ts';
 import { Crew } from './Crew.tsx';
 import { Orbit } from './Orbit.tsx';
 import { BrandLine, ClockPanel, Dock, RequestPanel, StopCard, ToolList, runState, type FeedStatus } from './Panels.tsx';
 import { Room, RoomHeader } from './Room.tsx';
+import { SidePanels } from './SidePanels.tsx';
 
 /**
  * The whole page as a function of what the feed holds (ADR-0011 B1): the table, the runs, the
@@ -47,14 +49,19 @@ export function Board(props: BoardProps) {
   const route = resolveRoute(props.route ?? CIRCUIT_ROUTE, view);
   const scene = sceneOf(view, layout, info);
   const state = runState(props.status, props.runId, view, props.events);
+  // The side panels of an ultrawide window (§9): only those with data are drawn, and the crew keeps off them.
+  const left = leftFacts(view, info);
+  const right = rightFacts(view, info, props.events);
+  const panels = panelSlots(layout, scene).filter((panel) => (panel.side === 'left' ? left : right) !== null);
   const className = ['board', layout.narrow ? 'is-narrow' : '', route.kind === 'circuit' ? '' : 'is-room'].filter((name) => name !== '').join(' ');
   return (
     <main className={className} data-finished={view.finished ? 'true' : 'false'} data-route={route.kind}>
       {route.kind === 'circuit' ? (
         <>
           <Orbit view={view} layout={layout} info={info} scene={scene} returningFrom={route.from}>
-            <Crew figures={crewFor(props.runId, view, scene, layout)} />
+            <Crew figures={crewFor(props.runId, view, scene, layout, panels)} />
           </Orbit>
+          <SidePanels panels={panels} left={left} right={right} />
           <StopCard view={view} scene={scene} layout={layout} events={props.events} />
           <RequestPanel info={info} runs={props.runs} runId={props.runId} events={props.events} onSelectRun={props.onSelectRun} />
         </>

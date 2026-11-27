@@ -112,6 +112,16 @@ export const ROOM_TEXTS = {
   ofTotal: serio('de'),
 } as const satisfies Record<string, CatalogText>;
 
+/** The two panels of an ultrawide window (§9, ADR-0014 G5). */
+export const PANEL_TEXTS = {
+  quote: serio('La cita'),
+  actions: serio('Acciones propuestas'),
+  confidence: serio('Confianza'),
+  classified: serio('Lo que clasificó'),
+  run: serio('Esta corrida'),
+  regions: serio('Datos de la corrida'),
+} as const satisfies Record<string, CatalogText>;
+
 /** The model's name, as the header shows it. An unknown one is shown as stored. */
 export const MODEL_NAMES: Readonly<Record<string, CatalogText>> = {
   simulator: serio('Simulador'),
@@ -209,6 +219,7 @@ export const CATALOG: readonly Readonly<Record<string, CatalogText>>[] = [
   FAILURE_REASONS,
   RUN_TEXTS,
   ROOM_TEXTS,
+  PANEL_TEXTS,
   MODEL_NAMES,
   NODE_TEXTS,
   NODE_LABELS,
