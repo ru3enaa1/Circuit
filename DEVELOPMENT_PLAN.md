@@ -337,7 +337,8 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
 - **Lo desbloquea:** F3 integrada.
 - **Entrega:** `docker compose up` levanta todo en local, sin llave; un README cuya primera
   pantalla es un GIF del circuito, una línea y el comando para correrlo; un video de 90
-  segundos; una página del caso que dice que las medidas son del simulador (sin corridas reales, ADR-0015 A1); el mensaje corto
+  segundos (el dueño lo cambió el 2026-11-27 por `docs/recorrido.md`, diez cuadros del tablero con su
+  descripción); una página del caso que dice que las medidas son del simulador (sin corridas reales, ADR-0015 A1); el mensaje corto
   de la aplicación.
 - **Terminado cuando:** en una máquina limpia, clonar y un comando recorren el circuito sin
   llave; una persona ajena entiende qué es viendo solo el GIF y las tres líneas.
@@ -363,7 +364,10 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   video de 90 s lo graba el dueño con su voz, sobre la app real (Claude, §1b: sin ffmpeg, y una voz
   generada pasaría por la del autor); el guion está en `docs/privado/video-guion.md`. **Integrada a
   `main` el 2026-11-27** con el sí del dueño (fast-forward de `cf1384a` a `0daa95c`; CI en verde en la
-  rama, 46083471484, y en `main`, 46083696457). Falta el video (el dueño).
+  rama, 46083471484, y en `main`, 46083696457). **En lugar del video** (el dueño, 2026-11-27):
+  `docs/recorrido.md`, el guion del video en diez cuadros del tablero real con su descripción, tomados
+  en tiempo real por `npm run board:storyboard` (`docs/media/recorrido/`, vigilados por
+  `storyboard.test.ts`). Con eso, **F6 hecha**; se cierra al integrarla a `main`.
 
 ### Segunda ronda (después del hito)
 

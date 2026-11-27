@@ -13,6 +13,9 @@ camino, la IA solo opina, y nada se escribe sin que una persona lo apruebe.**
 - 🧪 **Todo es inventado y local.** Una escuela de negocios ficticia, datos sintéticos y un
   simulador en lugar de la IA real. Lo levantas con un comando, sin llaves ni costos.
 
+¿Sin tiempo para correrlo? **[El recorrido, cuadro a cuadro](docs/recorrido.md)** lo cuenta en
+diez capturas del tablero, como un video de 90 segundos.
+
 ¿Prefieres la historia completa? En **[el caso](docs/caso.md)** está para qué sirve, cuatro
 mensajes con su recorrido y qué tanto se puede creer de cada cifra.
 
@@ -147,9 +150,10 @@ bash guards/check-forbidden-phrases.sh forbidden-phrases.txt README.md apps data
 ```sh
 npm run board:shots   # capturas del circuito y de cuatro salas en .shots/, con Chrome
 npm run board:gif     # vuelve a grabar docs/media/circuito.gif en tiempo real
+npm run board:storyboard   # vuelve a tomar los diez cuadros de docs/recorrido.md, en tiempo real
 ```
 
-Los dos sirven los casos dorados desde la memoria. Circuit responde solo a `127.0.0.1` y
+Los tres sirven los casos dorados desde la memoria. Circuit responde solo a `127.0.0.1` y
 `localhost`, nunca responde CORS y sirve solo los archivos de su compilación. Con «reducir
 movimiento» en el sistema, el tablero muestra cada corrida entera, sin animación.
 
@@ -190,6 +194,7 @@ tiene ninguna ruta de llaves.
 | Archivo | Qué guarda |
 |---|---|
 | [docs/caso.md](docs/caso.md) | El caso: para qué sirve, cuatro recorridos y sus medidas |
+| [docs/recorrido.md](docs/recorrido.md) | El recorrido en diez cuadros, en lugar del video |
 | [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) | Las fases, su estado y las recomendaciones abiertas |
 | [docs/adr/](docs/adr/) | Las decisiones de arquitectura, con sus razones |
 | [docs/reviews/](docs/reviews/) | Las líneas base y las auditorías de esas decisiones |

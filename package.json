@@ -27,7 +27,8 @@
     "board:build": "npm run build -w @circuit/board",
     "board:favicon": "vitest run favicon --project @circuit/board --update=all",
     "board:shots": "npm run board:build && node apps/circuit/test/shots/board-shots.ts",
-    "board:gif": "npm run board:build && node apps/circuit/test/shots/board-gif.ts"
+    "board:gif": "npm run board:build && node apps/circuit/test/shots/board-gif.ts",
+    "board:storyboard": "npm run board:build && node apps/circuit/test/shots/board-storyboard.ts"
   },
   "devDependencies": {
     "@types/node": "24.19.2",

@@ -45,7 +45,8 @@ type Send = (method: string, params?: Record<string, unknown>) => Promise<unknow
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function devtoolsPage(profile: string): Promise<WebSocket> {
+/** The page of a Chrome started with `--remote-debugging-port=0` (also for board-storyboard.ts). */
+export async function devtoolsPage(profile: string): Promise<WebSocket> {
   const portFile = join(profile, 'DevToolsActivePort');
   for (let waited = 0; !existsSync(portFile); waited += 100) {
     if (waited > CHROME_START_MS) throw new Error('Chrome no abrió su puerto de depuración.');

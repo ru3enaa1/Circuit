@@ -318,7 +318,11 @@ página del caso, con cada cifra y su fuente) y el README rehecho como presentac
 mensaje corto y el guion del video, en `docs/privado/` (local). Falta el video de 90 s, que graba el
 dueño con su voz (guion en `docs/privado/video-guion.md`). **F6 integrada a `main` el 2026-11-27**
 con el sí del dueño (fast-forward de `cf1384a` a `0daa95c`, sin commit de merge; CI en verde en la
-rama, corrida 46083471484, y en `main`, 46083696457). F6 sigue abierta en la misma rama por el video.
+rama, corrida 46083471484, y en `main`, 46083696457). **El video, cambiado por el dueño el 2026-11-27
+por `docs/recorrido.md`:** el guion en diez cuadros del tablero real, cada uno con su descripción,
+tomados en tiempo real con `npm run board:storyboard` (`apps/circuit/test/shots/board-storyboard.ts`)
+en `docs/media/recorrido/`, y vigilados por `storyboard.test.ts`. 1563 pruebas (una solo en Linux), la misma cobertura. Con eso, F6
+hecha, sin empujar.
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -973,6 +977,8 @@ rojo y restaurado por hash:
 
 ```powershell
 npm run board:gif                                         # docs/media/circuito.gif y sus cuadros en .shots/gif/; leer los PNG antes del commit
+npm run board:storyboard                                  # los diez cuadros de docs/recorrido.md en docs/media/recorrido/; mirarlos antes del commit
+npx vitest run --project '@circuit/circuit' storyboard   # cada cuadro, un PNG de 1280 × 720, y la página los muestra todos, en orden
 npx vitest run --project '@circuit/circuit' readme-gif   # el formato, 1280 × 720 y hasta 5 MB
 ```
 
