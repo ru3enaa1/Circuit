@@ -350,7 +350,8 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   `motion.css`), sin empujar. El GIF, hecho ese día (ADR-0017, `npm run board:gif`,
   `docs/media/circuito.gif`). El dueño seguía viendo diapositivas: la coreografía del paso, hecha
   ese día (ADR-0018: salir, viajar con un pulso por el tubo, llegar; el equipo entra por turnos),
-  con el GIF regrabado. Sigue el README nuevo.
+  con el GIF regrabado. El README nuevo, hecho ese día, con el GIF en su portada. Sigue
+  `docker compose up` que levante todo sin llave.
 
 ### Segunda ronda (después del hito)
 

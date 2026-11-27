@@ -1,70 +1,42 @@
 # Circuit
 
-Pieza de portafolio en construcción. La meta: un agente de texto que atiende solicitudes
-entrantes y trabaja dentro de un CRM, con un tablero donde cada solicitud recorre siete
-estaciones y una persona aprueba lo que el modelo no debe decidir.
+![Una solicitud recorre las siete estaciones del circuito: se tachan sus datos personales, se clasifica, se responde con una fuente, se proponen acciones en el CRM, una persona las aprueba y se cierra.](docs/media/circuito.gif)
 
-**Estado: fase F1, el CRM simulado.** Existen su esquema de base de datos, su API de
-lectura y de escritura, que corre en local, el comando que emite y revoca sus llaves, la
-semilla con los datos sintéticos del escenario y el respaldo de la base; todavía no hay
-agente ni tablero. Lo que sigue está en el [plan de desarrollo](DEVELOPMENT_PLAN.md).
+**Un agente de texto que atiende solicitudes y trabaja dentro de un CRM: el código decide el
+camino, el modelo solo opina, y nada se escribe sin que una persona lo apruebe.**
 
-## Qué hay hoy
+- Cada solicitud recorre siete estaciones (entrada, filtro, clasificación, conocimiento, CRM,
+  persona y cierre), y el tablero las dibuja solo con lo que de verdad quedó guardado.
+- El modelo trabaja en tres de ellas y nunca elige la siguiente; responde citando un documento,
+  y lo que propone para el CRM espera a una persona.
+- Es una demostración local, con una escuela y unos datos inventados. Responde un simulador, así
+  que el tablero no muestra tokens ni costos: no habría de dónde sacarlos.
 
-- Un monorepo TypeScript con npm workspaces: `apps/circuit`, el motor del circuito y su
-  servidor; `apps/crm`, con el esquema y el servidor del CRM; y `apps/board`, el tablero.
-- El esquema del CRM, donde la base impone las reglas aunque la API se equivoque: cada
-  cuenta ve solo sus filas (seguridad por filas), el rol del servicio no puede borrar, cada
-  escritura deja una fila de bitácora con quién la propuso y quién la aprobó, y las llaves
-  se guardan solo como SHA-256 ([ADR-0005](docs/adr/0005-esquema-crm.md)). El esquema
-  completo se lee en [database/schema.sql](database/schema.sql), generado desde una base
-  migrada.
-- La API de lectura del CRM ([ADR-0006](docs/adr/0006-api-lectura-crm.md)): siete rutas
-  que solo leen, en `127.0.0.1`. Cada petición pide una llave (`Authorization: Bearer`), la
-  cuenta de la ruta tiene que ser la de la llave (si no, 403 con el motivo), y cada lectura
-  corre en una transacción de solo lectura con un usuario de base de permiso mínimo y sin
-  atributos de administrador (`crm_app`). El registro guarda método, ruta, estado y duración, y nada personal.
-- La API de escritura del CRM ([ADR-0007](docs/adr/0007-api-escritura-crm.md)): crear y
-  actualizar un contacto (también moverlo de etapa), anotar, crear una tarea, archivar y
-  leer la bitácora. Cada escritura lleva la aprobación de una persona; el CRM firma como
-  proponente la llave que la manda, y la base deja la fila de bitácora en la misma
-  transacción. Archivar pide el permiso de borrado, que la llave del agente no tiene: 403
-  con el motivo. No hay ninguna ruta que borre.
-- Las llaves del CRM ([ADR-0008](docs/adr/0008-llaves-crm.md)): cada una es `crmk_` y 256
-  bits al azar, se muestra una sola vez y la base guarda solo su SHA-256. Las emite, lista y
-  revoca un comando local que corre como administrador (`npm run db:keys`); la API no tiene
-  ninguna ruta de llaves. Una llave con otra forma recibe 401 sin llegar a la base. Exportar
-  los contactos de una cuenta pide el permiso `export`: la llave del agente (leer y escribir)
-  recibe 403 al exportar, al archivar y en otra cuenta, y una prueba lo comprueba con una
-  llave emitida por el comando real.
-- El escenario, un paquete de datos que se cambia sin tocar el código
-  ([ADR-0009](docs/adr/0009-respaldo-y-semilla.md)): `scenarios/escuela/crm.json`, una
-  escuela de negocios inventada, Escuela Andamio, con sus seis etapas, cinco empresas
-  inventadas con una facturación marcada como ficticia, sus contactos, notas y tareas, y una
-  segunda cuenta para que el aislamiento se vea. Todo es sintético: los correos están bajo
-  `.test`, un dominio reservado que no entrega correo. `npm run db:seed` lo carga una vez por
-  cuenta y deja la llave del agente en un archivo que git ignora.
-- El respaldo de la base (`npm run db:backup`) y su restauración en una base nueva
-  (`npm run db:restore`), con el SHA-256 comprobado y una prueba que restaura y compara.
-- Una prueba de arquitectura: el núcleo no importa ningún otro módulo ni el SDK de
-  Anthropic, y cada módulo se usa solo por su `index.ts`
-  ([ADR-0001](docs/adr/0001-codigo-ordena-el-circuito.md),
-  [ADR-0003](docs/adr/0003-monolito-modular.md)).
-- PostgreSQL 18.7 en Docker Compose, publicado solo en `127.0.0.1`, con las migraciones
-  probadas contra bases desechables.
-- Guardas de secretos (reconocen también la forma de una llave del CRM), de frases
-  prohibidas y de finales de línea, y GitHub Actions con los
-  mismos comandos que en local, cobertura mínima de 80 incluida
-  ([ADR-0004](docs/adr/0004-ci-guardas-y-cobertura.md)).
+## Qué se ve en el GIF
 
-## Requisitos
+Una persona escribe a una escuela de negocios inventada (Escuela Andamio) para preguntar qué
+programa le sirve, y de paso deja su correo, su celular y su cédula.
 
-- Node 24 y npm 11 (verificado con Node 24.20.0 y npm 11.19.0).
-- Docker con Compose, encendido (verificado con Docker 29.9.3).
-- Git. En Windows, las guardas corren en Git Bash y npm en PowerShell
-  ([CLAUDE.md](CLAUDE.md), sección 8).
+1. **Entrada** recibe el texto.
+2. **Filtro** tacha los datos personales antes de que nada los lea: el modelo ve `[correo]`,
+   `[teléfono]` y `[documento]`. Si el texto intentara darle órdenes al modelo, el circuito se
+   detendría aquí.
+3. **Clasificación** dice qué pide, de qué tema y con qué confianza. Una queja, algo fuera de
+   alcance o una confianza baja saltan directo a Persona.
+4. **Conocimiento** responde con el programa que le sirve y cita la frase del documento de donde
+   lo sacó. Sin fuente, no hay respuesta.
+5. **CRM** propone tres acciones: una nota, mover el contacto de etapa y una tarea. Solo las
+   propone.
+6. **Persona** (el mentor) las aprueba, las corrige o las rechaza. Aquí el circuito espera.
+7. **Cierre** escribe en el CRM lo aprobado, una vez, y cada escritura queda en la bitácora con
+   quién la propuso y quién la aprobó.
 
-## Correr las pruebas
+Cada estación se puede abrir con un clic para ver lo que guardó.
+
+## Verlo en tu equipo
+
+Hace falta Node 24 con npm 11, y Docker con Compose encendido (verificado con Node 24.20.0, npm
+11.19.0 y Docker 29.9.3). No hace falta ninguna llave de API.
 
 ```sh
 git clone https://github.com/ru3enaa1/Circuit.git
@@ -73,146 +45,72 @@ npm ci
 cp .env.example .env
 ```
 
-Abrir `.env` y poner una contraseña distinta en cada una de `POSTGRES_PASSWORD`,
-`CRM_DB_PASSWORD` y `CIRCUIT_DB_PASSWORD` (de 16 a 128 letras, dígitos, `-`, `_`, `.` o `~`;
-`.env.example` trae un comando para generarlas). Se guarda en UTF-8 sin BOM. Si otro
-PostgreSQL ya usa el puerto 5432, cambiar `DB_PORT`.
+Abrir `.env` y poner una contraseña distinta en `POSTGRES_PASSWORD`, `CRM_DB_PASSWORD` y
+`CIRCUIT_DB_PASSWORD` (de 16 a 128 letras, dígitos, `-`, `_`, `.` o `~`; `.env.example` trae un
+comando para generarlas), y guardarlo en UTF-8 sin BOM. Después:
 
 ```sh
-docker compose up -d --wait db
-npm run db:migrate
-npm run db:users
-npm run check
+docker compose up -d --wait db   # PostgreSQL, solo en 127.0.0.1
+npm run db:migrate               # las tablas
+npm run db:users                 # los usuarios de permiso mínimo del CRM y del circuito
+npm run db:seed                  # la escuela inventada y la llave del agente
+npm run board:build              # el tablero
+npm run crm:start                # el CRM en http://127.0.0.1:4010 (déjalo abierto)
+npm run circuit:start            # en otra terminal: el tablero en http://127.0.0.1:4020
 ```
 
-`npm run check` corre los tipos y las pruebas con cobertura: sale con 0 si todo pasa.
-`npm run db:users` crea el usuario `crm_app` con la contraseña de `CRM_DB_PASSWORD`, y
-`circuit_app` con la de `CIRCUIT_DB_PASSWORD`; sin alguna de las dos, sale con 1 y nombra la
-variable.
+En el tablero, **«Probar una solicitud»** (abajo a la derecha) elige una de las solicitudes de
+ejemplo y la manda al circuito. Hay una normal, una queja, una con confianza baja y una que intenta
+darle órdenes al modelo. Al llegar a Persona, un clic en ella abre la propuesta con sus tres
+botones: **Aprobar**, **Corregir** y **Rechazar**. En Windows, npm se corre en PowerShell.
 
-`npm run crm:start` levanta el CRM en `http://127.0.0.1:4010`: `/health` responde 200, y una
-ruta sin llave, 401. Las cuentas y la llave del agente llegan con la semilla (la sección
-siguiente). `docker compose stop db` detiene la base y conserva sus datos.
+## Cómo está hecho
 
-## El tablero
+Las razones de cada decisión están en [docs/adr/](docs/adr/), una por decisión.
+
+- **El código ordena el circuito.** El camino es una tabla fija; el modelo solo responde dentro de
+  las estaciones 3, 4 y 5, y su texto de entrada va delimitado como dato, nunca como instrucción
+  ([ADR-0001](docs/adr/0001-codigo-ordena-el-circuito.md),
+  [ADR-0010](docs/adr/0010-motor-y-eventos.md)).
+- **El tablero se dibuja con eventos guardados.** Cada estación deja un evento en PostgreSQL, y el
+  tablero es una función de esos eventos: los revela de a uno y anima el paso de una estación a
+  la siguiente, sin inventar nada en el camino
+  ([ADR-0011](docs/adr/0011-tablero-desde-eventos.md),
+  [ADR-0018](docs/adr/0018-coreografia-del-paso.md)).
+- **El CRM es otro proceso, y el permiso mínimo lo pone la base.** La llave del agente lee y
+  escribe, pero no borra, no exporta y no ve otra cuenta: lo rechazan la API y la base, con
+  seguridad por filas y un usuario sin atributos de administrador
+  ([ADR-0005](docs/adr/0005-esquema-crm.md), [ADR-0008](docs/adr/0008-llaves-crm.md)).
+- **Una persona aprueba.** Cierre solo escribe lo que la persona aprobó, en orden y una sola vez,
+  y la bitácora guarda quién propuso y quién aprobó cada escritura
+  ([ADR-0012](docs/adr/0012-aprobacion-y-cierre.md)).
+- **El modelo está detrás de una interfaz.** Hoy responde un simulador, que da siempre la misma
+  respuesta a la misma solicitud. Detrás de la misma interfaz está el adaptador de Anthropic, que
+  pasa la misma batería de pruebas, pero solo contra un transporte falso: esta demostración no
+  llama a la API ni muestra corridas reales
+  ([ADR-0015](docs/adr/0015-modelo-real-y-repeticion.md)). Encenderlo es configuración:
+  `CIRCUIT_MODEL=anthropic` y `ANTHROPIC_API_KEY` en `.env`.
+- **Datos sintéticos.** La escuela, las empresas y las personas son inventadas, y los correos
+  están bajo `.test`, un dominio que no entrega correo
+  ([ADR-0009](docs/adr/0009-respaldo-y-semilla.md)).
+- **Pruebas que muerden.** TypeScript estricto, Vitest con cobertura mínima de 80, casos dorados
+  del circuito, pruebas de arquitectura y de seguridad contra bases desechables, y cada regla
+  probada con un cambio que la rompe a propósito. GitHub Actions corre lo mismo que en local,
+  con guardas de secretos y de frases prohibidas
+  ([ADR-0004](docs/adr/0004-ci-guardas-y-cobertura.md)).
+
+Stack: TypeScript, Fastify, Drizzle, PostgreSQL 18, React, zod, Vitest, Docker Compose y GitHub
+Actions.
+
+## Referencia
+
+### Las pruebas
+
+Con la base levantada y `npm run db:users` hecho:
 
 ```sh
-npm run board:build    # compila apps/board en apps/board/dist
-npm run crm:start      # el CRM en http://127.0.0.1:4010 (en otra terminal)
-npm run circuit:start  # el tablero, su API y sus dos órdenes en http://127.0.0.1:4020; Ctrl+C lo detiene
-npm run board:shots    # capturas a 1536×864, 768×864, 720×900 y 2560×1080 en .shots/, con Chrome (el circuito y cuatro salas)
+npm run check   # tipos y pruebas con cobertura: 0 si todo pasa
 ```
-
-El tablero dibuja el circuito solo con los eventos guardados
-([ADR-0011](docs/adr/0011-tablero-desde-eventos.md)): cada estación toma el estado de su evento,
-y los eventos se revelan de a uno cada 700 ms. Circuit responde solo a `127.0.0.1` y
-`localhost` con su puerto, nunca responde CORS y sirve solo los archivos de su compilación.
-`board:shots` no necesita la base: usa los casos dorados en memoria.
-
-Un clic en una estación, o en su píldora del muelle, entra a su sala: la estación en grande, lo
-que guardó con el texto entero y sus salidas, con la tomada en amarillo. Desde CRM se entra a
-cada acción propuesta. El portal de la izquierda, la miga de pan o Esc vuelven de a un nivel.
-Lo que se mira vive en la dirección de la página (`#/estacion/crm`, `#/estacion/crm/accion/3`),
-así que «atrás» del navegador también vuelve, y entrar nunca cambia la corrida
-([ADR-0013](docs/adr/0013-entrar-a-una-estacion.md)).
-
-El dibujo sigue el boceto del autor: cada estación lleva sus nodos en brazos, los tubos tienen
-dos rieles y la ruta tomada va en amarillo por dentro. Sobre los tubos se paran de dos a cuatro
-figuras del equipo, siempre las mismas para la misma corrida; son decoración y nunca muestran un
-estado. En una ventana ultraancha, dos paneles a los lados de Persona muestran la cita, las
-acciones propuestas, la confianza y el tiempo de la corrida
-([ADR-0014](docs/adr/0014-logo-equipo-y-paneles.md)).
-
-**Aprobar.** «Probar una solicitud», abajo a la derecha, arranca una corrida con una de las
-solicitudes de ejemplo del escenario (`scenarios/<id>/samples.json`). El circuito la recorre
-hasta Persona y espera. Al entrar a Persona se ve la propuesta de CRM y sus tres salidas, que
-son los botones: **Aprobar**, **Corregir** (quitar o editar acciones) y **Rechazar**. Solo
-entonces Cierre escribe en el CRM, una petición por acción, en orden, una sola vez, y cada fila
-de la bitácora del CRM dice que la propuso la llave del agente y la aprobó el mentor, con
-`approvalRef = run-<id>` ([ADR-0012](docs/adr/0012-aprobacion-y-cierre.md)). El mentor es
-`CIRCUIT_MENTOR` (por defecto `mentor`): **no hay inicio de sesión**, porque la demostración es
-local y de una sola persona; cualquier programa de este equipo podría decidir, y eso no sirve
-para un despliegue. Circuit necesita en `.env` las líneas `CIRCUIT_SCENARIO` y
-`CRM_AGENT_KEY_FILE` de `.env.example`, y la llave que deja `npm run db:seed`.
-
-**El modelo.** Las estaciones 3, 4 y 5 las responde un simulador, que lee
-`scenarios/<id>/simulator.json` y da siempre la misma respuesta a la misma solicitud. Por eso
-sus tokens, costos y tiempos de modelo salen vacíos: no hay una fuente para esos números. Detrás
-de la misma interfaz está el adaptador de Anthropic (`claude-opus-5-5`,
-[ADR-0015](docs/adr/0015-modelo-real-y-repeticion.md)): clasifica con salida estructurada,
-responde citando un documento del escenario (el código revisa que la cita esté ahí, palabra por
-palabra) y propone las acciones del CRM como herramientas que nunca ejecuta. Pasa la misma
-batería de pruebas que el simulador, pero **solo contra un transporte falso**: esta
-demostración no llama a la API ni muestra corridas reales. Encenderlo es configuración:
-`CIRCUIT_MODEL=anthropic` y `ANTHROPIC_API_KEY` en `.env`, con el gasto de tokens que eso trae.
-
-## Datos de ejemplo: la semilla
-
-```sh
-npm run db:seed
-```
-
-Carga el escenario que nombra `CIRCUIT_SCENARIO` (`escuela`, la carpeta
-`scenarios/escuela/`) en la base de `POSTGRES_DB`, en una sola transacción: o entra todo o
-nada. Una `.env` copiada antes de que existiera la semilla no trae `CIRCUIT_SCENARIO` ni
-`CRM_AGENT_KEY_FILE`; sin ellas el comando sale con 1 y las nombra, y basta con copiar esas
-dos líneas de `.env.example`.
-
-- **Una vez por cuenta.** Una cuenta que no existe nace con todas sus filas; una que ya
-  existe se salta entera, así que correrlo otra vez no duplica nada ni deshace lo que se
-  escribió después. Cambiar los datos de una cuenta ya sembrada pide una base nueva.
-- **Reproducible.** Las fechas salen del paquete y los ids del orden de carga: en una base
-  nueva, el mismo paquete da las mismas filas.
-- **La llave del agente** (`read,write`, etiqueta `agente`) queda en el archivo de
-  `CRM_AGENT_KEY_FILE`, `.secrets/crm-agent-key`, que git ignora; nunca se imprime. Si el
-  archivo ya tiene la llave viva, no se toca; si falta o no sirve, se revoca la anterior y se
-  emite otra.
-
-```powershell
-npm run crm:start   # en otra terminal; Ctrl+C lo detiene
-$k = (Get-Content .secrets\crm-agent-key -Raw).Trim()
-Invoke-WebRequest -UseBasicParsing -Headers @{ Authorization = "Bearer $k" } http://127.0.0.1:4010/accounts/escuela-andamio/stages   # 200
-```
-
-## Respaldar y restaurar
-
-```sh
-npm run db:backup -- --label antes-de-migrar
-npm run db:restore -- --file database/backups/<carpeta>/circuit.dump --into <base nueva>
-```
-
-- `db:backup` vuelca la base de `POSTGRES_DB` dentro del contenedor y la copia a
-  `database/backups/<AAAAMMDD-HHMMSS>Z-<etiqueta>/`, que git ignora, con su SHA-256 al
-  lado. No pasa por una tubería de la terminal: en Windows PowerShell 5.1, `>` reescribe un
-  archivo binario sin avisar.
-- `db:restore` restaura solo en una base nueva que crea, y nunca encima de una que existe.
-  Si algo falla, la borra. Para usar la copia, apuntar `POSTGRES_DB` a ella.
-
-## Llaves del CRM
-
-Las maneja `npm run db:keys`, como el administrador de `.env` y en una transacción por
-orden. En Windows, en PowerShell, como el resto de npm.
-
-```sh
-npm run db:keys -- issue --account <cuenta> --label <etiqueta> --permissions read,write
-npm run db:keys -- list --account <cuenta>
-npm run db:keys -- revoke --id <id>
-```
-
-- `issue` imprime el id y la llave una sola vez, después de guardarla. La base guarda solo
-  su SHA-256, así que una llave perdida no se recupera: se revoca y se emite otra.
-- Los permisos son `read`, `write`, `delete` y `export`, sin repetidos, y toda llave lleva
-  `read`; `read,write` es la del agente. La cuenta y la etiqueta van en minúsculas, cifras y
-  guiones, hasta 40 caracteres, para que una etiqueta no lleve el nombre de una persona.
-- `list` muestra de cada llave su id, etiqueta, permisos y fechas de creación y de
-  revocación, nunca su hash.
-- `revoke` es definitivo: desde la petición siguiente, esa llave recibe 401, igual que una
-  que no existe.
-- Sale con 0 si hizo lo pedido y con 1 y el motivo si no; sin orden, con el uso. Un error de
-  la base se nombra por su SQLSTATE, sin la llave ni la conexión.
-
-Las cuentas existen después de la semilla; antes, el comando sale con 1 y «No existe la
-cuenta …». La llave del agente la emite la semilla, no hace falta emitirla a mano.
 
 Las guardas, en Git Bash:
 
@@ -221,11 +119,53 @@ bash guards/check-secrets.sh
 bash guards/check-forbidden-phrases.sh forbidden-phrases.txt README.md apps database scenarios
 ```
 
-## Dónde está cada decisión
+### El tablero sin base de datos
+
+```sh
+npm run board:shots   # capturas del circuito y de cuatro salas en .shots/, con Chrome
+npm run board:gif     # vuelve a grabar docs/media/circuito.gif en tiempo real
+```
+
+Los dos sirven los casos dorados desde la memoria. Circuit responde solo a `127.0.0.1` y
+`localhost`, nunca responde CORS y sirve solo los archivos de su compilación. Con «reducir
+movimiento» en el sistema, el tablero muestra cada corrida entera, sin animación.
+
+### La semilla
+
+`npm run db:seed` carga el escenario de `CIRCUIT_SCENARIO` (`scenarios/escuela/`) en una sola
+transacción, una vez por cuenta: correrlo otra vez no duplica nada. La llave del agente queda en
+`.secrets/crm-agent-key`, que git ignora, y nunca se imprime. El mentor que aprueba es
+`CIRCUIT_MENTOR` (por defecto `mentor`); **no hay inicio de sesión**, porque la demostración es
+local y de una sola persona.
+
+### Respaldar y restaurar
+
+```sh
+npm run db:backup -- --label antes-de-migrar
+npm run db:restore -- --file database/backups/<carpeta>/circuit.dump --into <base nueva>
+```
+
+El respaldo lleva su SHA-256 al lado, y la restauración solo crea una base nueva, nunca encima de
+una que existe.
+
+### Llaves del CRM
+
+```sh
+npm run db:keys -- issue --account <cuenta> --label <etiqueta> --permissions read,write
+npm run db:keys -- list --account <cuenta>
+npm run db:keys -- revoke --id <id>
+```
+
+Cada llave es `crmk_` y 256 bits al azar, se muestra una sola vez y la base guarda solo su
+SHA-256. Los permisos son `read`, `write`, `delete` y `export`; toda llave lleva `read`. La API no
+tiene ninguna ruta de llaves.
+
+### Dónde está cada decisión
 
 | Archivo | Qué guarda |
 |---|---|
 | [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) | Las fases, su estado y las recomendaciones abiertas |
 | [docs/adr/](docs/adr/) | Las decisiones de arquitectura, con sus razones |
 | [docs/reviews/](docs/reviews/) | Las líneas base y las auditorías de esas decisiones |
+| [docs/diseno.md](docs/diseno.md) | El brief del tablero |
 | [CLAUDE.md](CLAUDE.md) | Las reglas del proyecto y los comandos verificados |

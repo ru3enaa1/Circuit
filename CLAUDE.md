@@ -287,8 +287,10 @@ dueño seguía viendo diapositivas. Cada revelado es un movimiento de la solicit
 dentro de los 700 ms: la estación hecha florece (relleno con clave por estado), un pulso
 (`edge__pulse`) cruza la ruta punteada y la siguiente se enciende al llegar, con el anillo; el equipo
 entra por turnos con un saltito (`crew__body`) y una figura que cambia de lugar entra de nuevo allí
-(`figureKey`). `choreography.test.ts`; U1–U8 en rojo. El GIF, regrabado (4,2 MB). Sigue el README
-nuevo, con el GIF en su portada.
+(`figureKey`). `choreography.test.ts`; U1–U8 en rojo. El GIF, regrabado (4,2 MB).
+**El README nuevo, hecho el 2026-11-27, sin empujar:** el GIF en la portada, una línea y tres
+puntos para quien no es técnico, el recorrido del GIF, los pasos para correrlo (hoy siete órdenes),
+cómo está hecho con sus ADR, y la referencia. Sigue `docker compose up` que levante todo sin llave.
 
 ## 3. Reglas de producto que gobiernan el código
 
