@@ -240,6 +240,17 @@ dos rieles, anillos, íconos, rótulos cortos y el muelle con íconos. Ese día 
 empujar:** 1260 pruebas (una solo en Linux), cobertura 94,53 / 86,97 / 94,9 / 96,53; N1–N3,
 C1–C4 y P1–P5 en rojo; N4 y C5 sobreviven como guardas (las notas de la ADR). B10 (el dueño
 mira `npm run board:shots`) sigue pendiente. Sigue F2.4.
+**B10 aprobado por el dueño el 2026-11-27. F2.4 hecha ese día, sin empujar (ADR-0012, con su
+enmienda A12):** `48bcb18` (el tipo `Approval` y `approvalFrom`, la 7 que reclama la corrida en
+`circuit.apply_claims` (`0006`) y aplica en orden, el cliente HTTP del CRM, el escritorio del
+mentor y las rutas `POST /api/runs/:id/decision` y `POST /api/runs`) y `6f66116` (la sala de
+Persona como aprobación y «Probar una solicitud»). 1378 pruebas (una solo en Linux), cobertura
+93,53 / 87,07 / 93,64 / 95,7; M1–M7 y D1–D4 en rojo. La base de desarrollo, respaldada
+(`database/backups/20261127-143511Z-antes-0006/`) y migrada a `0006`, con una corrida real
+aprobada (la 1) y sus tres escrituras en el CRM. **`circuit:start` ahora pide
+`CRM_AGENT_KEY_FILE`, y la `.env` del dueño sigue sin ella ni `CIRCUIT_SCENARIO`:** hay que
+copiar esas dos líneas de `.env.example`. F2 termina con F2.4: falta el push y la integración a
+`main`, que decide el dueño.
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -291,7 +302,7 @@ el CRM aparte).
   `database/restore.ts`, con las herramientas del contenedor.
 - El servidor de circuit (ADR-0011): `apps/circuit/src/main.ts` (la raíz de composición) y
   `src/server/` (`server.ts`, `api.ts` con sus listas fijas de campos, `guard.ts` con el `Host` y
-  las cabeceras, `board-files.ts`). Lee las corridas con `PgRunReader`
+  las cabeceras, `board-files.ts`, y `commands.ts` con las dos rutas `POST` de ADR-0012). Lee las corridas con `PgRunReader`
   (`modules/event-store/reader.ts`), que no es un puerto del núcleo. `CRM_TOOLS` vive en
   `crm-client`. Sus pruebas con base: `database/test/circuit-server-db.test.ts`.
 - `apps/board`: el tablero, servido por circuit desde `dist`. Su estado sale solo de
@@ -299,7 +310,10 @@ el CRM aparte).
   `src/use-run-events.ts` (lo vigila `test/source-rules.test.ts`); los textos, en `src/texts.ts`.
   No importa código de circuit: solo sus pruebas lo hacen (`test/support.ts`). Lo que se mira
   (ADR-0013) es el fragmento de la dirección: `src/route.ts` lo lee y lo resuelve contra la vista,
-  `src/use-route.ts` lo escucha, y `components/Room.tsx` y `Portal.tsx` dibujan la sala. La órbita en pequeño (ADR-0014) es
+  `src/use-route.ts` lo escucha, y `components/Room.tsx` y `Portal.tsx` dibujan la sala. La
+  aprobación (ADR-0012): `components/Decision.tsx` (la tarjeta de Persona), `src/correction.ts`
+  (la corrección, pura) y `components/Tryout.tsx` («Probar una solicitud»); las dos órdenes las
+  manda el feed de `use-run-events.ts`. La órbita en pequeño (ADR-0014) es
   `src/mark.ts`, que usan el portal y el logo (`src/logo.ts`, `components/Logo.tsx`). El dibujo
   de B1 (ADR-0014 G8): `src/shape.ts` (geometría pura), `src/scene.ts` (dónde va cada nodo,
   rótulo y telemetría, y sus `obstacles`) e `src/icons.ts`. El equipo: `src/crew-poses.ts` (las
@@ -820,6 +834,21 @@ rojo en su prueba y restaurado por hash:
 ```powershell
 npx vitest run --project '@circuit/board' logo favicon   # G1–G3: la geometría de §12, una sola función con el portal y el ícono
 npm run board:favicon                                    # reescribe apps/board/public/favicon.svg desde <Logo>; leer el diff
+```
+
+Verificados el 2026-11-27 en PowerShell (F2.4, ADR-0012), con M1–M7 y D1–D4, cada uno en rojo
+en su prueba y restaurado por hash, y el flujo real sobre la base de desarrollo:
+
+```powershell
+npx vitest run --project '@circuit/circuit' approval apply-without-approval crm-client server-decision tryouts   # A1, A2, A4, A5, A6, A8, A9, A12
+npx vitest run --project database apply-once apply-crm-e2e circuit-events   # A4 sobre PostgreSQL, A3 y A10 con el CRM real como proceso
+npx vitest run --project '@circuit/board' decision-render feed room-render  # la tarjeta de Persona, la corrección y «Probar una solicitud»
+npm run crm:start; npm run circuit:start   # en dos terminales; circuit necesita CIRCUIT_SCENARIO y CRM_AGENT_KEY_FILE en .env
+```
+
+```sh
+grep -rn "as Approval" apps/circuit/src   # A1: una sola línea, la de approvalFrom
+git diff --exit-code 4988600 -- apps/crm database/migrations/0000_init.sql database/migrations/0005_circuit_events.sql   # A11: 0
 ```
 
 Verificados el 2026-11-27 en PowerShell (G8, G4 y G5 de ADR-0014), con N1–N3, C1–C4 y P1–P5,

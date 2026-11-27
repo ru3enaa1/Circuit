@@ -286,8 +286,13 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   pedido del dueño, el circuito se redibujó igual al boceto B1 (G8: estaciones con brazos,
   tubos de dos rieles, anillos, íconos, rótulos cortos, muelle con íconos; `cab6432`), y se
   hicieron el equipo (G4, `df2b6ac`) y los paneles de la ultraancha (G5, `134863a`). **F2.3
-  hecha, sin empujar.** Pendiente: B10, la revisión del dueño de `npm run board:shots`. Sigue
-  F2.4.
+  hecha, sin empujar.** B10 aprobado por el dueño el 2026-11-27.
+  **F2.4 hecha el 2026-11-27, sin empujar** (ADR-0012 y su enmienda A12; `48bcb18`, `6f66116`):
+  la aprobación del mentor como el evento de la 6, la 7 que aplica en el CRM solo lo aprobado,
+  una vez y en orden (`0006`, `circuit.apply_claims`), la sala de Persona como aprobación y
+  «Probar una solicitud». Aplicar en el CRM sin aprobación falla (A2), con un CRM falso y con el
+  real. **Con F2.4, los criterios de F2 se cumplen**; falta el push y la integración a `main`,
+  que decide el dueño.
 
 ### F3 · Modelo
 

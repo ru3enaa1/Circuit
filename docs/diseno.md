@@ -152,7 +152,8 @@ del paquete del escenario, junto a la tabla y el umbral.
 - **«Probar una solicitud»:** abre la lista de solicitudes de ejemplo del escenario (las de los
   casos del simulador) y al elegir una arranca una corrida. Es una ruta `POST`, así que llega
   con F2.4, junto a la ruta que decide (ADR-0012), y no en F2.3, que solo lee (ADR-0011 B13).
-  Mientras no exista, el botón no se dibuja.
+  Hecho en F2.4 (ADR-0012 A12): abajo a la derecha, junto al muelle; la lista muestra el rótulo
+  de cada muestra, nunca su texto, y al elegir una el tablero sigue la corrida nueva.
 
 ## 9. Tamaños
 

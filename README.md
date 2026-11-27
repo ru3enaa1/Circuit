@@ -98,7 +98,8 @@ siguiente). `docker compose stop db` detiene la base y conserva sus datos.
 
 ```sh
 npm run board:build    # compila apps/board en apps/board/dist
-npm run circuit:start  # el tablero y su API de lectura en http://127.0.0.1:4020; Ctrl+C lo detiene
+npm run crm:start      # el CRM en http://127.0.0.1:4010 (en otra terminal)
+npm run circuit:start  # el tablero, su API y sus dos órdenes en http://127.0.0.1:4020; Ctrl+C lo detiene
 npm run board:shots    # capturas a 1536×864, 768×864, 720×900 y 2560×1080 en .shots/, con Chrome (el circuito y cuatro salas)
 ```
 
@@ -121,6 +122,18 @@ figuras del equipo, siempre las mismas para la misma corrida; son decoración y 
 estado. En una ventana ultraancha, dos paneles a los lados de Persona muestran la cita, las
 acciones propuestas, la confianza y el tiempo de la corrida
 ([ADR-0014](docs/adr/0014-logo-equipo-y-paneles.md)).
+
+**Aprobar.** «Probar una solicitud», abajo a la derecha, arranca una corrida con una de las
+solicitudes de ejemplo del escenario (`scenarios/<id>/samples.json`). El circuito la recorre
+hasta Persona y espera. Al entrar a Persona se ve la propuesta de CRM y sus tres salidas, que
+son los botones: **Aprobar**, **Corregir** (quitar o editar acciones) y **Rechazar**. Solo
+entonces Cierre escribe en el CRM, una petición por acción, en orden, una sola vez, y cada fila
+de la bitácora del CRM dice que la propuso la llave del agente y la aprobó el mentor, con
+`approvalRef = run-<id>` ([ADR-0012](docs/adr/0012-aprobacion-y-cierre.md)). El mentor es
+`CIRCUIT_MENTOR` (por defecto `mentor`): **no hay inicio de sesión**, porque la demostración es
+local y de una sola persona; cualquier programa de este equipo podría decidir, y eso no sirve
+para un despliegue. Circuit necesita en `.env` las líneas `CIRCUIT_SCENARIO` y
+`CRM_AGENT_KEY_FILE` de `.env.example`, y la llave que deja `npm run db:seed`.
 
 ## Datos de ejemplo: la semilla
 

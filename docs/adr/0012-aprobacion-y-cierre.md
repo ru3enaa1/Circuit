@@ -173,3 +173,51 @@ ASUNCIÓN queda como decisión.
    `0006`.
 5. **Sin inicio de sesión (A6).** Recomendación: aceptado para la demostración local, escrito
    en el README.
+
+## Enmienda A12 (2026-11-27, F2.4; la eligió Claude por CLAUDE.md §1b)
+
+**«Probar una solicitud» es la segunda ruta que escribe.** `docs/diseno.md` §8 la pide con F2.4 y
+esta ADR solo nombraba la de la decisión. `POST /api/runs` toma `{ sample }` (estricto, el id con
+forma de slug) y arranca `startRun` con el texto de esa muestra; no acepta texto libre, así que la
+misma entrada da la misma corrida con el simulador. Las muestras viven en el paquete,
+`scenarios/<id>/samples.json` (id, rótulo y texto: los de los casos dorados), y las carga
+`loadTryouts`, que también lee la cuenta del agente de `crm.json` (`agentAccount`). Sigue las mismas
+reglas que A6: solo JSON (415), el `Origin` del tablero (403), la revisión del `Host` y 16 KiB
+(413). `GET /api/circuit` suma `samples` (id y rótulo, nunca el texto) y `mentor`. Enmienda
+ADR-0011 B13: estas dos son las únicas rutas que no son `GET`.
+
+## Notas de implementación (F2.4, 2026-11-27)
+
+Commits `48bcb18` (núcleo, `0006`, cliente, servidor) y `6f66116` (tablero). 1378 pruebas (una
+solo en Linux), cobertura 93,53 / 87,07 / 93,64 / 95,7. M1–M7 en rojo (M7: sin la revisión del
+`Content-Type`), y en el tablero D1–D4 (sin la tarjeta, dos órdenes a la vez, la corrección que no
+mira «conservar», el tablero que no sigue la corrida nueva). D4 sobrevivió a la primera prueba
+(la corrida elegida ya era la más nueva) y se corrigió la prueba.
+
+- **El evento de la 7** trae `approvalRef` y, por acción, `status` (A5); los casos dorados
+  `normal` y `complaint` se regeneraron. Un `rejected` no trae `approvalRef`: no escribe nada.
+- **`applyDecision`** se exporta: es la 7 sobre lo que el almacén tenga, y la usan A2 (a) y el
+  «reinicio» de A4. Sin evento de la 6 no reclama nada; con decisión, reclama siempre, también
+  un `rejected`, así que ninguna 7 corre dos veces.
+- **La reserva escapa de `settle`:** `ApplyAlreadyClaimed` extiende `Unrecorded`, que `settle`
+  deja pasar, así que una segunda aplicación no guarda evento ni manda petición. Dos decisiones a
+  la vez chocan en `station_events_run_seq`; `PgEventStore` lo traduce a `EventConflict` y el
+  servidor responde 409.
+- **El cliente** comprueba además que cada acción sea una de las del `Approval` (identidad), y
+  traduce clave de etapa a id con `GET /stages`; `create_contact` entra en la etapa de menor
+  posición. La forma de la llave se revisa holgada (`crmk_` y 43 caracteres): decide el CRM.
+- **A6 y A8 se prueban en memoria** (`server-decision.test.ts`), no en un archivo con base: la
+  ruta no toca la base distinta de la memoria. La carrera real va en `apply-once-db.test.ts`, con
+  una escritura lenta para que las dos llamadas compitan por la reserva. Un 400 nombra un campo
+  del esquema (`sample`, `actions`, `actions[0].body`) o la sección (`cuerpo`), nunca una clave que
+  eligió quien envía.
+- **`CRM_AGENT_KEY_FILE` es obligatoria para `circuit:start`**, y `CRM_URL` opcional.
+- **Tablero:** la tarjeta y el menú no guardan estado: `<details>` nativo y un formulario cuyos
+  campos se leen al enviarlo (`correction.ts`, puro). Lo único con estado sigue en
+  `use-run-events.ts`: una orden a la vez, `sending` o `failed` con su motivo y su clase.
+- **No probado:** un clic real en un navegador (Tab, Enter, Esc). Se probó con el CRM y circuit
+  reales sobre la base de desarrollo (respaldada en `database/backups/20261127-143511Z-antes-0006/`
+  y migrada a `0006`): la corrida 1 llegó a Persona leyendo a Lucía del CRM, la aprobación dio
+  200 y tres escrituras firmadas `key-1` / `mentor` / `run-1`, la segunda decisión 409, otro
+  `Origin` 403 y `text/plain` 415; y capturas de Chrome sin ventana de la sala de Persona y de
+  Cierre.
