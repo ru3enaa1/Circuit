@@ -313,7 +313,8 @@ respaldada (`database/backups/20261127-222421Z-antes-compose/`) y recreada con e
 nuevo. Si el dueño corre todo Compose sobre su base, la semilla rota la llave de su `.secrets/`.
 **Empujada el 2026-11-27 a pedido del dueño (CI en verde en `60127b1`, corrida 46080546415;
 el trabajo `compose`, en Linux, en 32 s con la imagen construida).** Ese día, `docs/caso.md` (la
-página del caso, con cada cifra y su fuente) y el README rehecho como presentación, sin empujar. El
+página del caso, con cada cifra y su fuente) y el README rehecho como presentación, empujados
+(`17de1d8`, CI en verde, corrida 46081367498). El
 mensaje corto y el guion del video, en `docs/privado/` (local). Falta el video de 90 s, que graba el
 dueño con su voz, y la integración a `main`.
 
