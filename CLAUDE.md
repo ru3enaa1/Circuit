@@ -316,7 +316,9 @@ el trabajo `compose`, en Linux, en 32 s con la imagen construida).** Ese día, `
 página del caso, con cada cifra y su fuente) y el README rehecho como presentación, empujados
 (`17de1d8`, CI en verde, corrida 46081367498). El
 mensaje corto y el guion del video, en `docs/privado/` (local). Falta el video de 90 s, que graba el
-dueño con su voz, y la integración a `main`.
+dueño con su voz (guion en `docs/privado/video-guion.md`). **F6 integrada a `main` el 2026-11-27**
+con el sí del dueño (fast-forward de `cf1384a` a `0daa95c`, sin commit de merge; CI en verde en la
+rama, corrida 46083471484, y en `main`, 46083696457). F6 sigue abierta en la misma rama por el video.
 
 ## 3. Reglas de producto que gobiernan el código
 

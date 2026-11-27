@@ -361,8 +361,9 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   tiempos del simulador y sus tokens se dicen como tales) y el README rehecho como presentación (un
   recorrido guiado y la referencia plegada). El mensaje corto está en `docs/privado/` (local). El
   video de 90 s lo graba el dueño con su voz, sobre la app real (Claude, §1b: sin ffmpeg, y una voz
-  generada pasaría por la del autor); el guion está en `docs/privado/video-guion.md`. Falta: el
-  video (el dueño) e integrar a `main` (el dueño).
+  generada pasaría por la del autor); el guion está en `docs/privado/video-guion.md`. **Integrada a
+  `main` el 2026-11-27** con el sí del dueño (fast-forward de `cf1384a` a `0daa95c`; CI en verde en la
+  rama, 46083471484, y en `main`, 46083696457). Falta el video (el dueño).
 
 ### Segunda ronda (después del hito)
 
