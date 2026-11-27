@@ -267,7 +267,7 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
 - **Estado:** abierta el 2026-11-26 en `feat/f2-circuito`, que sale de `main` (`f72aa15`).
   F2.0 en curso: los bocetos del dueño (B0–B8) están listos desde el 2026-11-26, en
   `docs/privado/bocetos/Mockups_completados.zip` (local), y el dueño eligió el logo 4a de B8.
-  Falta escribir `docs/diseno.md` desde ellos y que el dueño lo apruebe.
+  `docs/diseno.md` escrito el 2026-11-26 desde ellos; falta que el dueño lo apruebe.
   ADR-0010 y ADR-0012 aceptadas el 2026-11-26; ADR-0011, propuesta hasta `docs/diseno.md`.
   F2.1 hecha el 2026-11-26 sin empujar (`46d4558`, `6cbf768`): el núcleo, `0005` y `circuit_app`.
   F2.2 hecha el 2026-11-26 sin empujar: el simulador y el cargador (`a51bb1b`), los tres
