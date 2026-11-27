@@ -31,6 +31,10 @@ programa le sirve, y de paso deja su correo, su celular y su cédula.
 7. **Cierre** escribe en el CRM lo aprobado, una vez, y cada escritura queda en la bitácora con
    quién la propuso y quién la aprobó.
 
+La trenza amarilla y rosada que cruza cada tubo es la solicitud en camino; al llegar queda de un
+solo color. Los personajes son decoración: llegan caminando o por una puerta, y al cerrar uno se va
+en tobogán; no dicen nada del estado.
+
 Cada estación se puede abrir con un clic para ver lo que guardó.
 
 ## Verlo en tu equipo

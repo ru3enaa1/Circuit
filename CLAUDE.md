@@ -290,7 +290,15 @@ entra por turnos con un saltito (`crew__body`) y una figura que cambia de lugar 
 (`figureKey`). `choreography.test.ts`; U1–U8 en rojo. El GIF, regrabado (4,2 MB).
 **El README nuevo, hecho el 2026-11-27, sin empujar:** el GIF en la portada, una línea y tres
 puntos para quien no es técnico, el recorrido del GIF, los pasos para correrlo (hoy siete órdenes),
-cómo está hecho con sus ADR, y la referencia. Sigue `docker compose up` que levante todo sin llave.
+cómo está hecho con sus ADR, y la referencia.
+**La trenza y los viajes del equipo, hechos el 2026-11-27, sin empujar (ADR-0019, a pedido del
+dueño; enmienda ADR-0018):** el pulso es una trenza de dos hebras, amarilla y rosada, que titila al
+cruzar el tubo y al conectar queda del color del estado (la ruta hacia Persona que espera, rosada).
+El equipo llega por la línea de entrada, por la de salida o por una puerta en su sitio, por turnos
+(`crew-moves.ts`, puro, con la semilla en `seed.ts`), y al cerrar la corrida uno camina a Cierre y se
+va en tobogán por la última línea. Sus viajes duran más que el paso; el circuito, no. El GIF guarda
+solo lo que cambia: de 5,38 a 0,92 MB, regrabado. V1–V12 en rojo. Higgsfield no hizo falta.
+Sigue `docker compose up` que levante todo sin llave.
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -359,7 +367,8 @@ el CRM aparte).
   `src/mark.ts`, que usan el portal y el logo (`src/logo.ts`, `components/Logo.tsx`). El dibujo
   de B1 (ADR-0014 G8): `src/shape.ts` (geometría pura), `src/scene.ts` (dónde va cada nodo,
   rótulo y telemetría, y sus `obstacles`) e `src/icons.ts`. El equipo: `src/crew-poses.ts` (las
-  poses de B7), `src/crew.ts` (semilla del id) y `components/Crew.tsx`; los paneles de la
+  poses de B7), `src/crew.ts` (dónde se para cada una), `src/crew-moves.ts` (cómo llega y cómo se
+  va, ADR-0019), `src/seed.ts` (la semilla del id) y `components/Crew.tsx`; los paneles de la
   ultraancha: `src/side-panels.ts` y `components/SidePanels.tsx`. Todo puro: lee la escena, no
   guarda nada. El movimiento entre eventos (ADR-0016, con los tres tiempos de
   ADR-0018: salir, viajar, llegar) es solo CSS, en `src/motion.css`.
@@ -942,6 +951,14 @@ su prueba y restaurado por hash, y el movimiento mirado en los cuadros de `board
 
 ```powershell
 npx vitest run --project '@circuit/board' choreography motion   # el pulso, los tres tiempos, los turnos del equipo y las claves
+```
+
+Verificados el 2026-11-27 en PowerShell (la trenza y los viajes del equipo, ADR-0019), con V1–V12,
+cada uno en rojo en su prueba y restaurado por hash, y los cuadros de `board:gif` mirados:
+
+```powershell
+npx vitest run --project '@circuit/board' choreography crew-moves motion source-rules   # la trenza, las llegadas, el tobogán y sus topes
+npx vitest run --project '@circuit/circuit' readme-gif                                  # el GIF y onlyChanges (solo lo que cambia)
 ```
 
 ## 10. Dónde está todo lo demás

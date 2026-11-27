@@ -8,6 +8,8 @@
 - **Enmendada por:** ADR-0018, aceptada el 2026-11-27. Los tiempos de `motion.css` pasan a tres
   tiempos por paso (salir, viajar, llegar), con un pulso por la ruta punteada; el equipo entra por
   turnos con un saltito, y una figura que cambia de lugar entra de nuevo donde aterriza (punto 7).
+  Y por ADR-0019, el mismo día: el pulso es una trenza, y el equipo llega y se va caminando, con
+  viajes que pueden durar más que el paso; el circuito sigue dentro de los 700 ms.
 
 ## Contexto
 

@@ -1,8 +1,12 @@
+import { movesFor, type CrewMove } from './crew-moves.ts';
 import type { Layout, Point } from './layout.ts';
 import { POSES, POSE_BOX, type Accent, type Pose } from './crew-poses.ts';
 import type { RunView, StationView } from './projection.ts';
 import { overlaps, type Box, type Scene } from './scene.ts';
 import { TUBE_SCALE } from './shape.ts';
+import { generator, seedOf } from './seed.ts';
+
+export { generator, seedOf };
 
 /**
  * The crew (docs/diseno.md §11, ADR-0014 G4): two to four stick figures standing on the tubes.
@@ -23,6 +27,15 @@ export interface CrewFigure {
   readonly on: readonly [string, string];
   /** A pink prop drawn yellow, when the figure stands by a pink station (§11). */
   readonly pinkAsYellow: boolean;
+  /** The figure on its spot: its pose and where it stands, the same while it stays (ADR-0018). */
+  readonly key: string;
+  /** How it comes in, or goes out (ADR-0019). */
+  readonly move: CrewMove;
+}
+
+/** A figure is the same one only on the same spot: one that moves enters again where it lands (ADR-0018). */
+export function spotKey(pose: Pose, x: number, y: number): string {
+  return `${pose.id}@${Math.round(x)},${Math.round(y)}`;
 }
 
 /** A figure is as tall as the circuit's R: smaller than any station (§11). */
@@ -49,31 +62,6 @@ const TOOLS_HEIGHT = 130;
 const NARROW_HEADER_HEIGHT = 160;
 /** A figure this close to a pink station takes a yellow prop instead of a pink one (§11). */
 const PINK_REACH_SCALE = 3;
-
-const FNV_OFFSET = 0x811c9dc5;
-const FNV_PRIME = 0x01000193;
-
-/** FNV-1a, 32 bits: the run's seed, the same on every machine (ADR-0014). */
-export function seedOf(text: string): number {
-  let hash = FNV_OFFSET;
-  for (const character of text) {
-    hash ^= character.codePointAt(0) ?? 0;
-    hash = Math.imul(hash, FNV_PRIME) >>> 0;
-  }
-  return hash >>> 0;
-}
-
-/** Mulberry32: a small fixed generator, so a seed always gives the same draws. */
-export function generator(seed: number): () => number {
-  let state = seed >>> 0;
-  return () => {
-    state = (state + 0x6d2b79f5) >>> 0;
-    let t = state;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 function shuffled<T>(items: readonly T[], next: () => number): T[] {
   const copy = [...items];
@@ -128,7 +116,9 @@ function framesOf(layout: Layout): Box[] {
   ];
 }
 
-function figureAt(pose: Pose, spot: Spot, scale: number): Omit<CrewFigure, 'pinkAsYellow' | 'on'> {
+type Standing = Omit<CrewFigure, 'pinkAsYellow' | 'on' | 'key' | 'move'> & { readonly feet: Point };
+
+function figureAt(pose: Pose, spot: Spot, scale: number): Standing {
   const feetX = (pose.feet[0][0] + pose.feet[1][0]) / 2;
   // A sitting pose rests its seat on the tube's center; the others stand on its top edge.
   const anchorY = pose.seat ?? POSE_BOX.feet;
@@ -138,7 +128,7 @@ function figureAt(pose: Pose, spot: Spot, scale: number): Omit<CrewFigure, 'pink
   const top = y + (pose.top ?? pose.head[1] - COVER_TOP) * scale;
   const bottom = y + POSE_BOX.feet * scale;
   // The whole width of the pose's box: a broom, a ball or a tape reaches to its sides.
-  return { pose, x, y, scale, box: { x: x + (POSE_BOX.width / 2) * scale, y: (top + bottom) / 2, w: POSE_BOX.width * scale, h: bottom - top } };
+  return { pose, x, y, scale, feet: ground, box: { x: x + (POSE_BOX.width / 2) * scale, y: (top + bottom) / 2, w: POSE_BOX.width * scale, h: bottom - top } };
 }
 
 /** Spots on the tubes of the pose's station first, so the shield stands by Filtro (B7). */
@@ -160,20 +150,27 @@ export function crewFor(runId: number | null, view: RunView, scene: Scene, layou
   const blocked = [...scene.obstacles, ...framesOf(layout), ...avoid];
   const pinkStations = view.stations.filter(isPinkStation);
   const pinkPlaces = pinkStations.flatMap((station) => layout.places[station.id] ?? []);
-  const crew: CrewFigure[] = [];
+  const crew: (Omit<CrewFigure, 'move'> & { readonly at: Point; readonly feet: Point })[] = [];
   for (const pose of poses) {
     if (crew.length === count) break;
     const placed = orderFor(pose, spots)
       .map((spot) => ({ spot, figure: figureAt(pose, spot, scale) }))
       .find(({ figure }) => figure.box.y - figure.box.h / 2 >= 0 && [...blocked, ...crew.map((other) => other.box)].every((other) => !overlaps(figure.box, other, CLEARANCE)));
     if (placed === undefined) continue;
-    const { spot, figure } = placed;
+    const { spot, figure: { feet, ...figure } } = placed;
     // Beside a pink station is on one of its tubes, or within reach of it.
     const pinkAsYellow =
       pinkStations.some((station) => spot.ends.includes(station.id)) || pinkPlaces.some((place) => Math.hypot(place.x - figure.box.x, place.y - figure.box.y) < place.r * PINK_REACH_SCALE);
-    crew.push({ ...figure, on: spot.ends, pinkAsYellow });
+    crew.push({ ...figure, on: spot.ends, pinkAsYellow, key: spotKey(pose, figure.x, figure.y), at: spot.center, feet });
   }
-  return crew;
+  const moves = movesFor(
+    crew.map((figure) => ({ key: figure.key, at: figure.at, on: figure.on, feet: figure.feet, height: POSE_BOX.height * scale, sitting: figure.pose.seat !== undefined, order: POSES.indexOf(figure.pose) })),
+    runId,
+    view,
+    scene,
+    layout,
+  );
+  return crew.map(({ at: _at, feet: _feet, ...figure }, index) => ({ ...figure, move: moves[index] as CrewMove }));
 }
 
 /** The color a prop is drawn in, with the pink one turned yellow by a pink station. */

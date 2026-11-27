@@ -62,6 +62,25 @@ export function segmentPath(from: Point, to: Point): string {
   return `M${pair(from)}L${pair(to)}`;
 }
 
+/**
+ * One strand of the braid that crosses a tube while the request travels (ADR-0019): a wave around
+ * the segment, half a wave per step, so two strands of opposite `side` cross at every step. The first
+ * half-wave is a quadratic curve and each `T` reflects its control point, so the wave alternates
+ * sides with one number per step. Its peak is `amplitude` away from the tube's center line.
+ */
+export function braidPath(from: Point, to: Point, amplitude: number, wavelength: number, side: 1 | -1): string {
+  const length = Math.hypot(to.x - from.x, to.y - from.y);
+  if (length === 0) return `M${pair(from)}`;
+  const steps = Math.max(2, Math.round((2 * length) / wavelength));
+  const step = { x: (to.x - from.x) / steps, y: (to.y - from.y) / steps };
+  // A quadratic curve reaches half way to its control point: twice the amplitude gives the peak.
+  const lift = (2 * amplitude * side) / length;
+  const control = { x: from.x + step.x / 2 - (to.y - from.y) * lift, y: from.y + step.y / 2 + (to.x - from.x) * lift };
+  const at = (index: number) => ({ x: from.x + step.x * index, y: from.y + step.y * index });
+  const rest = Array.from({ length: steps - 1 }, (_, index) => `T${pair(at(index + 2))}`).join('');
+  return `M${pair(from)}Q${pair(control)} ${pair(at(1))}${rest}`;
+}
+
 /** The soft neck between two circles (a metaball join), as the boceto draws it. */
 export function neckPath(c1: Point, r1: number, c2: Point, r2: number): string {
   const distance = Math.hypot(c2.x - c1.x, c2.y - c1.y);

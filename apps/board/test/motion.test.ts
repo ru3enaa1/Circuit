@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { RunEvent, RunSummary } from '../src/api.ts';
 import { Board, type BoardProps } from '../src/components/Board.tsx';
+import { WALK_MAX_MS } from '../src/crew-moves.ts';
 import { REVEAL_STEP_MS } from '../src/use-run-events.ts';
 import { GOLDEN_CASES, boardInfo, goldenEvents } from './support.ts';
 
@@ -57,7 +58,8 @@ function elements(markup: string): Element[] {
     }
     const classes = (/\bclass="([^"]*)"/.exec(attributes)?.[1] ?? '').split(/\s+/).filter((token) => token !== '');
     const base = classes.filter((token) => !isModifier(token)).sort();
-    const pose = /\bdata-pose="([^"]*)"/.exec(attributes)?.[1];
+    // A figure is told apart by its pose, and its journey by the figure it carries (ADR-0019).
+    const pose = /\bdata-(?:pose|figure)="([^"]*)"/.exec(attributes)?.[1];
     const element = base.length === 0 ? null : { key: `${tag}.${base.join('.')}${pose === undefined ? '' : `#${pose}`}`, classes, parent: nearest() };
     if (element !== null) found.push(element);
     if (selfClosing !== '/' && !VOID.has(tag.toLowerCase())) stack.push(element);
@@ -133,11 +135,32 @@ function times(declaration: string, root: ReadonlyMap<string, string>): number[]
   return resolved.split(/,(?![^(]*\))/).map((part) => [...part.matchAll(/(\d+(?:\.\d+)?)(ms|s)\b/g)].map(([, value = '0', unit]) => Number(value) * (unit === 's' ? 1000 : 1)));
 }
 
+/** The crew's journeys (ADR-0019): decoration that moves on its own clock, once, from a figure's mount. */
+const JOURNEY = /^\.crew__(walk|door|slide)\b/;
+/** The longest each may last, in ms: a walk across the window (crew-moves.ts), a door, a slide, a step out. */
+const JOURNEY_LIMITS: Readonly<Record<string, number>> = { 'motion-walk': WALK_MAX_MS, 'motion-door': 1400, 'motion-door-leaf': 1400, 'motion-slide': 1100, 'motion-fade': 320, 'motion-hop': 320 };
+
 describe('ADR-0016 · how long the board moves (docs/diseno.md §14)', () => {
   const root = new Map([...cssFiles().map(css).join('').matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map(([, name = '', value = '']) => [name, value.trim()]));
-  const declarations = cssFiles().flatMap((name) =>
-    [...css(name).matchAll(/(?:^|[;{\s])(animation|transition)\s*:\s*([^;}]+)/g)].filter(([, , value = '']) => !/^none\b/.test(value.trim())).map(([, property, value = '']) => ({ name, property, value: value.trim() })),
+  const rules = cssFiles().flatMap((name) =>
+    [...css(name).matchAll(/([^{}]+)\{([^{}]*)\}/g)].flatMap(([, selectors = '', body = '']) =>
+      [...body.matchAll(/(?:^|[;{\s])(animation|transition)\s*:\s*([^;}]+)/g)]
+        .filter(([, , value = '']) => !/^none\b/.test(value.trim()))
+        .map(([, property, value = '']) => ({ name, selector: selectors.trim(), property, value: value.trim() })),
+    ),
   );
+  const declarations = rules.filter((rule) => !JOURNEY.test(rule.selector));
+  const journeys = rules.filter((rule) => JOURNEY.test(rule.selector));
+
+  it('the crew moves only in its journeys, each once and within its limit (ADR-0019)', () => {
+    expect(journeys.map((rule) => rule.selector).sort()).toEqual(['.crew__door', '.crew__door-leaf', '.crew__slide', '.crew__walk', '.crew__walk.is-door', '.crew__walk.is-door .crew__body']);
+    for (const { selector, value } of journeys) {
+      const name = /motion-[\w-]+/.exec(value)?.[0] ?? '';
+      const [duration] = times(value.replace('var(--walk-ms)', `${WALK_MAX_MS}ms`), root)[0] ?? [];
+      expect({ selector, name, ok: duration !== undefined && duration <= (JOURNEY_LIMITS[name] ?? 0) }).toEqual({ selector, name, ok: true });
+      expect({ selector, once: !/infinite|alternate/.test(value) }).toEqual({ selector, once: true });
+    }
+  });
 
   it('reads the declarations (control)', () => {
     expect(declarations.filter((entry) => entry.name === MOTION_FILE).length).toBeGreaterThan(5);

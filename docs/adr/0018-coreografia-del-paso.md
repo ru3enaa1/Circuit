@@ -4,6 +4,9 @@
   cambia la arquitectura, ni el rumbo del producto, ni nada fuera del repositorio.
 - **Tarea:** F6 de `DEVELOPMENT_PLAN.md`, a pedido del dueño, antes del README.
 - **Enmienda:** ADR-0016 (los tiempos de `motion.css` y el punto 7, «el equipo nunca camina»).
+- **Enmendada por:** ADR-0019, aceptada el 2026-11-27: el pulso pasa a ser una trenza de dos hebras
+  que al conectar queda del color del estado, y el equipo llega caminando o por una puerta y uno se va
+  en tobogán (el punto 3 ya no vale).
 - **Depende de:** ADR-0011 (B1, B2), ADR-0014 G4 (el equipo), ADR-0016, ADR-0017 (el GIF).
 
 ## Contexto

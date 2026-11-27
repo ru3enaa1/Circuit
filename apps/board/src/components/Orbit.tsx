@@ -4,7 +4,7 @@ import type { CircuitInfo } from '../api.ts';
 import type { Layout, Point } from '../layout.ts';
 import type { EdgeView, RunView, StationView } from '../projection.ts';
 import { currentStation, type Box, type EdgeScene, type Scene } from '../scene.ts';
-import { RAIL_WIDTH, TUBE_SCALE, circlePath, segmentPath } from '../shape.ts';
+import { RAIL_WIDTH, TUBE_SCALE, braidPath, circlePath, segmentPath } from '../shape.ts';
 import { RUN_TEXTS } from '../texts.ts';
 import { StationRings, timeShares } from './StationBall.tsx';
 import { StationNode } from './StationNode.tsx';
@@ -26,6 +26,11 @@ export interface OrbitProps {
   /** What stands on the tubes, under the stations: the crew (§11). */
   readonly children?: ReactNode;
 }
+
+/** The braid's strands reach this share of the tube's core from its center line (ADR-0019). */
+const BRAID_REACH = 0.75;
+/** One whole wave of a strand, against the tube's width: two crossings per wave. */
+const BRAID_WAVE = 2.4;
 
 /** The small square of the stop, against its bubble. */
 const STOP_SQUARE = 0.6;
@@ -51,17 +56,45 @@ function BoxLabel({ box, text, className }: { readonly box: Box; readonly text: 
   );
 }
 
-function Tube({ from, to, layout, taken, waiting }: { readonly from: Point; readonly to: Point; readonly layout: Layout; readonly taken: boolean; readonly waiting: boolean }) {
+/**
+ * The request on its way to the station that waits (ADR-0019): two strands, yellow and pink, that
+ * braid across the tube once, when the event that made this route dashed mounts them. Each is
+ * measured in one, so motion.css grows it from the station left; when it connects, both strands
+ * turn the color of the state and fade into the one route.
+ */
+function Braid({ from, to, core, person }: { readonly from: Point; readonly to: Point; readonly core: number; readonly person: boolean }) {
+  const amplitude = (core / 2) * BRAID_REACH;
+  const wave = core * BRAID_WAVE;
+  return (
+    <g className={person ? 'edge__braid is-person' : 'edge__braid'}>
+      <path className="edge__strand edge__strand--a" d={braidPath(from, to, amplitude, wave, 1)} pathLength={1} />
+      <path className="edge__strand edge__strand--b" d={braidPath(from, to, amplitude, wave, -1)} pathLength={1} />
+    </g>
+  );
+}
+
+interface TubeProps {
+  readonly from: Point;
+  readonly to: Point;
+  readonly layout: Layout;
+  readonly taken: boolean;
+  readonly waiting: boolean;
+  /** The station it leads to waits for the person: the route settles pink, as Persona does. */
+  readonly person: boolean;
+}
+
+function Tube({ from, to, layout, taken, waiting, person }: TubeProps) {
   const width = round(layout.radius * TUBE_SCALE);
+  const core = round(width - 2 * RAIL_WIDTH);
   const d = segmentPath(from, to);
+  const now = ['edge__route', 'is-now', person ? 'is-person' : ''].filter((name) => name !== '').join(' ');
   return (
     <>
       <path className="edge__tube" d={d} strokeWidth={width} />
-      <path className="edge__core" d={d} strokeWidth={round(width - 2 * RAIL_WIDTH)} />
+      <path className="edge__core" d={d} strokeWidth={core} />
       {/* The solid route is measured in one unit, so motion.css draws it from the station left (ADR-0016). */}
-      {taken ? <path className={waiting ? 'edge__route is-now' : 'edge__route'} d={d} pathLength={waiting ? undefined : 1} /> : null}
-      {/* The request on its way to the station that waits: a pulse that crosses the tube once, when that event mounts it (ADR-0018). */}
-      {taken && waiting ? <path className="edge__pulse" d={d} pathLength={1} /> : null}
+      {taken ? <path className={waiting ? now : 'edge__route'} d={d} pathLength={waiting ? undefined : 1} /> : null}
+      {taken && waiting ? <Braid from={from} to={to} core={core} person={person} /> : null}
     </>
   );
 }
@@ -90,7 +123,7 @@ function Edge({ scene, view, layout }: { readonly scene: EdgeScene; readonly vie
   }
   return (
     <g {...attributes}>
-      <Tube from={from} to={to} layout={layout} taken={edge.taken} waiting={edge.toWaiting} />
+      <Tube from={from} to={to} layout={layout} taken={edge.taken} waiting={edge.toWaiting} person={edge.toWaiting && view.stations.some((station) => station.id === edge.to && station.decidedBy === 'person')} />
       {label === null ? null : <BoxLabel box={label} text={RUN_TEXTS.branch.text} className="edge__label" />}
     </g>
   );

@@ -107,20 +107,40 @@ function paced(frames: readonly Frame[]): { readonly frame: Frame; readonly dela
   return kept.map((frame, index) => ({ frame, delay: index + 1 < kept.length ? Math.round(((kept[index + 1]?.at ?? frame.at) - frame.at) * 1000) : FINAL_HOLD_MS }));
 }
 
+/**
+ * A frame keeps only what changed (ADR-0019): a pixel with the same color as in the frame before is
+ * the transparent index, and every frame stays under the next one (dispose 1). The crew's journeys
+ * made the GIF pass its 5 MB when each frame was written whole; long runs of one index compress to
+ * almost nothing, and the picture is the same.
+ */
+export function onlyChanges(indexed: Uint8Array, before: Uint8Array | null, transparent: number): Uint8Array {
+  if (before === null) return indexed;
+  return indexed.map((index, at) => (index === before[at] ? transparent : index));
+}
+
+/** The palette's last place, kept free of colors for the pixels that did not change. */
+const UNCHANGED = 255;
+/** «Do not dispose»: the next frame is drawn over this one. */
+const KEEP_UNDER = 1;
+
 /** One palette for every frame, from the last one, which holds every color of the run, so nothing flickers. */
 function encode(frames: readonly Frame[]): Uint8Array {
   const steps = paced(frames);
   const last = steps.at(-1);
   if (last === undefined) throw new Error('Chrome no pintó ningún cuadro.');
-  const palette = gifenc.quantize(pngjs.PNG.sync.read(last.frame.png).data, 256);
+  // 255 colors and the unchanged place: a color no pixel takes, since applyPalette never picks it.
+  const palette = [...gifenc.quantize(pngjs.PNG.sync.read(last.frame.png).data, UNCHANGED), [0, 0, 0]];
   const gif = gifenc.GIFEncoder();
   // Each frame kept, also as a PNG with its time on screen, for the review the GIF cannot give here.
   rmSync(FRAMES_DIR, { recursive: true, force: true });
   mkdirSync(FRAMES_DIR, { recursive: true });
   steps.forEach(({ frame, delay }, index) => writeFileSync(join(FRAMES_DIR, `${String(index).padStart(3, '0')}-${delay}ms.png`), frame.png));
+  let before: Uint8Array | null = null;
   for (const { frame, delay } of steps) {
     const image = pngjs.PNG.sync.read(frame.png);
-    gif.writeFrame(gifenc.applyPalette(image.data, palette), image.width, image.height, { palette, delay, repeat: 0 });
+    const indexed = gifenc.applyPalette(image.data, palette.slice(0, UNCHANGED));
+    gif.writeFrame(onlyChanges(indexed, before, UNCHANGED), image.width, image.height, { palette, delay, repeat: 0, transparent: before !== null, transparentIndex: UNCHANGED, dispose: KEEP_UNDER });
+    before = indexed;
   }
   gif.finish();
   return gif.bytes();

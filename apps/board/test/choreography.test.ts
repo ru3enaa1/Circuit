@@ -8,6 +8,7 @@ import type { RunEvent, RunSummary } from '../src/api.ts';
 import { Board, type BoardProps } from '../src/components/Board.tsx';
 import { Crew, figureKey } from '../src/components/Crew.tsx';
 import { StationBall } from '../src/components/StationBall.tsx';
+import { braidPath } from '../src/shape.ts';
 import { crewFor } from '../src/crew.ts';
 import { layoutFor } from '../src/layout.ts';
 import { projectRun, type StationView } from '../src/projection.ts';
@@ -17,12 +18,13 @@ import { GOLDEN_CASES, boardInfo, goldenEvents, prefixes } from './support.ts';
 
 // ADR-0018: one reveal is one move of the request, in three beats (leave, travel, arrive), so the
 // board reads as a flow and not as a change of slides. All of it still comes from stored events:
-// a pulse exists only on the route a revealed event made dashed, and the beats are CSS.
+// a braid (ADR-0019, which made the pulse two strands) exists only on the route a revealed event
+// made dashed, and the beats are CSS.
 
 const info = boardInfo();
 const MOTION = readFileSync(new URL('../src/motion.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 const ROOT = new Map([...MOTION.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map(([, name = '', value = '']) => [name, value.trim()]));
-/** The pulse may still fade over the tube's last stretch when the station lights up. */
+/** The braid may still grow over the tube's last stretch, under the bubble, when the station lights up. */
 const PULSE_FADE_MS = 40;
 
 function render(events: readonly RunEvent[]): string {
@@ -31,12 +33,14 @@ function render(events: readonly RunEvent[]): string {
   return renderToStaticMarkup(createElement(Board, props));
 }
 
-/** Each taken edge group of the markup: its dashed route and its pulses. */
-function edges(markup: string): { edge: string; now: number; pulses: string[] }[] {
+/** Each taken edge group of the markup: its dashed route, its braids and their strands. */
+function edges(markup: string): { edge: string; now: number; person: number; pulses: string[]; braids: string[] }[] {
   return [...markup.matchAll(/<g class="edge[^"]*" data-edge="([^"]+)"[^>]*>([\s\S]*?)<\/g>/g)].map(([, edge = '', body = '']) => ({
     edge,
-    now: (body.match(/class="edge__route is-now"/g) ?? []).length,
-    pulses: body.match(/<path class="edge__pulse"[^>]*>/g) ?? [],
+    now: (body.match(/class="edge__route is-now[^"]*"/g) ?? []).length,
+    person: (body.match(/class="edge__route is-now is-person"/g) ?? []).length,
+    pulses: body.match(/<path class="edge__strand[^"]*"[^>]*>/g) ?? [],
+    braids: body.match(/<g class="edge__braid[^"]*"/g) ?? [],
   }));
 }
 
@@ -50,27 +54,43 @@ function timing(selector: string, property: 'animation' | 'transition' = 'animat
   return [duration, delay];
 }
 
-describe('ADR-0018 · the request travels: a pulse on the route a revealed event made dashed', () => {
-  it.each(GOLDEN_CASES)('the golden case %s: one pulse on each dashed route, and none elsewhere', (name) => {
+describe('ADR-0019 · the request travels: a braid on the route a revealed event made dashed', () => {
+  it.each(GOLDEN_CASES)('the golden case %s: one braid of two strands on each dashed route, and none elsewhere', (name) => {
     for (const events of prefixes(goldenEvents(name))) {
-      for (const { edge, now, pulses } of edges(render(events))) {
+      for (const { edge, now, person, pulses, braids } of edges(render(events))) {
         const step = `${name}, ${events.length} events, ${edge}`;
-        expect({ step, pulses: pulses.length }).toEqual({ step, pulses: now });
+        expect({ step, braids: braids.length, strands: pulses.length }).toEqual({ step, braids: now, strands: 2 * now });
         for (const pulse of pulses) expect({ step, measured: pulse.includes('pathLength="1"') }).toEqual({ step, measured: true });
+        // A braid, not one thick strand: the two waves leave the tube's center line to opposite sides.
+        const shapes = new Set(pulses.map((pulse) => /\sd="([^"]*)"/.exec(pulse)?.[1]));
+        expect({ step, shapes: shapes.size }).toEqual({ step, shapes: pulses.length });
+        // The braid settles in the color the route takes: pink toward Persona waiting for the person.
+        expect({ step, pink: braids.filter((braid) => braid.includes('is-person')).length }).toEqual({ step, pink: person });
       }
     }
   });
 
-  it('the check sees a pulse (control): the normal case sends one at each move between stations', () => {
-    const events = goldenEvents('normal');
-    const moving = prefixes(events).filter((prefix) => edges(render(prefix)).some((edge) => edge.pulses.length > 0));
+  it('the check sees a braid (control): the normal case sends one at each move, and the complaint one goes pink', () => {
+    const moving = prefixes(goldenEvents('normal')).filter((prefix) => edges(render(prefix)).some((edge) => edge.braids.length > 0));
+    const pink = prefixes(goldenEvents('complaint')).filter((prefix) => edges(render(prefix)).some((edge) => edge.person > 0));
 
     expect(moving.length).toBeGreaterThanOrEqual(4);
+    expect(pink.length).toBeGreaterThan(0);
+  });
+
+  it('a strand is a wave around the tube: two of opposite side cross on its center line', () => {
+    const a = braidPath({ x: 0, y: 0 }, { x: 100, y: 0 }, 4, 20, 1);
+    const b = braidPath({ x: 0, y: 0 }, { x: 100, y: 0 }, 4, 20, -1);
+
+    expect(a).toBe('M0 0Q5 8 10 0T20 0T30 0T40 0T50 0T60 0T70 0T80 0T90 0T100 0');
+    expect(b).toBe('M0 0Q5 -8 10 0T20 0T30 0T40 0T50 0T60 0T70 0T80 0T90 0T100 0');
+    // Along a slanted tube the wave leaves it square: its first control point is on the normal.
+    expect(braidPath({ x: 0, y: 0 }, { x: 0, y: 100 }, 4, 20, 1).startsWith('M0 0Q-8 5 0 10')).toBe(true);
   });
 });
 
 describe('ADR-0018 · the three beats, read from motion.css', () => {
-  const [pulse, pulseAt] = timing('.edge__pulse');
+  const [pulse, pulseAt] = timing('.edge__strand--a');
   const [arrive, arriveAt] = timing('.station--waiting .station__fill');
 
   it('reads the times (control)', () => {
@@ -86,8 +106,11 @@ describe('ADR-0018 · the three beats, read from motion.css', () => {
     expect(pulseAt).toBeLessThan(Math.max(bloom, draw));
   });
 
-  it('the station that waits lights up when the pulse is in, and the ring lands with it', () => {
+  it('both strands grow together, and the station that waits lights up when the braid is in, the ring with it', () => {
+    expect(timing('.edge__strand--b')).toEqual([pulse, pulseAt]);
     expect(arriveAt).toBeGreaterThanOrEqual(pulseAt + pulse - PULSE_FADE_MS);
+    // The route in the state's one color takes over from the braid when it connects.
+    expect(timing('.edge__route.is-now')[1]).toBe(arriveAt);
     expect(timing('.station__selected')[1]).toBe(arriveAt);
     expect(timing('.station__wait-ring')[1]).toBe(arriveAt);
   });
@@ -95,18 +118,6 @@ describe('ADR-0018 · the three beats, read from motion.css', () => {
   it('its icon and name turn dark only once it is lit: never dark on the dark ground', () => {
     expect(timing('.station--waiting .station__inside', 'transition')[1]).toBeGreaterThanOrEqual(arriveAt);
     expect(timing('.station--person.station--waiting .station__outline', 'transition')[1]).toBeGreaterThanOrEqual(arriveAt);
-  });
-
-  it('the crew enters by turns, each figure with its hop, all inside the step', () => {
-    const turns = ['.crew__figure', '.crew__figure:nth-child(2)', '.crew__figure:nth-child(3)', '.crew__figure:nth-child(4)'];
-    const fades = turns.map((selector) => timing(selector));
-    // The first figure's hop is the plain .crew__body rule; the others are under their nth-child.
-    const hops = turns.map((selector, index) => timing(index === 0 ? '.crew__body' : `${selector} .crew__body`));
-
-    expect(fades.map(([, delay]) => delay)).toEqual([...fades.map(([, delay]) => delay)].sort((a, b) => a - b));
-    expect(new Set(fades.map(([, delay]) => delay)).size).toBe(turns.length);
-    expect(hops.map(([, delay]) => delay)).toEqual(fades.map(([, delay]) => delay));
-    for (const [duration, delay] of [...fades, ...hops]) expect(duration + delay).toBeLessThanOrEqual(REVEAL_STEP_MS);
   });
 });
 

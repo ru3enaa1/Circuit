@@ -127,7 +127,7 @@ describe('G4 · the crew as a whole', () => {
     expect([...markup.matchAll(/data-pose="/g)]).toHaveLength(crew.length);
     const pinkPose = POSES.find((pose) => pose.id === 'saluda');
     if (pinkPose === undefined) throw new Error('pose');
-    const figure = { pose: pinkPose, x: 0, y: 0, scale: 1, box: { x: 0, y: 0, w: 1, h: 1 }, on: ['a', 'b'] as const, pinkAsYellow: true };
+    const figure = { pose: pinkPose, x: 0, y: 0, scale: 1, box: { x: 0, y: 0, w: 1, h: 1 }, on: ['a', 'b'] as const, pinkAsYellow: true, key: 'saluda@0,0', move: { kind: 'door' as const, walk: [], walkMs: 0, atMs: 0, slide: null } };
     const yellow = renderToStaticMarkup(createElement('svg', null, createElement(Crew, { figures: [figure] })));
     expect(yellow).not.toContain('var(--pink)');
     expect(renderToStaticMarkup(createElement('svg', null, createElement(Crew, { figures: [{ ...figure, pinkAsYellow: false }] })))).toContain('var(--pink)');

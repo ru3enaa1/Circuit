@@ -203,9 +203,10 @@ parte vacía de las 12.
   estación, un texto, un botón ni la propuesta.
 - **Son decoración:** nunca muestran un estado. Su elección y su lugar salen de una semilla
   atada al id de la corrida, así que la misma corrida las pone siempre igual («Reproducible»).
-- En un alto, en una falla y mientras espera la persona, solo poses serias. Entran por turnos con
-  un saltito donde están paradas, y una que cambia de lugar entra de nuevo allí (ADR-0018); nunca
-  caminan. Con «reducir movimiento», quietas.
+- En un alto, en una falla y mientras espera la persona, solo poses serias. Llegan caminando por
+  la línea de entrada o la de salida y por los tubos, o salen de una puerta en su sitio, por turnos;
+  cuando la corrida cierra, una camina a Cierre y se va en tobogán por la última línea (ADR-0019).
+  Con «reducir movimiento», quietas.
 - Un accesorio rosado nunca va junto a una estación rosada: para no confundirlo con un estado,
   ahí se usa uno amarillo.
 
@@ -239,7 +240,8 @@ al nombre «Circuit» (IBM Plex Sans 600) y a 16 px como ícono de pestaña.
 - El estado nunca depende solo del color (§5).
 - El movimiento son transiciones de CSS entre dos vistas proyectadas (ADR-0011 B2), de 160 a
   320 ms. Cada paso del revelado es un movimiento de la solicitud (ADR-0018): la estación hecha
-  florece, un pulso cruza el tubo y la siguiente se enciende al llegar. Con
+  florece, una trenza amarilla y rosada cruza el tubo y, al llegar, queda de un solo color según el
+  estado (ADR-0019) mientras la siguiente se enciende. El equipo camina en sus propios tiempos. Con
   `prefers-reduced-motion`, cortes limpios, sin acercamiento ni revelado.
 - Texto mínimo: 10,5 px en mono para la telemetría; 13 px para lo que se lee.
 

@@ -54,6 +54,8 @@ describe('the board source', () => {
     expect(block).toMatch(/\*::before/);
     expect(block).toMatch(/animation: none !important;/);
     expect(block).toMatch(/transition: none !important;/);
+    // What only lives while it moves would stay drawn with no animation to hide it (ADR-0019).
+    expect(block).toMatch(/\.edge__braid,\s*\.crew__door\s*\{\s*display: none;/);
     // The rooms and the reveal move only by CSS animations (ADR-0016), so the cut above reaches all of them.
     expect(filesMatching(/@keyframes/).sort()).toEqual(['motion.css', 'room.css']);
   });

@@ -4,7 +4,12 @@
 declare module 'gifenc' {
   export type Palette = number[][];
   export interface Encoder {
-    writeFrame(index: Uint8Array, width: number, height: number, options: { readonly palette?: Palette; readonly delay?: number; readonly repeat?: number }): void;
+    writeFrame(
+      index: Uint8Array,
+      width: number,
+      height: number,
+      options: { readonly palette?: Palette; readonly delay?: number; readonly repeat?: number; readonly transparent?: boolean; readonly transparentIndex?: number; readonly dispose?: number },
+    ): void;
     finish(): void;
     bytes(): Uint8Array;
   }

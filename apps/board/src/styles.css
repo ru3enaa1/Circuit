@@ -110,15 +110,40 @@ body,
   stroke-dasharray: 6 6;
 }
 
-/* The request on its way (ADR-0018): one short dash with round caps, a capsule, on a path measured in
-   one (a twentieth of the tube, then a gap longer than the path); motion.css moves it once along the
-   tube. Thinner than the tube's core. */
-.edge__pulse {
+/* Toward Persona while it waits for the person: the route settles pink, as Persona does (ADR-0019). */
+.edge__route.is-now.is-person {
+  stroke: var(--pink);
+}
+
+/*
+ * The request on its way (ADR-0019): two strands, yellow and pink, braided inside the tube's core and
+ * glowing. Where they cross, the screen blend shows the two together, a light peach. Each strand is
+ * measured in one and hidden by its own dash until motion.css grows it from the station left. When
+ * it connects, both turn the state's color, --settle: yellow for a station at work, pink for Persona.
+ */
+.edge__braid {
+  --settle: var(--yellow);
+  filter: drop-shadow(0 0 3px var(--pink)) drop-shadow(0 0 4px var(--yellow));
+}
+
+.edge__braid.is-person {
+  --settle: var(--pink);
+}
+
+.edge__strand {
   fill: none;
-  stroke: var(--yellow);
-  stroke-width: 6;
+  stroke-width: 2.4;
   stroke-linecap: round;
-  stroke-dasharray: 0.05 2;
+  stroke-dasharray: 1 2;
+  mix-blend-mode: screen;
+}
+
+.edge__strand--a {
+  stroke: var(--yellow);
+}
+
+.edge__strand--b {
+  stroke: var(--pink);
 }
 
 .orbit.is-closed .edge__route {
@@ -396,6 +421,25 @@ body,
   fill: var(--bone);
 }
 
+/* The door a figure steps out of (ADR-0019): lines and dots like the figures, a dark doorway behind a leaf. */
+.crew__door-way {
+  fill: var(--bg);
+  stroke: var(--bone);
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+
+.crew__door-panel {
+  fill: #3a3936;
+  stroke: var(--bone);
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+
+.crew__door-knob {
+  fill: var(--bone);
+}
+
 /* Reduced motion (§14, ADR-0013 E6): clean cuts, no zoom and no fade. */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -403,5 +447,11 @@ body,
   *::after {
     animation: none !important;
     transition: none !important;
+  }
+
+  /* What only lives while it moves (ADR-0019): the braid on its way and the door a figure steps out of. */
+  .edge__braid,
+  .crew__door {
+    display: none;
   }
 }
