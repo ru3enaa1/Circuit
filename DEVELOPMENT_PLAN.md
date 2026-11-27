@@ -325,7 +325,10 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   el simulador; seis mutantes en rojo. El mismo día el dueño decidió no usar la llave (ADR-0015 A1):
   sin corridas reales, F3.5 fuera del hito. **F3.2 hecha:** el adaptador clasifica sobre un
   transporte falso; 1406 pruebas; Y1–Y7 en rojo. **F3.3 hecha:** el conocimiento con cita, con los
-  documentos delimitados y en caché; 1417 pruebas; Z1–Z8 en rojo.
+  documentos delimitados y en caché; 1417 pruebas; Z1–Z8 en rojo. **F3.4 hecha:** las propuestas
+  al CRM como herramientas `strict` que no se ejecutan, y `CIRCUIT_MODEL=anthropic` cableado,
+  apagado. La batería corre con el adaptador sobre un transporte falso: **F3 cumple su
+  «terminado cuando»**; 1456 pruebas; W1–W14 en rojo. Falta integrarla a `main` (el dueño).
 
 ### F6 · Demostración
 

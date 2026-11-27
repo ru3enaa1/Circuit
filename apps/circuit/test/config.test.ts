@@ -79,11 +79,38 @@ describe('B6 · readCircuitConfig', () => {
     for (const value of ['corta', 'mi base', '99999', '../otro', '70000']) expect(message).not.toContain(value);
   });
 
-  it('CIRCUIT_MODEL other than the simulator stops the start-up by its name', () => {
+  it('CIRCUIT_MODEL out of the list stops the start-up by its name', () => {
     const message = errorOf({ ...VALID, CIRCUIT_MODEL: 'claude-real' });
 
     expect(message).toContain('CIRCUIT_MODEL');
     expect(message).not.toContain('claude-real');
+  });
+});
+
+describe('CIRCUIT_MODEL=anthropic (ADR-0015)', () => {
+  const KEY = 'clave-de-prueba-que-no-sirve-0123456789';
+
+  it('(control) the simulator needs no key, and ignores one that is there', () => {
+    expect(readCircuitConfig(VALID)).toMatchObject({ model: 'simulator', anthropicApiKey: null });
+    expect(readCircuitConfig({ ...VALID, ANTHROPIC_API_KEY: KEY })).toMatchObject({ model: 'simulator', anthropicApiKey: null });
+  });
+
+  it('takes the key from ANTHROPIC_API_KEY', () => {
+    expect(readCircuitConfig({ ...VALID, CIRCUIT_MODEL: 'anthropic', ANTHROPIC_API_KEY: KEY })).toMatchObject({ model: 'anthropic', anthropicApiKey: KEY });
+  });
+
+  it.each([
+    ['no key', undefined],
+    ['an empty key', ''],
+    ['a key with a space', 'clave con espacios que no sirve 0123'],
+    ['a key in quotes', '"clave-de-prueba-que-no-sirve-0123456789"'],
+    ['a short key', 'corta-secreta'],
+  ])('%s stops the start-up naming the variable, never the value', (_name, key) => {
+    const message = errorOf({ ...VALID, CIRCUIT_MODEL: 'anthropic', ANTHROPIC_API_KEY: key });
+
+    expect(message).toContain('ANTHROPIC_API_KEY');
+    if (key) expect(message).not.toContain(key);
+    expect(message).not.toMatch(/secreta|que no sirve|clave-de-prueba/);
   });
 
   it('a .env saved with a BOM is named as such', () => {

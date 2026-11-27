@@ -17,7 +17,7 @@ const CLASSIFICATION = { intent: 'request', topic: 'radiografia', urgency: 'medi
 
 function adapter(answers: readonly (FakeAnswer | 'network-down')[], extra: Partial<AnthropicOptions> = {}) {
   const transport = fakeAnthropic(answers);
-  const model = createAnthropicModel({ apiKey: FAKE_API_KEY, fetch: transport.fetch, topics: TOPICS, maxRetries: 0, ...extra });
+  const model = createAnthropicModel({ apiKey: FAKE_API_KEY, fetch: transport.fetch, topics: TOPICS, stages: ['nueva'], maxRetries: 0, ...extra });
   return { model, sent: transport.sent };
 }
 
@@ -25,7 +25,7 @@ const ok = (output: unknown = CLASSIFICATION): FakeAnswer => ({ text: JSON.strin
 
 describe('Anthropic adapter · classification (ADR-0015 F3.2)', () => {
   it('K8 · cannot be made without the fetch it will use', () => {
-    const options = { apiKey: FAKE_API_KEY, topics: TOPICS } as unknown as AnthropicOptions;
+    const options = { apiKey: FAKE_API_KEY, topics: TOPICS, stages: [] } as unknown as AnthropicOptions;
     expect(() => createAnthropicModel(options)).toThrow(/fetch/);
   });
 

@@ -135,6 +135,17 @@ local y de una sola persona; cualquier programa de este equipo podría decidir, 
 para un despliegue. Circuit necesita en `.env` las líneas `CIRCUIT_SCENARIO` y
 `CRM_AGENT_KEY_FILE` de `.env.example`, y la llave que deja `npm run db:seed`.
 
+**El modelo.** Las estaciones 3, 4 y 5 las responde un simulador, que lee
+`scenarios/<id>/simulator.json` y da siempre la misma respuesta a la misma solicitud. Por eso
+sus tokens, costos y tiempos de modelo salen vacíos: no hay una fuente para esos números. Detrás
+de la misma interfaz está el adaptador de Anthropic (`claude-opus-5-5`,
+[ADR-0015](docs/adr/0015-modelo-real-y-repeticion.md)): clasifica con salida estructurada,
+responde citando un documento del escenario (el código revisa que la cita esté ahí, palabra por
+palabra) y propone las acciones del CRM como herramientas que nunca ejecuta. Pasa la misma
+batería de pruebas que el simulador, pero **solo contra un transporte falso**: esta
+demostración no llama a la API ni muestra corridas reales. Encenderlo es configuración:
+`CIRCUIT_MODEL=anthropic` y `ANTHROPIC_API_KEY` en `.env`, con el gasto de tokens que eso trae.
+
 ## Datos de ejemplo: la semilla
 
 ```sh

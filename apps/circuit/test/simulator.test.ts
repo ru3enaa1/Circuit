@@ -62,10 +62,11 @@ describe('the simulator (ADR-0010 D12)', () => {
 });
 
 describe('CIRCUIT_MODEL (ADR-0010 D12)', () => {
-  it('is the simulator when unset or empty', () => {
+  it('is the simulator when unset or empty, and takes a name of the list', () => {
     expect(readModelChoice({})).toBe('simulator');
     expect(readModelChoice({ CIRCUIT_MODEL: '' })).toBe('simulator');
     expect(readModelChoice({ CIRCUIT_MODEL: 'simulator' })).toBe('simulator');
+    expect(readModelChoice({ CIRCUIT_MODEL: 'anthropic' })).toBe('anthropic');
   });
 
   it('stops on any other value, naming the variable and not quoting the value', () => {

@@ -15,6 +15,7 @@ describe('the real package', () => {
     const tryouts = loadTryouts(SCENARIOS_DIR, GOLDEN_SCENARIO);
 
     expect(tryouts.agentAccount).toBe('escuela-andamio');
+    expect(tryouts.stages).toEqual(['nueva', 'diagnostico', 'programa-propuesto', 'conversacion-agendada', 'inscrita', 'descartada']);
     expect(tryouts.samples.map((sample) => sample.id)).toEqual([...GOLDEN_CASES]);
     for (const sample of tryouts.samples) expect(sample.text, sample.id).toBe(readInput(sample.id as (typeof GOLDEN_CASES)[number]).text);
   });
@@ -45,23 +46,32 @@ describe('a package that is not well formed', () => {
   }
 
   const SAMPLE = { id: 'uno', label: 'Uno', text: 'Hola.' };
+  const STAGES = [{ key: 'segunda', position: 1 }, { key: 'primera', position: 0 }];
+  /** A crm.json with the agent's account and its stages; another account's stages never count. */
+  const crmOf = (agentAccount: string, stages: unknown = STAGES) => ({
+    agentAccount,
+    accounts: [{ slug: 'otra', stages: [{ key: 'ajena', position: 0 }] }, { slug: agentAccount, stages }],
+  });
 
-  it('(control) loads a small one', () => {
-    write('bueno', { agentAccount: 'cuenta-a' }, { samples: [SAMPLE] });
+  it("(control) loads a small one, with the agent account's stages by position", () => {
+    write('bueno', crmOf('cuenta-a'), { samples: [SAMPLE] });
 
-    expect(loadTryouts(root, 'bueno')).toEqual({ agentAccount: 'cuenta-a', samples: [SAMPLE] });
+    expect(loadTryouts(root, 'bueno')).toEqual({ agentAccount: 'cuenta-a', stages: ['primera', 'segunda'], samples: [SAMPLE] });
   });
 
   it.each([
     ['no agent account', {}, { samples: [SAMPLE] }],
     ['an account that is not a slug', { agentAccount: '../x' }, { samples: [SAMPLE] }],
-    ['no samples', { agentAccount: 'a' }, { samples: [] }],
-    ['a repeated id', { agentAccount: 'a' }, { samples: [SAMPLE, SAMPLE] }],
-    ['a field of more', { agentAccount: 'a' }, { samples: [{ ...SAMPLE, email: 'x@y.test' }] }],
-    ['an empty text', { agentAccount: 'a' }, { samples: [{ ...SAMPLE, text: ' ' }] }],
-    ['a label of 61 characters', { agentAccount: 'a' }, { samples: [{ ...SAMPLE, label: 'x'.repeat(61) }] }],
-    ['a key of more at the top', { agentAccount: 'a' }, { samples: [SAMPLE], other: 1 }],
-    ['samples.json that is not JSON', { agentAccount: 'a' }, '{ secreto'],
+    ['no samples', crmOf('a'), { samples: [] }],
+    ['a repeated id', crmOf('a'), { samples: [SAMPLE, SAMPLE] }],
+    ['a field of more', crmOf('a'), { samples: [{ ...SAMPLE, email: 'x@y.test' }] }],
+    ['an empty text', crmOf('a'), { samples: [{ ...SAMPLE, text: ' ' }] }],
+    ['a label of 61 characters', crmOf('a'), { samples: [{ ...SAMPLE, label: 'x'.repeat(61) }] }],
+    ['a key of more at the top', crmOf('a'), { samples: [SAMPLE], other: 1 }],
+    ['an agent account with no stages', { agentAccount: 'a', accounts: [{ slug: 'otra', stages: STAGES }] }, { samples: [SAMPLE] }],
+    ['a stage key out of shape', crmOf('a', [{ key: 'Con Espacios', position: 0 }]), { samples: [SAMPLE] }],
+    ['a stage with no position', crmOf('a', [{ key: 'primera' }]), { samples: [SAMPLE] }],
+    ['samples.json that is not JSON', crmOf('a'), '{ secreto'],
   ])('refuses %s, without quoting the file', (name, crm, samples) => {
     const id = `caso-${name.replace(/[^a-z0-9]+/g, '-').slice(0, 30)}`;
     write(id, crm, samples);

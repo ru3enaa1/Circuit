@@ -28,7 +28,29 @@ export interface Sample {
 export interface Tryouts {
   /** The account of crm.json the agent's key belongs to (ADR-0009 D22). */
   readonly agentAccount: string;
+  /** The stage keys of that account, by position: the only stages station 5 may propose (ADR-0015 F3.4). */
+  readonly stages: readonly string[];
   readonly samples: readonly Sample[];
+}
+
+/** The CRM's stage key (apps/crm/src/scenario.ts checks the same shape when it seeds). */
+const STAGE_KEY_PATTERN = /^[a-z0-9-]{1,40}$/;
+
+/** The agent account's stage keys. Its full shape is the CRM's to check; this reads only what circuit uses. */
+function stagesOf(crm: Record<string, unknown>, agentAccount: string): readonly string[] {
+  const accounts = Array.isArray(crm['accounts']) ? crm['accounts'] : [];
+  const account = accounts.find((candidate: unknown) => isRecord(candidate) && candidate['slug'] === agentAccount);
+  const stages = isRecord(account) ? account['stages'] : undefined;
+  if (!Array.isArray(stages)) throw new InvalidScenario('crm.json no trae las etapas de la cuenta del agente.');
+  const ordered = stages.map((stage: unknown) => {
+    const key = isRecord(stage) ? stage['key'] : undefined;
+    const position = isRecord(stage) ? stage['position'] : undefined;
+    if (typeof key !== 'string' || !STAGE_KEY_PATTERN.test(key) || !Number.isSafeInteger(position)) {
+      throw new InvalidScenario('crm.json trae una etapa sin clave o sin posición.');
+    }
+    return { key, position: position as number };
+  });
+  return Object.freeze(ordered.sort((a, b) => a.position - b.position).map((stage) => stage.key));
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -59,9 +81,10 @@ export function loadTryouts(scenariosDir: string, id: string): Tryouts {
   const crm = readJson(join(root, 'crm.json'), 'crm.json');
   const agentAccount = isRecord(crm) ? crm['agentAccount'] : undefined;
   if (typeof agentAccount !== 'string' || !SCENARIO_ID_PATTERN.test(agentAccount)) throw new InvalidScenario('crm.json no nombra la cuenta del agente.');
+  const stages = stagesOf(crm as Record<string, unknown>, agentAccount);
   const file = readJson(join(root, 'samples.json'), 'samples.json');
   const list = isRecord(file) && Object.keys(file).length === 1 ? file['samples'] : undefined;
   if (!Array.isArray(list) || list.length === 0 || list.length > MAX_SAMPLES) throw new InvalidScenario(`samples.json debe traer de 1 a ${MAX_SAMPLES} muestras.`);
   const seen = new Set<string>();
-  return Object.freeze({ agentAccount, samples: Object.freeze(list.map((entry: unknown, index) => sampleOf(entry, index, seen))) });
+  return Object.freeze({ agentAccount, stages, samples: Object.freeze(list.map((entry: unknown, index) => sampleOf(entry, index, seen))) });
 }

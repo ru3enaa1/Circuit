@@ -3,6 +3,7 @@ export { createSimulator, DEFAULT_REPLIES, InvalidSimulatorFile, parseSimulatorF
 export type { SimulatedReplies } from './simulator.ts';
 export { ANTHROPIC_MODEL, createAnthropicModel, ModelRefused, ModelUnavailable } from './anthropic.ts';
 export type { AnthropicOptions } from './anthropic.ts';
+export { InvalidStage } from './crm-tools.ts';
 export { UnsafeDocument } from './prompts.ts';
 export type { Topic } from './prompts.ts';
 export { PRICES, PRICES_READ_ON, PRICES_SOURCE, usageOf } from './prices.ts';

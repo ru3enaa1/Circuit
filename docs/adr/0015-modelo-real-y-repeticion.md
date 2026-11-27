@@ -154,3 +154,29 @@ restaurados por hash: la solicitud en el sistema, sin punto de caché, documento
 `documentId` sin `null`, la revisión de etiquetas sensible a mayúsculas, sin revisión del id, los
 documentos armados dentro de la llamada y en otro orden. `npm run check` en 0: 1417 pruebas (una
 solo en Linux), cobertura 93,66 / 86,99 / 93,78 / 95,79.
+
+**F3.4 (2026-11-27, con A1).** Antes se revisó lo vigente ese día: `@anthropic-ai/sdk` 1.14.0 sigue
+siendo `latest` en el registro, y `claude-opus-5-5`, el Opus vigente; nada cambió.
+`modules/model/crm-tools.ts`: las cinco acciones de `ACTION_TYPES` como herramientas `strict`, en
+ese orden. `create_contact` pide solo el nombre, porque el correo lo pone el núcleo (ADR-0010 D4).
+`move_stage` lleva un enum con las etapas de la cuenta del agente y se quita si el escenario no
+tiene etapas; una etapa fuera de forma lanza `InvalidStage` al crear el adaptador. Hay una sola
+llamada, con `tool_choice: auto` (Opus 5.5 rechaza la elección forzada) y esfuerzo `medium`, sin
+`tool_result` y sin segunda vuelta. Las llamadas se juntan en orden como `{actions}`, con el
+nombre de la herramienta como `type`, puesto al final para que ninguna entrada renombre su acción.
+Ninguna llamada es la propuesta de nada; una respuesta cortada por `max_tokens` da `null` y la
+estación falla, en vez de proponer menos. El contexto del CRM va en un bloque `<crm>` aparte,
+antes de la solicitud, como JSON con cada `<` escapado y sin el id del contacto. Las herramientas
+y las instrucciones son fijas para un escenario, con el punto de caché después de ellas.
+`loadTryouts` devuelve también `stages`: las claves de la cuenta del agente, por `position`.
+
+**Encendido (2026-11-27).** `CIRCUIT_MODEL` acepta `simulator` (por defecto) y `anthropic`. Con
+`anthropic`, `ANTHROPIC_API_KEY` es obligatoria, de 20 a 200 letras, dígitos, `-` o `_`, y el
+mensaje nombra la variable, nunca su valor. `modelFor`, de `main.ts`, construye el modelo y le da
+al adaptador el `fetch` del proceso; las pruebas le dan uno falso (K8). `.env.example` trae
+`CIRCUIT_MODEL=simulator` y la llave comentada. **F3 cumple su «terminado cuando»:** la batería
+de contrato corre con el adaptador sobre `test/support/simulated-anthropic.ts`, un transporte
+falso que responde lo que respondería el simulador (`anthropic-contract.test.ts`, 15 pruebas).
+Pruebas nuevas: `anthropic-crm.test.ts` (11), `model-choice.test.ts` (3) y casos en
+`config`, `simulator` y `tryouts`. W1–W14 en rojo y restaurados por hash. `npm run check` en 0:
+1456 pruebas (una solo en Linux), cobertura 93,74 / 87,07 / 93,91 / 95,83.

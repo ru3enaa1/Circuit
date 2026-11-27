@@ -14,12 +14,16 @@ export const CIRCUIT_DB_USER = 'circuit_app';
 export const DB_PASSWORD_PATTERN = /^[A-Za-z0-9._~-]{16,128}$/;
 export const DB_PASSWORD_RULE = 'de 16 a 128 letras, dígitos, «-», «_», «.» o «~»';
 
-/** The models circuit can run with. Only the simulator until F3 (ADR-0010 D12, ADR-0001 D3). */
-export const MODEL_CHOICES = ['simulator'] as const;
+/**
+ * The models circuit can run with (ADR-0010 D12, ADR-0001 D3): the simulator, the default, and
+ * Anthropic's model (ADR-0015), which needs ANTHROPIC_API_KEY. With A1 the demonstration never
+ * turns it on; turning it on is this variable and the key, not code.
+ */
+export const MODEL_CHOICES = ['simulator', 'anthropic'] as const;
 export type ModelChoice = (typeof MODEL_CHOICES)[number];
 
 /**
- * CIRCUIT_MODEL, unset or `simulator`. Any other value stops the start-up naming the variable
+ * CIRCUIT_MODEL, unset (the simulator) or one of MODEL_CHOICES. Any other value stops the start-up naming the variable
  * and never quoting what it held: turning the real model on is a configuration change, and a
  * typo must not fall back to something else in silence.
  */
@@ -55,7 +59,9 @@ export const DEFAULT_MENTOR = 'mentor';
 // CRM_AGENT_KEY_FILE is required since F2.4: circuit reads and writes the CRM with that key. Its
 // file and CRM_URL are read by crm-client (ADR-0012 A9), which knows their rules.
 const REQUIRED = ['CIRCUIT_DB_PASSWORD', 'POSTGRES_DB', 'DB_PORT', 'CIRCUIT_SCENARIO', 'CRM_AGENT_KEY_FILE'] as const;
-const OPTIONAL = ['CIRCUIT_PORT', 'CIRCUIT_MODEL', 'CIRCUIT_MENTOR', 'CRM_URL'] as const;
+const OPTIONAL = ['CIRCUIT_PORT', 'CIRCUIT_MODEL', 'CIRCUIT_MENTOR', 'CRM_URL', 'ANTHROPIC_API_KEY'] as const;
+/** Anthropic's keys are letters, digits, «-» and «_»; a space or a quote is a copy that went wrong. */
+const API_KEY_SHAPE = /^[A-Za-z0-9_-]{20,200}$/;
 
 export interface CircuitDatabaseConfig {
   readonly host: string;
@@ -71,6 +77,8 @@ export interface CircuitConfig {
   readonly port: number;
   readonly scenario: string;
   readonly model: ModelChoice;
+  /** Only with CIRCUIT_MODEL=anthropic; never printed, never stored (ADR-0015 K11). */
+  readonly anthropicApiKey: string | null;
   /** The name every decision is signed with (A7). */
   readonly mentor: string;
   readonly db: CircuitDatabaseConfig;
@@ -114,6 +122,15 @@ function modelOf(env: Readonly<Record<string, string | undefined>>): ModelChoice
   }
 }
 
+/** The key the real model needs, checked only for its shape; the message names the variable, never the value. */
+function apiKeyOf(env: Readonly<Record<string, string | undefined>>): string {
+  const key = env['ANTHROPIC_API_KEY'];
+  if (key === undefined || !API_KEY_SHAPE.test(key)) {
+    throw new CircuitConfigError('Con CIRCUIT_MODEL=anthropic hace falta ANTHROPIC_API_KEY en .env, sin espacios ni comillas.');
+  }
+  return key;
+}
+
 export function readCircuitConfig(env: Readonly<Record<string, string | undefined>>): CircuitConfig {
   const withBom = [...REQUIRED, ...OPTIONAL].filter((name) => env[name] === undefined && env[BYTE_ORDER_MARK + name] !== undefined);
   if (withBom.length > 0) throw new CircuitConfigError(`${withBom.join(', ')} empieza con un BOM: guarda .env como UTF-8 sin BOM.`);
@@ -124,12 +141,14 @@ export function readCircuitConfig(env: Readonly<Record<string, string | undefine
   const problems = problemsOf(env);
   if (problems.length > 0) throw new CircuitConfigError(problems.join(' '));
   const model = modelOf(env);
+  const anthropicApiKey = model === 'anthropic' ? apiKeyOf(env) : null;
   const port = env['CIRCUIT_PORT'];
   return {
     host: CIRCUIT_LISTEN_HOST,
     port: port === undefined || port === '' ? DEFAULT_CIRCUIT_PORT : Number(port),
     scenario: env['CIRCUIT_SCENARIO'] as string,
     model,
+    anthropicApiKey,
     mentor: env['CIRCUIT_MENTOR'] || DEFAULT_MENTOR,
     db: {
       host: CIRCUIT_DB_HOST,

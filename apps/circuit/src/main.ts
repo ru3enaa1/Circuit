@@ -6,10 +6,20 @@ import pg from 'pg';
 
 import { CircuitConfigError, readCircuitConfig, type CircuitConfig, type CircuitDatabaseConfig, type ModelChoice } from './config.ts';
 import { createDecisionDesk } from './modules/approval/index.ts';
-import { CIRCUIT, LOW_CONFIDENCE_BELOW, startRun, type Clock, type EngineDeps } from './modules/circuit/index.ts';
+import { CIRCUIT, LOW_CONFIDENCE_BELOW, startRun, type Clock, type EngineDeps, type ModelPort, type SourceDocument } from './modules/circuit/index.ts';
 import { CRM_TOOLS, CrmClientConfigError, HttpCrmClient, readCrmEndpoint } from './modules/crm-client/index.ts';
 import { PgEventStore, PgRunReader } from './modules/event-store/index.ts';
-import { createSimulator, InvalidSimulatorFile, parseSimulatorFile, requestSha256, SIMULATOR_NAME } from './modules/model/index.ts';
+import {
+  ANTHROPIC_MODEL,
+  createAnthropicModel,
+  createSimulator,
+  InvalidSimulatorFile,
+  InvalidStage,
+  parseSimulatorFile,
+  requestSha256,
+  SIMULATOR_NAME,
+  type SimulatedReplies,
+} from './modules/model/index.ts';
 import { InvalidScenario, loadScenario, loadTryouts, type Tryouts } from './modules/scenario/index.ts';
 import { circuitPayload } from './server/api.ts';
 import { readBoardFiles } from './server/board-files.ts';
@@ -39,7 +49,33 @@ const CONNECT_TIMEOUT_MS = 5_000;
 const STATEMENT_TIMEOUT_MS = 5_000;
 
 /** The name each model choice stores in its events, which the board shows. */
-const MODEL_NAMES: Readonly<Record<ModelChoice, string>> = { simulator: SIMULATOR_NAME };
+const MODEL_NAMES: Readonly<Record<ModelChoice, string>> = { simulator: SIMULATOR_NAME, anthropic: ANTHROPIC_MODEL };
+
+export interface ModelInputs {
+  readonly replies: readonly SimulatedReplies[];
+  readonly documents: readonly SourceDocument[];
+  readonly stages: readonly string[];
+}
+
+/**
+ * The model CIRCUIT_MODEL chose (ADR-0015): configuration, not code. The adapter gets the fetch
+ * it will use from here, so the tests pass a fake one and never reach the network (K8).
+ */
+export function modelFor(config: Pick<CircuitConfig, 'model' | 'anthropicApiKey'>, inputs: ModelInputs, fetch: typeof globalThis.fetch): ModelPort {
+  if (config.model === 'simulator') return createSimulator(inputs.replies);
+  if (config.anthropicApiKey === null) throw new CircuitStartupError('Con CIRCUIT_MODEL=anthropic hace falta ANTHROPIC_API_KEY.');
+  try {
+    return createAnthropicModel({
+      apiKey: config.anthropicApiKey,
+      fetch,
+      topics: inputs.documents.map(({ id, title }) => ({ id, title })),
+      stages: inputs.stages,
+    });
+  } catch (error) {
+    if (error instanceof InvalidStage) throw new CircuitStartupError(`El escenario de CIRCUIT_SCENARIO no sirve para el modelo: ${error.message}`);
+    throw error;
+  }
+}
 
 const INVALID_PASSWORD = '28P01';
 const UNKNOWN_DATABASE = '3D000';
@@ -157,7 +193,7 @@ export async function startCircuit(env: Readonly<Record<string, string | undefin
       store,
       clock: SYSTEM_CLOCK,
       digest: { sha256: requestSha256 },
-      model: createSimulator(replies),
+      model: modelFor(config, { replies, documents: scenario.documents, stages: tryouts.stages }, globalThis.fetch),
       crmReader: crm,
       documents: scenario.documents,
       scenario: scenario.id,

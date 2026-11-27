@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 
 import type { ModelPort, ModelReply } from '../circuit/index.ts';
+import { actionsOf, contextBlock, crmSystem, crmTools } from './crm-tools.ts';
 import { usageOf } from './prices.ts';
 import { ANSWER_INSTRUCTIONS, answerSchema, classifySchema, classifySystem, documentsBlock, type Topic } from './prompts.ts';
 
@@ -19,6 +20,8 @@ const CLASSIFY_MAX_TOKENS = 4000;
  * tokens; the rest is room for the thinking, so a long answer is not cut into JSON the core refuses.
  */
 const ANSWER_MAX_TOKENS = 8000;
+/** Up to five actions (actions.ts), one a note of up to 4000 characters, and the thinking. */
+const CRM_MAX_TOKENS = 8000;
 /** One request should not keep a station waiting longer than this. */
 const DEFAULT_TIMEOUT_MS = 60_000;
 /** The SDK's own default: it retries 408, 409, 429, 5xx and dropped connections, with no side effects. */
@@ -30,6 +33,8 @@ export interface AnthropicOptions {
   readonly fetch: typeof globalThis.fetch;
   /** The scenario's programs, the only topics a classification may name. */
   readonly topics: readonly Topic[];
+  /** The stage keys of the agent's CRM account, the only stages move_stage may name. */
+  readonly stages: readonly string[];
   readonly timeoutMs?: number;
   readonly maxRetries?: number;
 }
@@ -55,8 +60,7 @@ export class ModelRefused extends Error {
 }
 
 /** The text of the answer as JSON, or the text itself when it is not JSON: the core then fails the station. */
-function outputOf(message: Anthropic.Message): unknown {
-  if (message.stop_reason === 'refusal') throw new ModelRefused();
+function jsonOf(message: Anthropic.Message): unknown {
   const text = message.content.flatMap((block) => (block.type === 'text' ? [block.text] : [])).join('');
   try {
     return JSON.parse(text) as unknown;
@@ -65,7 +69,16 @@ function outputOf(message: Anthropic.Message): unknown {
   }
 }
 
-function replyOf(message: Anthropic.Message): ModelReply {
+/**
+ * Station 5's proposal: the tool calls, gathered. An answer cut by max_tokens may hold a call cut
+ * in half, so it gives nothing the core accepts, and the station fails instead of proposing less.
+ */
+function proposalOf(message: Anthropic.Message): unknown {
+  return message.stop_reason === 'max_tokens' ? null : { actions: actionsOf(message) };
+}
+
+function replyOf(message: Anthropic.Message, read: (message: Anthropic.Message) => unknown): ModelReply {
+  if (message.stop_reason === 'refusal') throw new ModelRefused();
   const { usage } = message;
   const split = usage.cache_creation;
   const cacheWrite = usage.cache_creation_input_tokens ?? 0;
@@ -77,7 +90,7 @@ function replyOf(message: Anthropic.Message): ModelReply {
     cacheRead: usage.cache_read_input_tokens ?? 0,
     output: usage.output_tokens,
   };
-  return { output: outputOf(message), usage: usageOf(message.model, tokens) };
+  return { output: read(message), usage: usageOf(message.model, tokens) };
 }
 
 /** Any failure of the SDK, without its message: it can carry the answer's body or headers (K11). */
@@ -99,6 +112,9 @@ export function createAnthropicModel(options: AnthropicOptions): ModelPort {
   });
   const system = classifySystem(options.topics);
   const schema = classifySchema(options.topics);
+  // Built once: a stage out of shape stops the adapter from being made, before any request.
+  const tools = crmTools(options.stages);
+  const crmInstructions = crmSystem(options.stages);
   return {
     name: ANTHROPIC_MODEL,
     async classify(request) {
@@ -111,7 +127,7 @@ export function createAnthropicModel(options: AnthropicOptions): ModelPort {
           output_config: { effort: 'low', format: { type: 'json_schema', schema } },
         }),
       );
-      return replyOf(message);
+      return replyOf(message, jsonOf);
     },
     async answer(request, documents) {
       // Built before the call, so a document that breaks the delimiters never reaches the network.
@@ -130,10 +146,31 @@ export function createAnthropicModel(options: AnthropicOptions): ModelPort {
           output_config: { effort: 'medium', format: { type: 'json_schema', schema: answerSchema(documents) } },
         }),
       );
-      return replyOf(message);
+      return replyOf(message, jsonOf);
     },
-    async proposeCrm() {
-      throw new Error('Las propuestas al CRM llegan en F3.4.');
+    async proposeCrm(request, context) {
+      const message = await called(() =>
+        client.messages.create({
+          model: ANTHROPIC_MODEL,
+          max_tokens: CRM_MAX_TOKENS,
+          // Tools and instructions are fixed for a scenario; the breakpoint after them caches both.
+          tools,
+          system: [{ type: 'text', text: crmInstructions, cache_control: { type: 'ephemeral' } }],
+          // Opus 5.5 refuses a forced tool choice; «auto» with the instructions, and no call is a valid «nothing to do».
+          tool_choice: { type: 'auto' },
+          messages: [
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: contextBlock(context) },
+                { type: 'text', text: request },
+              ],
+            },
+          ],
+          output_config: { effort: 'medium' },
+        }),
+      );
+      return replyOf(message, proposalOf);
     },
   };
 }

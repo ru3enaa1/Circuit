@@ -25,7 +25,7 @@ const reply = (output: unknown): FakeAnswer => ({ text: JSON.stringify(output) }
 function adapter(answers: readonly (FakeAnswer | 'network-down')[]) {
   const transport = fakeAnthropic(answers);
   const topics = [{ id: 'radiografia', title: 'Radiografía' }];
-  const model = createAnthropicModel({ apiKey: FAKE_API_KEY, fetch: transport.fetch, topics, maxRetries: 0 });
+  const model = createAnthropicModel({ apiKey: FAKE_API_KEY, fetch: transport.fetch, topics, stages: ['nueva'], maxRetries: 0 });
   return { model, sent: transport.sent };
 }
 

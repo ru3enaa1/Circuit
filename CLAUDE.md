@@ -264,8 +264,12 @@ se prueba solo con un transporte falso (`test/support/fake-anthropic.ts`); F3.5 
 nada muestra medidas del modelo como reales. **F3.2 hecha, sin empujar:** `modules/model/anthropic.ts`
 (la clasificación) y `prices.ts` (Opus 5.5, con fuente y fecha); 1406 pruebas; Y1–Y7 en rojo.
 **F3.3 hecha, sin empujar:** `answer` con cita, los documentos delimitados con su id y en caché,
-los textos en `modules/model/prompts.ts`; 1417 pruebas; Z1–Z8 en rojo. Sigue F3.4 (CRM con
-herramientas, que corre la batería).
+los textos en `modules/model/prompts.ts`; 1417 pruebas; Z1–Z8 en rojo. **F3.4 hecha, sin empujar:**
+`proposeCrm` con herramientas `strict` que no se ejecutan (`modules/model/crm-tools.ts`), y
+`CIRCUIT_MODEL=anthropic` con `ANTHROPIC_API_KEY`, apagado (`modelFor` de `main.ts`); la batería
+corre con el adaptador sobre un transporte falso (`test/support/simulated-anthropic.ts`). **F3
+cumple su «terminado cuando»**: 1456 pruebas (una solo en Linux), cobertura 93,74 / 87,07 / 93,91 /
+95,83; W1–W14 en rojo. Falta el push y la integración a `main` (el dueño). Después: R11.
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -290,7 +294,8 @@ el CRM aparte).
   `circuit.station_events` como `circuit_app` (`0005`, dueño `circuit_owner`); su esquema de
   drizzle está en `apps/circuit/src/modules/event-store/schema.ts`. `model` trae el simulador,
   que responde desde `scenarios/<id>/simulator.json`, y el adaptador de Anthropic (`anthropic.ts`, con
-  sus textos y esquemas en `prompts.ts` y los precios en `prices.ts`); `scenario` carga los documentos. Las
+  sus textos y esquemas en `prompts.ts`, las herramientas del CRM en `crm-tools.ts` y los precios en
+  `prices.ts`; lo elige `modelFor` de `main.ts` con `CIRCUIT_MODEL`); `scenario` carga los documentos. Las
   pruebas con base de circuit viven en `database/test/`, porque `apps/circuit/test` no sale de
   la app. Los casos dorados: `apps/circuit/test/golden/`, y solo `npm run golden:update` los
   reescribe.
@@ -883,6 +888,7 @@ rojo en la batería y restaurado por hash:
 npx vitest run --project '@circuit/circuit' simulator-contract   # K1–K6: la batería de contrato del modelo, con el simulador (15 pruebas)
 npx vitest run --project '@circuit/circuit' anthropic-model      # F3.2: el adaptador sobre el transporte falso, sin red (13 pruebas; Y1–Y7 en rojo)
 npx vitest run --project '@circuit/circuit' anthropic-answer     # F3.3: el conocimiento con cita y la estación 4 en el motor (10 pruebas; Z1–Z8 en rojo)
+npx vitest run --project '@circuit/circuit' anthropic-crm anthropic-contract model-choice   # F3.4: herramientas, la batería con el adaptador y CIRCUIT_MODEL (W1–W14 en rojo)
 ```
 
 ## 10. Dónde está todo lo demás

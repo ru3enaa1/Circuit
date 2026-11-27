@@ -18,6 +18,8 @@ export interface FakeAnswer {
   readonly model?: string;
   readonly stopReason?: string;
   readonly usage?: Record<string, unknown>;
+  /** Tool calls after the text, as station 5's answer brings them. */
+  readonly toolUses?: readonly { readonly name: string; readonly input: unknown }[];
   /** A raw body, for an error answer. */
   readonly body?: unknown;
 }
@@ -36,28 +38,39 @@ function messageOf(answer: FakeAnswer): unknown {
     type: 'message',
     role: 'assistant',
     model: answer.model ?? 'claude-opus-5-5',
-    content: [{ type: 'text', text: answer.text ?? '{}' }],
-    stop_reason: answer.stopReason ?? 'end_turn',
+    content: [
+      ...(answer.text === undefined && answer.toolUses !== undefined ? [] : [{ type: 'text', text: answer.text ?? '{}' }]),
+      ...(answer.toolUses ?? []).map((call, index) => ({ type: 'tool_use', id: `toolu_prueba_${index}`, name: call.name, input: call.input })),
+    ],
+    stop_reason: answer.stopReason ?? (answer.toolUses === undefined ? 'end_turn' : 'tool_use'),
     stop_sequence: null,
     usage: answer.usage ?? FAKE_USAGE,
   };
 }
 
-/** Answers each call with the next answer of the list (the last one repeats), or throws when `answers` says so. */
-export function fakeAnthropic(answers: readonly (FakeAnswer | 'network-down')[]): {
+export interface FakeTransport {
   readonly fetch: typeof globalThis.fetch;
   readonly sent: SentRequest[];
-} {
+}
+
+/** Answers each call with the next answer of the list (the last one repeats), or throws when `answers` says so. */
+export function fakeAnthropic(answers: readonly (FakeAnswer | 'network-down')[]): FakeTransport {
+  return fakeAnthropicWith((_body, index) => answers[Math.min(index, answers.length - 1)]);
+}
+
+/** Answers each call with what `answerFor` makes of its body; the index counts the calls from 0. */
+export function fakeAnthropicWith(answerFor: (body: Record<string, unknown>, index: number) => FakeAnswer | 'network-down' | undefined): FakeTransport {
   const sent: SentRequest[] = [];
   const fetch = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = input instanceof Request ? input.url : String(input);
     const headers = new Headers(init?.headers);
-    sent.push({ url, headers, body: JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown> });
-    const answer = answers[Math.min(sent.length - 1, answers.length - 1)];
+    const body = JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>;
+    sent.push({ url, headers, body });
+    const answer = answerFor(body, sent.length - 1);
     if (answer === undefined || answer === 'network-down') throw new TypeError('fetch failed');
     const status = answer.status ?? 200;
-    const body = status === 200 ? messageOf(answer) : (answer.body ?? { type: 'error', error: { type: 'api_error', message: 'falla de prueba' } });
-    return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
+    const reply = status === 200 ? messageOf(answer) : (answer.body ?? { type: 'error', error: { type: 'api_error', message: 'falla de prueba' } });
+    return new Response(JSON.stringify(reply), { status, headers: { 'content-type': 'application/json' } });
   }) as typeof globalThis.fetch;
   return { fetch, sent };
 }
