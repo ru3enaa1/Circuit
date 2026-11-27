@@ -4,7 +4,7 @@ import { idleView, projectRun } from '../projection.ts';
 import { CIRCUIT_ROUTE, resolveRoute, routeHash, type Route } from '../route.ts';
 import { RUN_TEXTS } from '../texts.ts';
 import { Orbit } from './Orbit.tsx';
-import { ClockPanel, Dock, RequestPanel, ToolList, brandLine, type FeedStatus } from './Panels.tsx';
+import { ClockPanel, Dock, RequestPanel, ToolList, BrandLine, type FeedStatus } from './Panels.tsx';
 import { Room, RoomHeader } from './Room.tsx';
 
 /**
@@ -54,7 +54,7 @@ export function Board(props: BoardProps) {
         <>
           {/* Keyed by the address, so each room mounts anew and its way in plays again (§10). */}
           <Room key={routeHash(route)} view={view} info={info} layout={layout} route={route} />
-          <RoomHeader brand={brandLine(info)} view={view} route={route} />
+          <RoomHeader brand={<BrandLine info={info} />} view={view} route={route} />
         </>
       )}
       <ClockPanel view={view} events={props.events} runs={props.runs} info={info} />

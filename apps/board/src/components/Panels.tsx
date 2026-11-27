@@ -4,6 +4,7 @@ import { redactedText, runClock, runStateText } from '../nodes.ts';
 import { isFinished, type RunView } from '../projection.ts';
 import { routeHash } from '../route.ts';
 import { MODEL_NAMES, RUN_TEXTS, STATION_NAMES, STATUS_TEXTS, textOf } from '../texts.ts';
+import { Logo } from './Logo.tsx';
 
 /**
  * What surrounds the circuit (docs/diseno.md §6): the request on the top left, the run's clock
@@ -40,19 +41,28 @@ function stateLine(props: RequestPanelProps): string {
   return runStateText(props.view, props.events.at(-1) ?? null, stationName);
 }
 
-/** «Circuit · Escuela · Simulador» (§6). */
-export function brandLine(info: CircuitInfo): string {
-  return [RUN_TEXTS.brand.text, capitalized(info.scenario), textOf(MODEL_NAMES, info.model)].join(' · ');
+/** The logo's size beside the name (§12). */
+const LOGO_SIZE = 32;
+
+/** «Circuit · Escuela · Simulador» (§6): the logo at 32 px, «Circuit» in Plex Sans 600, then the scenario and the model (§6, §12). */
+export function BrandLine({ info }: { readonly info: CircuitInfo }) {
+  const detail = [capitalized(info.scenario), textOf(MODEL_NAMES, info.model)].join(' · ');
+  return (
+    <p className="request__brand">
+      <Logo size={LOGO_SIZE} />
+      <span className="brand__name">{RUN_TEXTS.brand.text}</span>
+      <span className="brand__detail">{` · ${detail}`}</span>
+    </p>
+  );
 }
 
 /** The top left: the brand line, «Solicitud N.º 12», its state and its crossed-out text (§6). */
 export function RequestPanel(props: RequestPanelProps) {
   const { info, runs, runId } = props;
   const text = redactedText(props.events);
-  const brand = brandLine(info);
   return (
     <header className="request">
-      <p className="request__brand">{brand}</p>
+      <BrandLine info={info} />
       <details className="runs">
         <summary>
           <h1 className="request__title">{runId === null ? RUN_TEXTS.latestRuns.text : `${RUN_TEXTS.request.text} ${runId}`}</h1>

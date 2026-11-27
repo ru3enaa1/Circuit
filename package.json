@@ -25,6 +25,7 @@
     "golden:update": "node apps/circuit/test/golden/update.ts",
     "circuit:start": "node --env-file-if-exists=.env apps/circuit/src/main.ts",
     "board:build": "npm run build -w @circuit/board",
+    "board:favicon": "vitest run favicon --project @circuit/board --update=all",
     "board:shots": "npm run board:build && node apps/circuit/test/shots/board-shots.ts"
   },
   "devDependencies": {

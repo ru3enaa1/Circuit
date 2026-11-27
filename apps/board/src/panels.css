@@ -12,9 +12,26 @@
 }
 
 .request__brand {
+  display: flex;
+  align-items: center;
   margin: 0 0 6px;
   color: var(--label);
   font: 500 13px var(--sans);
+}
+
+/* The logo beside the name (§12): the mark carries its own colors, so only its spacing lives here. */
+.request__brand .logo {
+  flex: none;
+  margin-right: 10px;
+}
+
+.brand__name {
+  color: var(--bone);
+  font: 600 15px var(--sans);
+}
+
+.brand__detail {
+  white-space: pre;
 }
 
 .runs summary {

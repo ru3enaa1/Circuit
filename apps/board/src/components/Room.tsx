@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 import type { CircuitInfo } from '../api.ts';
 import { telemetryOf } from '../format.ts';
@@ -189,12 +189,12 @@ export function Room({ view, info, layout, route }: RoomProps) {
 }
 
 /** The top left inside a room: the brand line and the breadcrumb, «Circuito › CRM › Tarea» (§10). */
-export function RoomHeader({ brand, view, route }: { readonly brand: string; readonly view: RunView; readonly route: RoomRoute }) {
+export function RoomHeader({ brand, view, route }: { readonly brand: ReactNode; readonly view: RunView; readonly route: RoomRoute }) {
   const name = textOf(STATION_NAMES, route.station);
   const action = route.kind === 'action' ? actionFacts(view, route.index) : null;
   return (
     <header className="request is-room">
-      <p className="request__brand">{brand}</p>
+      {brand}
       <nav className="crumbs" aria-label={ROOM_TEXTS.whereYouAre.text}>
         <ol>
           <li>
