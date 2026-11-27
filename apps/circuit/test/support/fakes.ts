@@ -3,6 +3,8 @@ import { createHash } from 'node:crypto';
 import {
   CIRCUIT,
   type AppliedAction,
+  type ApplyClaims,
+  type Approval,
   type Clock,
   type ContactSummary,
   type CrmAction,
@@ -39,9 +41,11 @@ export const sha256Digest: Digest = {
 };
 
 /** The store in memory: it only grows, and it refuses what the table would (seq gaps, a station twice). */
-export class MemoryStore implements EventStore {
+export class MemoryStore implements EventStore, ApplyClaims {
   readonly runs: NewRun[] = [];
   readonly stored: StationEvent[] = [];
+  /** The runs claimed for station 7 (ADR-0012 A4); a test may plant one. */
+  readonly claimed = new Set<number>();
   /** Throws on this append (1-based), to see that the engine stops there (D8). */
   failOnAppend: number | null = null;
   private appends = 0;
@@ -63,6 +67,12 @@ export class MemoryStore implements EventStore {
 
   async events(runId: number): Promise<readonly StationEvent[]> {
     return this.stored.filter((event) => event.runId === runId);
+  }
+
+  async claim(runId: number): Promise<boolean> {
+    if (this.claimed.has(runId)) return false;
+    this.claimed.add(runId);
+    return true;
   }
 }
 
@@ -130,25 +140,32 @@ export const NORMAL_REPLIES: ScriptedReplies = {
 
 export const KNOWN_CONTACT: ContactSummary = { id: 7, fullName: 'Lucía Restrepo Arango', stage: 'diagnostico' };
 
+/** What the CRM answers a write that created a row. */
+const CREATED = 201;
+
 export function fakeCrm(contacts: Readonly<Record<string, ContactSummary>> = {}): CrmReader & CrmWriter & {
   readonly lookups: string[];
   readonly writes: { readonly action: CrmAction; readonly contactId: number | null }[];
+  /** The Approval each write came with, in the same order. */
+  readonly approvals: Approval[];
   failOnWrite: number | null;
 } {
   let nextId = 100;
   return {
     lookups: [],
     writes: [],
+    approvals: [],
     failOnWrite: null,
     async findContactByEmail(email) {
       this.lookups.push(email);
       return contacts[email] ?? null;
     },
-    async apply(action, contactId): Promise<AppliedAction> {
+    async apply(approval, action, contactId): Promise<AppliedAction> {
       this.writes.push({ action, contactId });
+      this.approvals.push(approval);
       if (this.failOnWrite === this.writes.length) throw new Error('500 del CRM');
       nextId += 1;
-      return { id: nextId };
+      return { id: nextId, status: CREATED };
     },
   };
 }

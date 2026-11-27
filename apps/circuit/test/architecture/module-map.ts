@@ -25,7 +25,8 @@ export const MODULE_RULES: Readonly<Record<ModuleName, ModuleRule>> = {
   // node:crypto: the simulator looks replies up by the SHA-256 of the request (ADR-0010 D12).
   model: { modules: ['circuit'], packages: ['node:crypto'] },
   // Implements the core's CRM port over HTTP, with the agent's key (ADR-0003 M3).
-  'crm-client': { modules: ['circuit'], packages: [] },
+  // node:fs and node:path: it reads the agent's key from CRM_AGENT_KEY_FILE at start-up (ADR-0012 A9).
+  'crm-client': { modules: ['circuit'], packages: ['node:fs', 'node:path'] },
   // Station 6: the mentor approves, corrects or rejects what station 5 proposed.
   approval: { modules: ['circuit'], packages: [] },
   // Loads the scenario package (synthetic data and documents) from scenarios/.

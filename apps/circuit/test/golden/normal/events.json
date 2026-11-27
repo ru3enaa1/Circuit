@@ -138,20 +138,24 @@
   {
     "costMicroUsd": 0,
     "detail": {
+      "approvalRef": "run-1",
       "results": [
         {
           "id": 101,
           "result": "applied",
+          "status": 201,
           "type": "add_note"
         },
         {
           "id": 102,
           "result": "applied",
+          "status": 201,
           "type": "move_stage"
         },
         {
           "id": 103,
           "result": "applied",
+          "status": 201,
           "type": "create_task"
         }
       ]

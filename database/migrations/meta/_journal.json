@@ -43,6 +43,13 @@
       "when": 1795724998383,
       "tag": "0005_circuit_events",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795788274151,
+      "tag": "0006_apply_claims",
+      "breakpoints": true
     }
   ]
 }

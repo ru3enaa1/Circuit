@@ -14,4 +14,5 @@ export const MIGRATION_SHA256: MigrationHashes = {
   '0003_audit_author_format': '8028a65c7e1e5bba7d730596b18746b343dff627cc3c79e2d5d7b9b84229a746',
   '0004_crm_owner': 'c0cde83155383f9a5f2f478fe3bfbd6ea7c9b90dcd0d5f434f07cf8aae13c287',
   '0005_circuit_events': '1dbbd2e6a249d288235f1b5648f1b703cb95203ff4e028e9e5bbe959c0bce932',
+  '0006_apply_claims': '7d6d6674ade55c3a1b02c7746e07ed211817586a850bb89db085f339bb6c5375',
 };

@@ -75,6 +75,7 @@
   {
     "costMicroUsd": 0,
     "detail": {
+      "approvalRef": "run-1",
       "results": []
     },
     "durationMs": 10,

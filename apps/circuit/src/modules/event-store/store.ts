@@ -1,18 +1,20 @@
-import { asc, eq } from 'drizzle-orm';
+import { asc, DrizzleQueryError, eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import type pg from 'pg';
+import pg from 'pg';
 
 import {
+  EventConflict,
   isOutcome,
   isRecord,
   isStationId,
+  type ApplyClaims,
   type Detail,
   type EventStatus,
   type EventStore,
   type NewRun,
   type StationEvent,
 } from '../circuit/index.ts';
-import { runs, stationEvents } from './schema.ts';
+import { applyClaims, runs, stationEvents } from './schema.ts';
 
 /**
  * The core's EventStore over PostgreSQL (ADR-0010 D10, D16). It connects as circuit_app, whose
@@ -21,8 +23,16 @@ import { runs, stationEvents } from './schema.ts';
  */
 
 const STATUSES: readonly string[] = ['completed', 'stopped', 'failed'] satisfies readonly EventStatus[];
+/** unique_violation: station_events_run_seq or station_events_run_station refused the row. */
+const UNIQUE_VIOLATION = '23505';
 
-export class PgEventStore implements EventStore {
+/** drizzle wraps every database error and keeps pg's in `cause` (CLAUDE.md §8). */
+function isUniqueViolation(error: unknown): boolean {
+  const source = error instanceof DrizzleQueryError ? error.cause : error;
+  return source instanceof pg.DatabaseError && source.code === UNIQUE_VIOLATION;
+}
+
+export class PgEventStore implements EventStore, ApplyClaims {
   private readonly db;
 
   constructor(pool: pg.Pool) {
@@ -38,7 +48,27 @@ export class PgEventStore implements EventStore {
     return row.id;
   }
 
+  /** Another event in the same place (two decisions at once) is an EventConflict, which the server answers with 409. */
   async append(event: StationEvent): Promise<void> {
+    try {
+      await this.insertEvent(event);
+    } catch (error) {
+      if (isUniqueViolation(error)) throw new EventConflict(event.runId);
+      throw error;
+    }
+  }
+
+  /**
+   * ADR-0012 A4: one row per run. ON CONFLICT DO NOTHING turns the primary key into the answer
+   * `false` without an error, so two calls at once claim once: the second waits for the first's
+   * row and then finds it.
+   */
+  async claim(runId: number): Promise<boolean> {
+    const rows = await this.db.insert(applyClaims).values({ runId }).onConflictDoNothing().returning({ runId: applyClaims.runId });
+    return rows.length === 1;
+  }
+
+  private async insertEvent(event: StationEvent): Promise<void> {
     await this.db.insert(stationEvents).values({
       runId: event.runId,
       seq: event.seq,

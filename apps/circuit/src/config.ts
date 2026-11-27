@@ -1,3 +1,5 @@
+import { isApprover } from './modules/circuit/index.ts';
+
 // What circuit reads from its environment. apps/circuit never imports the CRM's code (ADR-0003
 // M3), so the password rule is repeated here; database/test/circuit-login-db.test.ts checks
 // it is the CRM's, character for character.
@@ -47,8 +49,13 @@ const SCENARIO_PATTERN = /^[a-z0-9-]{1,40}$/;
 // first variable's name (ADR-0006 baseline).
 const BYTE_ORDER_MARK = '\uFEFF';
 
-const REQUIRED = ['CIRCUIT_DB_PASSWORD', 'POSTGRES_DB', 'DB_PORT', 'CIRCUIT_SCENARIO'] as const;
-const OPTIONAL = ['CIRCUIT_PORT', 'CIRCUIT_MODEL'] as const;
+/** ADR-0012 A7, question 1: who signs every decision when CIRCUIT_MENTOR is unset. */
+export const DEFAULT_MENTOR = 'mentor';
+
+// CRM_AGENT_KEY_FILE is required since F2.4: circuit reads and writes the CRM with that key. Its
+// file and CRM_URL are read by crm-client (ADR-0012 A9), which knows their rules.
+const REQUIRED = ['CIRCUIT_DB_PASSWORD', 'POSTGRES_DB', 'DB_PORT', 'CIRCUIT_SCENARIO', 'CRM_AGENT_KEY_FILE'] as const;
+const OPTIONAL = ['CIRCUIT_PORT', 'CIRCUIT_MODEL', 'CIRCUIT_MENTOR', 'CRM_URL'] as const;
 
 export interface CircuitDatabaseConfig {
   readonly host: string;
@@ -64,6 +71,8 @@ export interface CircuitConfig {
   readonly port: number;
   readonly scenario: string;
   readonly model: ModelChoice;
+  /** The name every decision is signed with (A7). */
+  readonly mentor: string;
   readonly db: CircuitDatabaseConfig;
 }
 
@@ -84,6 +93,11 @@ function problemsOf(env: Readonly<Record<string, string | undefined>>): string[]
   if (!DB_NAME_PATTERN.test(env['POSTGRES_DB'] ?? '')) problems.push('POSTGRES_DB debe ser un nombre de base de 1 a 63 letras, dígitos o «_».');
   if (portOf(env['DB_PORT'], 1) === null) problems.push(`DB_PORT debe ser un puerto entre 1 y ${MAX_TCP_PORT}.`);
   if (!SCENARIO_PATTERN.test(env['CIRCUIT_SCENARIO'] ?? '')) problems.push('CIRCUIT_SCENARIO debe ser de 1 a 40 minúsculas, dígitos o «-».');
+  const mentor = env['CIRCUIT_MENTOR'];
+  if (mentor !== undefined && mentor !== '' && !isApprover(mentor)) {
+    // The CRM's audit author shape, and never a key's own name (ADR-0007 D7).
+    problems.push('CIRCUIT_MENTOR debe ser de 1 a 40 minúsculas, dígitos o «-», y no key-<n>.');
+  }
   const port = env['CIRCUIT_PORT'];
   if (port !== undefined && port !== '' && portOf(port, 0) === null) {
     problems.push(`CIRCUIT_PORT debe ser un puerto entre 0 y ${MAX_TCP_PORT} (0 deja que el sistema elija uno libre).`);
@@ -116,6 +130,7 @@ export function readCircuitConfig(env: Readonly<Record<string, string | undefine
     port: port === undefined || port === '' ? DEFAULT_CIRCUIT_PORT : Number(port),
     scenario: env['CIRCUIT_SCENARIO'] as string,
     model,
+    mentor: env['CIRCUIT_MENTOR'] || DEFAULT_MENTOR,
     db: {
       host: CIRCUIT_DB_HOST,
       port: Number(env['DB_PORT']),

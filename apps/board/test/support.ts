@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 
 import { CIRCUIT, LOW_CONFIDENCE_BELOW } from '../../circuit/src/modules/circuit/index.ts';
 import { SIMULATOR_NAME } from '../../circuit/src/modules/model/index.ts';
-import { loadScenario } from '../../circuit/src/modules/scenario/index.ts';
+import { loadScenario, loadTryouts } from '../../circuit/src/modules/scenario/index.ts';
 import { circuitPayload } from '../../circuit/src/server/api.ts';
 import type { CircuitInfo, RunEvent } from '../src/api.ts';
 
@@ -27,6 +27,8 @@ export function boardInfo(): CircuitInfo {
     model: SIMULATOR_NAME,
     lowConfidenceBelow: LOW_CONFIDENCE_BELOW,
     documents: scenario.documents,
+    samples: loadTryouts(SCENARIOS_DIR, 'escuela').samples,
+    mentor: 'mentor',
   });
   // Through JSON, as the browser receives it.
   return JSON.parse(JSON.stringify(payload)) as CircuitInfo;

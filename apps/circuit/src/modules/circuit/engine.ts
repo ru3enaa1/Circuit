@@ -72,6 +72,14 @@ async function runStation(
 }
 
 /**
+ * An error that is not a station's result: the station did not run, so settle lets it through
+ * and no event is stored for it (ADR-0012 A4: a claim another call already holds).
+ */
+export class Unrecorded extends Error {
+  override readonly name: string = 'Unrecorded';
+}
+
+/**
  * The station's result, or a failed one. Only the field name of an invalid reply is kept: a
  * port's error message can quote the request or the reply, so it is not stored (D2).
  */
@@ -80,6 +88,7 @@ export async function settle(work: () => Promise<StationResult>): Promise<Statio
     const result = await work();
     return { ...result, usage: checkedUsage(result.usage) };
   } catch (error) {
+    if (error instanceof Unrecorded) throw error;
     const detail: Detail = error instanceof InvalidInput ? { reason: 'invalid', field: error.field } : { reason: 'port_error' };
     return { outcome: 'error', status: 'failed', detail, usage: { tokensIn: null, tokensOut: null, costMicroUsd: null } };
   }

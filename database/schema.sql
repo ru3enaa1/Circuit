@@ -149,6 +149,16 @@ $$;
 
 
 --
+-- Name: apply_claims; Type: TABLE; Schema: circuit; Owner: -
+--
+
+CREATE TABLE circuit.apply_claims (
+    run_id bigint NOT NULL,
+    claimed_at timestamp(3) with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: runs; Type: TABLE; Schema: circuit; Owner: -
 --
 
@@ -481,6 +491,14 @@ ALTER TABLE ONLY drizzle.__drizzle_migrations ALTER COLUMN id SET DEFAULT nextva
 
 
 --
+-- Name: apply_claims apply_claims_pkey; Type: CONSTRAINT; Schema: circuit; Owner: -
+--
+
+ALTER TABLE ONLY circuit.apply_claims
+    ADD CONSTRAINT apply_claims_pkey PRIMARY KEY (run_id);
+
+
+--
 -- Name: runs runs_pkey; Type: CONSTRAINT; Schema: circuit; Owner: -
 --
 
@@ -702,6 +720,14 @@ CREATE TRIGGER notes_audit AFTER INSERT OR UPDATE ON crm.notes FOR EACH ROW EXEC
 --
 
 CREATE TRIGGER tasks_audit AFTER INSERT OR UPDATE ON crm.tasks FOR EACH ROW EXECUTE FUNCTION crm.write_audit_log();
+
+
+--
+-- Name: apply_claims apply_claims_run_id_runs_id_fk; Type: FK CONSTRAINT; Schema: circuit; Owner: -
+--
+
+ALTER TABLE ONLY circuit.apply_claims
+    ADD CONSTRAINT apply_claims_run_id_runs_id_fk FOREIGN KEY (run_id) REFERENCES circuit.runs(id);
 
 
 --
@@ -1003,6 +1029,13 @@ GRANT ALL ON FUNCTION crm.resolve_api_key(presented_hash bytea) TO crm_service;
 --
 
 REVOKE ALL ON FUNCTION crm.write_audit_log() FROM PUBLIC;
+
+
+--
+-- Name: TABLE apply_claims; Type: ACL; Schema: circuit; Owner: -
+--
+
+GRANT SELECT,INSERT ON TABLE circuit.apply_claims TO circuit_service;
 
 
 --

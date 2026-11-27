@@ -9,14 +9,14 @@ import { promisify } from 'node:util';
 import { CIRCUIT, LOW_CONFIDENCE_BELOW } from '../../src/modules/circuit/index.ts';
 import { CRM_TOOLS } from '../../src/modules/crm-client/index.ts';
 import { SIMULATOR_NAME } from '../../src/modules/model/index.ts';
-import { loadScenario } from '../../src/modules/scenario/index.ts';
+import { loadScenario, loadTryouts } from '../../src/modules/scenario/index.ts';
 import { BOARD_DIST_DIR } from '../../src/main.ts';
 import { circuitPayload } from '../../src/server/api.ts';
 import { readBoardFiles } from '../../src/server/board-files.ts';
 import { buildServer } from '../../src/server/server.ts';
 import { GOLDEN_SCENARIO, SCENARIOS_DIR, runCase, type GoldenCase } from '../golden/harness.ts';
 import { MemoryStore } from '../support/fakes.ts';
-import { MemoryRunReader } from '../support/server.ts';
+import { MemoryRunReader, TEST_MENTOR, memoryCommands } from '../support/server.ts';
 
 // ADR-0011 B10: `npm run board:shots` takes the board at the four sizes of docs/diseno.md §9
 // with Chrome without a window, into a folder git ignores, for the owner to review. The runs
@@ -82,10 +82,14 @@ async function shoot(set: string, browser: string, profile: string): Promise<voi
   const spec = SETS[set];
   if (spec === undefined) throw new Error(`No hay un juego «${set}». Hay: ${Object.keys(SETS).join(', ')}.`);
   const scenario = loadScenario(SCENARIOS_DIR, GOLDEN_SCENARIO);
-  const circuit = circuitPayload({ definition: CIRCUIT, scenario: scenario.id, model: SIMULATOR_NAME, lowConfidenceBelow: LOW_CONFIDENCE_BELOW, documents: scenario.documents });
+  const samples = loadTryouts(SCENARIOS_DIR, GOLDEN_SCENARIO).samples;
+  const circuit = circuitPayload({ definition: CIRCUIT, scenario: scenario.id, model: SIMULATOR_NAME, lowConfidenceBelow: LOW_CONFIDENCE_BELOW, documents: scenario.documents, samples, mentor: TEST_MENTOR });
   let port = 0;
+  const store = await storeOf(spec.cases, spec.keep);
   const app = buildServer({
-    reader: new MemoryRunReader(await storeOf(spec.cases, spec.keep)),
+    reader: new MemoryRunReader(store),
+    // The captures never click; the commands are there so the board draws its buttons.
+    commands: memoryCommands(store),
     circuit,
     tools: CRM_TOOLS,
     board: readBoardFiles(BOARD_DIST_DIR),

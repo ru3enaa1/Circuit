@@ -8,6 +8,7 @@ import {
   delimit,
   redact,
   startRun,
+  type ApplyClaims,
   type ContactSummary,
   type EventStore,
   type StationEvent,
@@ -52,7 +53,7 @@ export function modelRequestOf(text: string): string {
 }
 
 /** Runs one case from intake to its end, deciding at station 6 when the case says so. */
-export async function runCase(name: GoldenCase, store: EventStore = new MemoryStore()): Promise<readonly StationEvent[]> {
+export async function runCase(name: GoldenCase, store: EventStore & ApplyClaims = new MemoryStore()): Promise<readonly StationEvent[]> {
   const input = readInput(name);
   const scenario = loadScenario(SCENARIOS_DIR, GOLDEN_SCENARIO);
   const crm = fakeCrm(input.contact === null ? {} : { [emailOf(input.text)]: input.contact });
@@ -61,7 +62,7 @@ export async function runCase(name: GoldenCase, store: EventStore = new MemorySt
   const deps = { definition: CIRCUIT, store, clock, digest: sha256Digest, model, crmReader: crm, documents: scenario.documents, scenario: scenario.id };
   const started = await startRun(deps, input.text);
   if (started.at === 'end' || input.decision === null) return started.events;
-  const done = await decideRun({ definition: CIRCUIT, store, clock, writer: crm }, started.runId, input.decision, GOLDEN_MENTOR);
+  const done = await decideRun({ definition: CIRCUIT, store, claims: store, clock, writer: crm }, started.runId, input.decision, GOLDEN_MENTOR);
   return done.events;
 }
 

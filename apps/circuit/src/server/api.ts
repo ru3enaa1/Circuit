@@ -43,6 +43,10 @@ export interface CircuitPayload {
   readonly stations: readonly { readonly id: string; readonly number: number; readonly decidedBy: string }[];
   readonly transitions: readonly { readonly from: string; readonly outcome: string; readonly to: string }[];
   readonly documents: readonly { readonly id: string; readonly title: string }[];
+  /** «Probar una solicitud» (ADR-0012 A12): each sample's id and label, never its text. */
+  readonly samples: readonly { readonly id: string; readonly label: string }[];
+  /** Who signs the decisions (A7), shown in the person station's room. */
+  readonly mentor: string;
 }
 
 export interface CircuitSource {
@@ -51,6 +55,8 @@ export interface CircuitSource {
   readonly model: string;
   readonly lowConfidenceBelow: number;
   readonly documents: readonly SourceDocument[];
+  readonly samples: readonly { readonly id: string; readonly label: string }[];
+  readonly mentor: string;
 }
 
 /** Built once at start-up. The documents' text stays out: the board shows titles only. */
@@ -62,6 +68,8 @@ export function circuitPayload(source: CircuitSource): CircuitPayload {
     stations: source.definition.stations.map(({ id, number, decidedBy }) => ({ id, number, decidedBy })),
     transitions: source.definition.transitions.map(({ from, outcome, to }) => ({ from, outcome, to })),
     documents: source.documents.map(({ id, title }) => ({ id, title })),
+    samples: source.samples.map(({ id, label }) => ({ id, label })),
+    mentor: source.mentor,
   };
 }
 
@@ -69,7 +77,7 @@ function pick<T extends object, K extends keyof T>(value: T, fields: readonly K[
   return Object.fromEntries(fields.map((field) => [field, value[field]])) as Pick<T, K>;
 }
 
-const runId = z
+export const runIdParam = z
   .string()
   .regex(/^[1-9][0-9]{0,15}$/)
   .transform(Number)
@@ -82,7 +90,7 @@ const seq = z
   .pipe(z.number().int().max(MAX_SEQ));
 
 const NO_QUERY = z.strictObject({});
-const EVENTS_PARAMS = z.strictObject({ id: runId });
+const EVENTS_PARAMS = z.strictObject({ id: runIdParam });
 const EVENTS_QUERY = z.strictObject({ after: seq.optional() });
 
 /** A refused parameter. The message is the field's name, never what it held. */
@@ -96,7 +104,7 @@ export class InvalidParameter extends Error {
   }
 }
 
-function parse<T>(schema: z.ZodType<T>, value: unknown, fallbackField: string): T {
+export function parse<T>(schema: z.ZodType<T>, value: unknown, fallbackField: string): T {
   const parsed = schema.safeParse(value);
   if (parsed.success) return parsed.data;
   const issue = parsed.error.issues[0];

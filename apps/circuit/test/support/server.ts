@@ -2,15 +2,36 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { CIRCUIT, LOW_CONFIDENCE_BELOW, type StationEvent } from '../../src/modules/circuit/index.ts';
+import { createDecisionDesk } from '../../src/modules/approval/index.ts';
+import { CIRCUIT, LOW_CONFIDENCE_BELOW, startRun, type CrmReader, type CrmWriter, type StationEvent } from '../../src/modules/circuit/index.ts';
 import { CRM_TOOLS, type CrmTool } from '../../src/modules/crm-client/index.ts';
 import type { RunReader, RunSummary } from '../../src/modules/event-store/index.ts';
 import { SIMULATOR_NAME } from '../../src/modules/model/index.ts';
 import { circuitPayload } from '../../src/server/api.ts';
 import { readBoardFiles, type BoardFiles } from '../../src/server/board-files.ts';
 import type { LogLine } from '../../src/server/log.ts';
+import type { RunCommands } from '../../src/server/commands.ts';
 import { buildServer } from '../../src/server/server.ts';
-import { DOCUMENTS, MemoryStore } from './fakes.ts';
+import { DOCUMENTS, KNOWN_CONTACT, MemoryStore, NORMAL_TEXT, engineDeps, fakeCrm, steppingClock } from './fakes.ts';
+
+/** The mentor the tests' desk signs with, and the one sample they can try. */
+export const TEST_MENTOR = 'mentor';
+export const TEST_SAMPLES = Object.freeze([Object.freeze({ id: 'normal', label: 'Pide un programa', text: NORMAL_TEXT })]);
+
+/** The board's two commands over a store and a CRM in memory, as main.ts wires them over PostgreSQL and HTTP. */
+export function memoryCommands(store: MemoryStore, crm: CrmReader & CrmWriter = fakeCrm({ 'lucia@hiloverde.test': KNOWN_CONTACT })): RunCommands {
+  const desk = createDecisionDesk({ definition: CIRCUIT, store, claims: store, clock: steppingClock(), writer: crm }, TEST_MENTOR);
+  return {
+    async tryout(sampleId) {
+      const sample = TEST_SAMPLES.find((entry) => entry.id === sampleId);
+      if (sample === undefined) return null;
+      return { runId: (await startRun(engineDeps({ store, crmReader: crm }), sample.text)).runId };
+    },
+    async decide(runId, input) {
+      await desk.decide(runId, input);
+    },
+  };
+}
 
 /** The port the tests' Host headers name; inject never opens it. */
 export const TEST_PORT = 4020;
@@ -69,6 +90,7 @@ export interface TestServerOptions {
   readonly store?: MemoryStore;
   readonly tools?: readonly CrmTool[];
   readonly board?: BoardFiles;
+  readonly crm?: CrmReader & CrmWriter;
 }
 
 /** The circuit server over a store in memory, with its log kept for the test. */
@@ -76,12 +98,15 @@ export function testServer(options: TestServerOptions = {}) {
   const store = options.store ?? new MemoryStore();
   const reader = new MemoryRunReader(store);
   const lines: LogLine[] = [];
+  const crm = options.crm ?? fakeCrm({ 'lucia@hiloverde.test': KNOWN_CONTACT });
   const circuit = circuitPayload({
     definition: CIRCUIT,
     scenario: 'escuela',
     model: SIMULATOR_NAME,
     lowConfidenceBelow: LOW_CONFIDENCE_BELOW,
     documents: DOCUMENTS,
+    samples: TEST_SAMPLES,
+    mentor: TEST_MENTOR,
   });
   const app = buildServer({
     reader,
@@ -90,8 +115,9 @@ export function testServer(options: TestServerOptions = {}) {
     board: options.board ?? new Map(),
     port: () => TEST_PORT,
     log: (line) => lines.push(line),
+    commands: memoryCommands(store, crm),
   });
-  return { app, reader, store, lines };
+  return { app, reader, store, lines, crm };
 }
 
 export { readBoardFiles };

@@ -151,7 +151,7 @@ describe('D9, D10 · the checks of the table', () => {
 });
 
 describe('D10 · who owns circuit, and what circuit_service holds', () => {
-  it('circuit_owner owns the schema, both tables and their sequences', async () => {
+  it('circuit_owner owns the schema, the three tables and their sequences (ADR-0012 A4 adds apply_claims)', async () => {
     const owned = await db!.pool.query<{ kind: string; name: string; owner: string }>(
       `SELECT 'schema' AS kind, n.nspname AS name, pg_get_userbyid(n.nspowner) AS owner
        FROM pg_namespace n WHERE n.nspname = 'circuit'
@@ -165,19 +165,28 @@ describe('D10 · who owns circuit, and what circuit_service holds', () => {
     expect(sorted).toEqual([
       { kind: 'relation S', name: 'runs_id_seq', owner: OWNER_ROLES.circuit },
       { kind: 'relation S', name: 'station_events_id_seq', owner: OWNER_ROLES.circuit },
+      { kind: 'relation r', name: 'apply_claims', owner: OWNER_ROLES.circuit },
       { kind: 'relation r', name: 'runs', owner: OWNER_ROLES.circuit },
       { kind: 'relation r', name: 'station_events', owner: OWNER_ROLES.circuit },
       { kind: 'schema', name: 'circuit', owner: OWNER_ROLES.circuit },
     ]);
   });
 
-  it('circuit_service holds SELECT and INSERT on both tables and nothing on the sequences', async () => {
+  it('circuit_service holds SELECT and INSERT on the three tables and nothing on the sequences', async () => {
     const grants = await db!.pool.query<{ grant: string }>(
       `SELECT table_name || ' ' || privilege_type AS grant FROM information_schema.role_table_grants
        WHERE grantee = $1 ORDER BY 1`,
       [SERVICE_ROLES.circuit],
     );
-    expect(grants.rows.map((row) => row.grant)).toEqual(['runs INSERT', 'runs SELECT', 'station_events INSERT', 'station_events SELECT']);
+    // Sorted here, by code point, not by the server's collation.
+    expect(grants.rows.map((row) => row.grant).sort()).toEqual([
+      'apply_claims INSERT',
+      'apply_claims SELECT',
+      'runs INSERT',
+      'runs SELECT',
+      'station_events INSERT',
+      'station_events SELECT',
+    ]);
     const sequences = await db!.pool.query<{ usable: boolean }>(
       `SELECT bool_or(has_sequence_privilege($1, c.oid, 'USAGE, SELECT, UPDATE')) AS usable
        FROM pg_class c WHERE c.relnamespace = 'circuit'::regnamespace AND c.relkind = 'S'`,

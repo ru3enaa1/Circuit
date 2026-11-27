@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { CircuitConfigError, DEFAULT_CIRCUIT_PORT, readCircuitConfig } from '../src/config.ts';
+import { CircuitConfigError, DEFAULT_CIRCUIT_PORT, DEFAULT_MENTOR, readCircuitConfig } from '../src/config.ts';
 
 // ADR-0011 B6: the circuit server's configuration, from the environment only. It listens on
 // 127.0.0.1 whatever the environment says, and no variable can change that.
@@ -17,6 +17,7 @@ const VALID = {
   POSTGRES_DB: 'circuit',
   DB_PORT: '5432',
   CIRCUIT_SCENARIO: 'escuela',
+  CRM_AGENT_KEY_FILE: '.secrets/crm-agent-key',
 } as const;
 
 function errorOf(env: Record<string, string | undefined>): string {
@@ -61,7 +62,7 @@ describe('B6 · readCircuitConfig', () => {
   });
 
   it('names every missing variable', () => {
-    expect(errorOf({})).toBe('Faltan variables de entorno: CIRCUIT_DB_PASSWORD, POSTGRES_DB, DB_PORT, CIRCUIT_SCENARIO. Copia .env.example a .env y complétalo.');
+    expect(errorOf({})).toBe('Faltan variables de entorno: CIRCUIT_DB_PASSWORD, POSTGRES_DB, DB_PORT, CIRCUIT_SCENARIO, CRM_AGENT_KEY_FILE. Copia .env.example a .env y complétalo.');
   });
 
   it('names each invalid variable and never quotes its value', () => {
@@ -71,6 +72,7 @@ describe('B6 · readCircuitConfig', () => {
       DB_PORT: '99999',
       CIRCUIT_SCENARIO: '../otro',
       CIRCUIT_PORT: '70000',
+      CRM_AGENT_KEY_FILE: VALID.CRM_AGENT_KEY_FILE,
     });
 
     for (const name of ['CIRCUIT_DB_PASSWORD', 'POSTGRES_DB', 'DB_PORT', 'CIRCUIT_SCENARIO', 'CIRCUIT_PORT']) expect(message).toContain(name);
@@ -88,5 +90,27 @@ describe('B6 · readCircuitConfig', () => {
     const { CIRCUIT_DB_PASSWORD: password, ...rest } = VALID;
 
     expect(errorOf({ ...rest, [`${String.fromCharCode(0xfeff)}CIRCUIT_DB_PASSWORD`]: password })).toContain('BOM');
+  });
+});
+
+describe('A7 · CIRCUIT_MENTOR (ADR-0012)', () => {
+  it('(control) is «mentor» when unset or empty, and takes a name of the audit author shape', () => {
+    expect(DEFAULT_MENTOR).toBe('mentor');
+    expect(readCircuitConfig(VALID).mentor).toBe('mentor');
+    expect(readCircuitConfig({ ...VALID, CIRCUIT_MENTOR: '' }).mentor).toBe('mentor');
+    expect(readCircuitConfig({ ...VALID, CIRCUIT_MENTOR: 'asesora-1' }).mentor).toBe('asesora-1');
+  });
+
+  it.each([
+    ["a key's own name", 'key-7'],
+    ['an email', 'mentor@escuela.test'],
+    ['a space', 'la mentora'],
+    ['41 characters', 'm'.repeat(41)],
+    ['capitals', 'Mentor'],
+  ])("%s stops the start-up by the variable's name, never its value", (_case, value) => {
+    const message = errorOf({ ...VALID, CIRCUIT_MENTOR: value });
+
+    expect(message).toContain('CIRCUIT_MENTOR');
+    expect(message).not.toContain(value);
   });
 });

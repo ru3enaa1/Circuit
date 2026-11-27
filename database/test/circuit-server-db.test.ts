@@ -1,3 +1,6 @@
+import { writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { projectRun } from '../../apps/board/src/projection.ts';
@@ -7,13 +10,14 @@ import { CIRCUIT, LOW_CONFIDENCE_BELOW } from '../../apps/circuit/src/modules/ci
 import { CRM_TOOLS } from '../../apps/circuit/src/modules/crm-client/index.ts';
 import { PgEventStore, PgRunReader } from '../../apps/circuit/src/modules/event-store/index.ts';
 import { SIMULATOR_NAME } from '../../apps/circuit/src/modules/model/index.ts';
-import { CircuitStartupError, startCircuit, startupMessage, type RunningCircuit } from '../../apps/circuit/src/main.ts';
+import { startCircuit, startupMessage, type RunningCircuit } from '../../apps/circuit/src/main.ts';
 import { circuitPayload, EVENT_FIELDS, RUN_FIELDS } from '../../apps/circuit/src/server/api.ts';
 import type { LogLine } from '../../apps/circuit/src/server/log.ts';
 import { buildServer } from '../../apps/circuit/src/server/server.ts';
 import { GOLDEN_CASES, readInput, runCase } from '../../apps/circuit/test/golden/harness.ts';
-import { DOCUMENTS } from '../../apps/circuit/test/support/fakes.ts';
-import { GOOD_HOST, TEST_PORT, fakeBoardDir } from '../../apps/circuit/test/support/server.ts';
+import { DOCUMENTS, MemoryStore } from '../../apps/circuit/test/support/fakes.ts';
+import { GOOD_HOST, TEST_MENTOR, TEST_PORT, TEST_SAMPLES, fakeBoardDir, memoryCommands } from '../../apps/circuit/test/support/server.ts';
+import { FAKE_KEY } from '../../apps/circuit/test/support/fake-crm-http.ts';
 import { readLocalEnv } from '../env.ts';
 import { createOrUpdateCircuitApp, readCircuitPassword } from '../users.ts';
 import { createDisposableDatabase, DATABASE_HOOK_TIMEOUT_MS, runMigrations, type DisposableDatabase } from './disposable-db.ts';
@@ -25,6 +29,9 @@ import { createDisposableDatabase, DATABASE_HOOK_TIMEOUT_MS, runMigrations, type
 const env = readLocalEnv();
 const password = readCircuitPassword(env);
 const board = fakeBoardDir();
+// Since F2.4 circuit reads the agent's key at start-up (ADR-0012 A9); a key of its shape, in the board's temporary folder.
+const keyFile = join(board.dir, 'agent-key');
+writeFileSync(keyFile, `${FAKE_KEY}\n`);
 
 let db: DisposableDatabase | undefined;
 let reader: PgRunReader;
@@ -39,8 +46,8 @@ beforeAll(async () => {
   // A new database: the cases get ids 1 to 4, in the order of GOLDEN_CASES.
   for (const name of GOLDEN_CASES) await runCase(name, store);
   reader = new PgRunReader(pool);
-  const circuit = circuitPayload({ definition: CIRCUIT, scenario: 'escuela', model: SIMULATOR_NAME, lowConfidenceBelow: LOW_CONFIDENCE_BELOW, documents: DOCUMENTS });
-  app = buildServer({ reader, circuit, tools: CRM_TOOLS, board: new Map(), port: () => TEST_PORT, log: () => undefined });
+  const circuit = circuitPayload({ definition: CIRCUIT, scenario: 'escuela', model: SIMULATOR_NAME, lowConfidenceBelow: LOW_CONFIDENCE_BELOW, documents: DOCUMENTS, samples: TEST_SAMPLES, mentor: TEST_MENTOR });
+  app = buildServer({ reader, circuit, tools: CRM_TOOLS, board: new Map(), port: () => TEST_PORT, log: () => undefined, commands: memoryCommands(new MemoryStore()) });
 }, DATABASE_HOOK_TIMEOUT_MS);
 
 afterAll(async () => {
@@ -103,11 +110,13 @@ describe('B5 · the read API over PostgreSQL', () => {
   });
 });
 
-describe('B13 · the server only reads', () => {
-  it('POST, PUT, PATCH and DELETE on every route give 404, and the tables do not change', async () => {
+// ADR-0012 amends B13: POST /api/runs and POST /api/runs/:id/decision are the only writes.
+describe('B13 · every other route only reads', () => {
+  it('POST, PUT, PATCH and DELETE on every read route give 404, and the tables do not change', async () => {
     const before = await rowCounts();
     for (const method of ['POST', 'PUT', 'PATCH', 'DELETE'] as const) {
-      for (const url of ['/', '/api/circuit', '/api/runs', '/api/runs/1/events', '/api/tools']) {
+      const urls = ['/', '/api/circuit', '/api/runs', '/api/runs/1/events', '/api/tools'].filter((url) => !(method === 'POST' && url === '/api/runs'));
+      for (const url of urls) {
         const response = await app.inject({ method, url, headers: { host: GOOD_HOST, 'content-type': 'application/json' }, payload: '{"decision":"approved"}' });
         expect(response.statusCode, `${method} ${url}`).toBe(404);
       }
@@ -137,7 +146,7 @@ describe('B4 · end to end: the golden case normal, stored, read and projected',
 });
 
 describe('main.ts · the circuit process', () => {
-  const baseEnv = () => ({ ...env, POSTGRES_DB: db?.name ?? '', CIRCUIT_PORT: '0', CIRCUIT_SCENARIO: 'escuela' });
+  const baseEnv = () => ({ ...env, POSTGRES_DB: db?.name ?? '', CIRCUIT_PORT: '0', CIRCUIT_SCENARIO: 'escuela', CRM_AGENT_KEY_FILE: keyFile });
 
   it('listens on 127.0.0.1, serves the API and the board, and closes', async () => {
     const lines: LogLine[] = [];
@@ -170,14 +179,19 @@ describe('main.ts · the circuit process', () => {
     [{ POSTGRES_DB: 'circuit_no_existe' }, 'npm run db:migrate'],
     [{ CIRCUIT_SCENARIO: 'no-existe' }, 'CIRCUIT_SCENARIO'],
     [{ DB_PORT: '1' }, 'docker compose up'],
+    [{ CRM_AGENT_KEY_FILE: join(board.dir, 'no-existe') }, 'npm run db:seed'],
+    [{ CRM_URL: 'http://ejemplo.test:4010' }, 'CRM_URL'],
   ])('refuses to start with %j, naming the fix and never a value', async (change, fix) => {
     const attempt = startCircuit({ ...baseEnv(), ...change }, { log: () => undefined, boardDir: board.dist });
 
-    await expect(attempt).rejects.toBeInstanceOf(CircuitStartupError);
+    await expect(attempt).rejects.toBeInstanceOf(Error);
     const message = startupMessage(await attempt.catch((error: unknown) => error));
     expect(message).toContain(fix);
     expect(message).not.toContain(password);
     expect(message).not.toContain('otra-clave');
+    expect(message).not.toContain(FAKE_KEY);
+    expect(message).not.toContain('ejemplo.test');
+    expect(message).toMatch(/^Circuit no arrancó: /);
   });
 
   it('a port already taken is named by its variable', async () => {

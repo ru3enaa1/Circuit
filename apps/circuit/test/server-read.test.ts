@@ -27,7 +27,10 @@ describe('B5 · the four routes answer fixed fields', () => {
   it('GET /api/circuit: the table, the threshold and the titles, without any document text', async () => {
     const body = (await get('/api/circuit')).json();
 
-    expect(Object.keys(body).sort()).toEqual(['documents', 'lowConfidenceBelow', 'model', 'scenario', 'stations', 'transitions']);
+    expect(Object.keys(body).sort()).toEqual(['documents', 'lowConfidenceBelow', 'mentor', 'model', 'samples', 'scenario', 'stations', 'transitions']);
+    // ADR-0012 A12: a sample's id and label, never its text.
+    expect(body.samples).toEqual([{ id: 'normal', label: 'Pide un programa' }]);
+    expect(body.mentor).toBe('mentor');
     expect(body.stations.map((station: { id: string }) => station.id)).toEqual(['intake', 'filter', 'classification', 'knowledge', 'crm', 'person', 'close']);
     expect(Object.keys(body.stations[0]).sort()).toEqual(['decidedBy', 'id', 'number']);
     expect(Object.keys(body.transitions[0]).sort()).toEqual(['from', 'outcome', 'to']);
@@ -128,11 +131,13 @@ describe('B8 · the CRM tools are data', () => {
   });
 });
 
-describe('B13 · the server only reads', () => {
-  it.each(['POST', 'PUT', 'PATCH', 'DELETE'] as const)('%s on every route gives 404 and reads nothing', async (method) => {
+// ADR-0012 amends B13: POST /api/runs and POST /api/runs/:id/decision are the only writes (server-decision.test.ts).
+describe('B13 · every other route only reads', () => {
+  it.each(['POST', 'PUT', 'PATCH', 'DELETE'] as const)('%s on every read route gives 404 and reads nothing', async (method) => {
     const before = reader.calls.length;
     const stored = store.stored.length;
-    for (const url of ['/', '/api/circuit', '/api/runs', '/api/runs/1/events', '/api/tools']) {
+    const urls = ['/', '/api/circuit', '/api/runs', '/api/runs/1/events', '/api/tools'].filter((url) => !(method === 'POST' && url === '/api/runs'));
+    for (const url of urls) {
       const response = await app.inject({ method, url, headers: { host: GOOD_HOST, 'content-type': 'application/json' }, payload: '{}' });
       expect(response.statusCode, `${method} ${url}`).toBe(404);
     }

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { CIRCUIT_DB_USER } from '../../apps/circuit/src/config.ts';
-import { CIRCUIT, decideRun, startRun, type EventStore } from '../../apps/circuit/src/modules/circuit/index.ts';
+import { CIRCUIT, decideRun, startRun, type ApplyClaims, type EventStore } from '../../apps/circuit/src/modules/circuit/index.ts';
 import { PgEventStore } from '../../apps/circuit/src/modules/event-store/index.ts';
 import { KNOWN_CONTACT, MemoryStore, NORMAL_TEXT, engineDeps, fakeCrm, steppingClock } from '../../apps/circuit/test/support/fakes.ts';
 import { readLocalEnv } from '../env.ts';
@@ -27,10 +27,10 @@ afterAll(async () => {
 }, DATABASE_HOOK_TIMEOUT_MS);
 
 /** One normal run from intake to close, on the given store, with fresh fakes and clocks. */
-async function fullRun(on: EventStore) {
+async function fullRun(on: EventStore & ApplyClaims) {
   const crm = fakeCrm({ 'lucia@hiloverde.test': KNOWN_CONTACT });
   const started = await startRun(engineDeps({ store: on, crmReader: crm }), NORMAL_TEXT);
-  return decideRun({ definition: CIRCUIT, store: on, clock: steppingClock(), writer: crm }, started.runId, { decision: 'approved' }, 'mentor');
+  return decideRun({ definition: CIRCUIT, store: on, clock: steppingClock(), claims: on, writer: crm }, started.runId, { decision: 'approved' }, 'mentor');
 }
 
 describe('D16 · the PostgreSQL store, as circuit_app', () => {

@@ -1,5 +1,6 @@
 import type { EventStatus, Outcome, StationId } from './definition.ts';
 import type { CrmAction } from './actions.ts';
+import type { Approval } from './approval.ts';
 
 /**
  * The ports the core declares (ADR-0001 D2, ADR-0003 M2). Adapters implement them in other
@@ -104,12 +105,47 @@ export interface CrmReader {
   findContactByEmail(email: string): Promise<ContactSummary | null>;
 }
 
-/** What one write to the CRM gave back: the id of the row it touched. */
+/** What one write to the CRM gave back: the id of the row it touched and the HTTP status (ADR-0012 A5). */
 export interface AppliedAction {
   readonly id: number;
+  readonly status: number;
 }
 
-/** Writing to the CRM: only station 7 receives it, and only for approved actions. */
+/**
+ * A write the CRM refused or never answered. It holds the HTTP status when there was one, and
+ * nothing of the answer's body, which station 7 does not store (A5).
+ */
+export class CrmWriteFailed extends Error {
+  override readonly name = 'CrmWriteFailed';
+  readonly status: number | null;
+
+  constructor(status: number | null) {
+    super(status === null ? 'El CRM no respondió la escritura.' : `El CRM respondió ${status} a la escritura.`);
+    this.status = status;
+  }
+}
+
+/**
+ * Writing to the CRM: only station 7 receives it, and every write takes the Approval that
+ * approvalFrom read from the stored decision (ADR-0012 A1). One call is one request, never retried (A5).
+ */
 export interface CrmWriter {
-  apply(action: CrmAction, contactId: number | null): Promise<AppliedAction>;
+  apply(approval: Approval, action: CrmAction, contactId: number | null): Promise<AppliedAction>;
+}
+
+/**
+ * The claim that makes station 7 apply once (ADR-0012 A4): true when this call claimed the run,
+ * false when it was already claimed, also by a process that died before storing station 7.
+ */
+export interface ApplyClaims {
+  claim(runId: number): Promise<boolean>;
+}
+
+/** Another event took that place in the run first (two decisions at once): nothing was stored. */
+export class EventConflict extends Error {
+  override readonly name = 'EventConflict';
+
+  constructor(runId: number) {
+    super(`Otro evento de la corrida ${runId} se guardó antes.`);
+  }
 }

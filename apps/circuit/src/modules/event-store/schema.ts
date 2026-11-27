@@ -70,5 +70,17 @@ export const stationEvents = circuit.table(
   ],
 );
 
+/**
+ * ADR-0012 A4: one row per run whose station 7 started applying, inserted before its first
+ * request to the CRM. The primary key refuses a second claim, also after a restart; a claim with
+ * no event of station 7 is an application cut off, which nothing repeats on its own.
+ */
+export const applyClaims = circuit.table('apply_claims', {
+  runId: bigint('run_id', { mode: 'number' })
+    .primaryKey()
+    .references(() => runs.id),
+  claimedAt: timestamp('claimed_at', { withTimezone: true, mode: 'string', precision: 3 }).notNull().defaultNow(),
+});
+
 /** The lists of the CHECKs, for the test that compares them with the core's. */
 export const CHECKED_LISTS = { stations: STATION_LIST, outcomes: OUTCOME_LIST, statuses: STATUS_LIST } as const;
