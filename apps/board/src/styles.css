@@ -364,6 +364,27 @@ body,
   stroke-width: 3;
 }
 
+/* The crew (§11): bone figures with a short flat shadow; decoration that never covers the circuit. */
+.crew {
+  pointer-events: none;
+}
+
+.crew__shadow {
+  fill: #3a3936;
+}
+
+.crew__limbs {
+  fill: none;
+  stroke: var(--bone);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.crew__joints {
+  fill: var(--bone);
+}
+
 /* Reduced motion (§14, ADR-0013 E6): clean cuts, no zoom and no fade. */
 @media (prefers-reduced-motion: reduce) {
   *,

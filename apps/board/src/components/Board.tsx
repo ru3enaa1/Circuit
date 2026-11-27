@@ -1,9 +1,11 @@
 import type { CircuitInfo, CrmTool, RunEvent, RunSummary } from '../api.ts';
+import { crewFor } from '../crew.ts';
 import { layoutFor } from '../layout.ts';
 import { idleView, projectRun } from '../projection.ts';
 import { CIRCUIT_ROUTE, resolveRoute, routeHash, type Route } from '../route.ts';
 import { sceneOf } from '../scene.ts';
 import { RUN_TEXTS } from '../texts.ts';
+import { Crew } from './Crew.tsx';
 import { Orbit } from './Orbit.tsx';
 import { BrandLine, ClockPanel, Dock, RequestPanel, StopCard, ToolList, runState, type FeedStatus } from './Panels.tsx';
 import { Room, RoomHeader } from './Room.tsx';
@@ -50,7 +52,9 @@ export function Board(props: BoardProps) {
     <main className={className} data-finished={view.finished ? 'true' : 'false'} data-route={route.kind}>
       {route.kind === 'circuit' ? (
         <>
-          <Orbit view={view} layout={layout} info={info} scene={scene} returningFrom={route.from} />
+          <Orbit view={view} layout={layout} info={info} scene={scene} returningFrom={route.from}>
+            <Crew figures={crewFor(props.runId, view, scene, layout)} />
+          </Orbit>
           <StopCard view={view} scene={scene} layout={layout} events={props.events} />
           <RequestPanel info={info} runs={props.runs} runId={props.runId} events={props.events} onSelectRun={props.onSelectRun} />
         </>
