@@ -11,8 +11,8 @@ agente ni tablero. Lo que sigue está en el [plan de desarrollo](DEVELOPMENT_PLA
 
 ## Qué hay hoy
 
-- Un monorepo TypeScript con npm workspaces: `apps/circuit`, con sus cinco módulos vacíos,
-  y `apps/crm`, con el esquema y el servidor del CRM.
+- Un monorepo TypeScript con npm workspaces: `apps/circuit`, el motor del circuito y su
+  servidor; `apps/crm`, con el esquema y el servidor del CRM; y `apps/board`, el tablero.
 - El esquema del CRM, donde la base impone las reglas aunque la API se equivoque: cada
   cuenta ve solo sus filas (seguridad por filas), el rol del servicio no puede borrar, cada
   escritura deja una fila de bitácora con quién la propuso y quién la aprobó, y las llaves
@@ -93,6 +93,20 @@ variable.
 `npm run crm:start` levanta el CRM en `http://127.0.0.1:4010`: `/health` responde 200, y una
 ruta sin llave, 401. Las cuentas y la llave del agente llegan con la semilla (la sección
 siguiente). `docker compose stop db` detiene la base y conserva sus datos.
+
+## El tablero
+
+```sh
+npm run board:build    # compila apps/board en apps/board/dist
+npm run circuit:start  # el tablero y su API de lectura en http://127.0.0.1:4020; Ctrl+C lo detiene
+npm run board:shots    # capturas a 1536×864, 768×864, 720×900 y 2560×1080 en .shots/, con Chrome
+```
+
+El tablero dibuja el circuito solo con los eventos guardados
+([ADR-0011](docs/adr/0011-tablero-desde-eventos.md)): cada estación toma el estado de su evento,
+y los eventos se revelan de a uno cada 700 ms. Circuit responde solo a `127.0.0.1` y
+`localhost` con su puerto, nunca responde CORS y sirve solo los archivos de su compilación.
+`board:shots` no necesita la base: usa los casos dorados en memoria.
 
 ## Datos de ejemplo: la semilla
 

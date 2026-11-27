@@ -164,3 +164,43 @@ quedan como decisión al aceptarse la ADR; la 4 fija cuándo.
   compila el JSX solo; si no, el plugin entra con una enmienda y su versión del día.
 4. **Aceptación (orden).** Recomendación: aceptar esta ADR después de aprobar
   `docs/diseno.md`, porque B10 lo cita.
+
+## Notas de implementación (F2.3a, 2026-11-26)
+
+Implementada sobre `5da6bfb` (la base real, que cierra ADR-0010 A1). Lo que se hizo distinto de
+lo escrito, y por qué; Claude eligió cada punto (CLAUDE.md §1b):
+
+- **Pregunta 3, resuelta:** Vite 8.3.8 compila el JSX solo, con su transformación Oxc
+  (`oxc.jsx.runtime: 'automatic'` en `apps/board/vite.config.ts`). `@vitejs/plugin-react` no
+  entra. Versiones del día, comprobadas en el registro: `react` y `react-dom` 19.3.1,
+  `@types/react` 19.3.3, `@types/react-dom` 19.3.0, `@fontsource/ibm-plex-sans` y
+  `@fontsource/jetbrains-mono` 5.3.0; `vite` 8.3.8 declarada (la última era 8.4.0; se fija la
+  que trae Vitest, y `npm ls vite --all` muestra una sola). `npm audit --audit-level=low`: 0.
+- **zod 4.6.7 en `apps/circuit`**, la misma de `apps/crm`: B5 la pide y B12 no la nombraba.
+- **El lector de corridas** (`PgRunReader`, `modules/event-store/reader.ts`) no estaba en el
+  cerco: el puerto `EventStore` del núcleo no lista corridas ni lee desde un `seq`, y el núcleo
+  no cambia. No es un puerto del núcleo: solo lo usa el servidor. `eventOfRow` de `store.ts`
+  pasó a exportarse dentro del módulo.
+- **`GET /api/circuit` trae además `scenario` y `model`**, para la línea «Circuit · Escuela ·
+  Simulador» del brief (§6).
+- **Estados al terminar:** una corrida terminada (alto, falla o fin) deja `skipped` toda
+  estación que no visitó; mientras sigue, solo las de número menor que la más lejana alcanzada.
+  Así la inyección se ve como «detenida en Filtro» y el resto «saltada».
+- **B1 y B2, con el estado de la página:** la corrida elegida y la lista abierta no son estado
+  de una estación. La corrida vive en `use-run-events.ts`; la lista es un `<details>` (sin
+  estado de React); el tamaño de la ventana se lee con `useSyncExternalStore` en
+  `use-viewport.ts`. Los chequeos de B1, B2 y B7 corren además como prueba
+  (`apps/board/test/source-rules.test.ts`).
+- **El revelado** es `createRunFeed` en `use-run-events.ts`, con los temporizadores inyectados:
+  `feed.test.ts` mueve el tiempo a mano y ve cada paso de 700 ms.
+- **M4** se plantó como «la lista admite un tipo de archivo que no es suyo» (el servidor no
+  conoce la carpeta de `dist`, así que no hay ruta que resolver contra ella). Las rutas con
+  `..` y `%2e%2e` dan 404 igual. M1–M6 en rojo, cada uno restaurado por hash.
+- **B11:** un `.tsx` sin pruebas plantado en `apps/board/src` aparece al 0 % en el informe;
+  con más de mil pruebas, un archivo chico ya no baja la suite entera del piso de 80 por sí solo.
+- **B10:** `npm run board:shots` toma tres juegos (normal, espera y inyección) a las cuatro
+  medidas, en `.shots/`, con un perfil de Chrome propio (sin él, Chrome le entrega la orden a la
+  ventana abierta y espera). Revisión del dueño pendiente. El hueco de los lados a 2560×1080 lo
+  llenan los paneles de F2.3c.
+- Las pruebas con base de B4, B5 y B13 están en `database/test/circuit-server-db.test.ts`,
+  junto con el arranque de `main.ts`.

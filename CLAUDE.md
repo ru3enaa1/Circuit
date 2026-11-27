@@ -213,8 +213,14 @@ en rojo. **Segunda auditoría el 2026-11-26: APROBAR CON CONDICIONES**
 primero (NFC, el tramo de hasta 30 caracteres y un salto de línea entre etiqueta y número, las
 cifras de otros sistemas y el correo con tildes); EA1 y EA2 aplicadas en la ADR. Es la última
 auditoría: el dueño las apagó (§1b). Con eso, 896 pruebas (una solo en Linux), cobertura
-95,66 / 88,18 / 96,85 / 98,01; **F2.2 hecha**, en commits locales, sin empujar. Sigue F2.0
-(`docs/diseno.md`), que acepta ADR-0011 y abre F2.3.
+95,66 / 88,18 / 96,85 / 98,01; **F2.2 hecha**, en commits locales, sin empujar.
+**F2.3a hecha el 2026-11-26, sin empujar (ADR-0011):** circuit sirve en `127.0.0.1:4020`
+(`npm run circuit:start`) el tablero y cuatro rutas `GET`, con la revisión de `Host`, CSP y la
+lista fija de `apps/board/dist`; `apps/board` (React, Vite 8.3.8 sin plugin) dibuja la órbita solo
+desde `projectRun`, con siete apariencias, nodos, telemetría, muelle y el revelado de a uno.
+1094 pruebas (una solo en Linux), cobertura 94,21 / 87,09 / 94,67 / 96,44; M1–M6 en rojo; las
+desviaciones, en las «Notas de implementación» de la ADR. **B10 (revisión del dueño de
+`npm run board:shots`) pendiente.** Sigue F2.3b: entrar a una estación, el portal y CRM.
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -264,7 +270,15 @@ el CRM aparte).
   (`npm run db:seed`) como el administrador, una vez por cuenta, y la llave del agente la
   emite con el paso de `database/keys.ts`. Respaldo y restauración: `database/backup.ts` y
   `database/restore.ts`, con las herramientas del contenedor.
-- `apps/board`: el tablero, servido por circuit (llega en F2).
+- El servidor de circuit (ADR-0011): `apps/circuit/src/main.ts` (la raíz de composición) y
+  `src/server/` (`server.ts`, `api.ts` con sus listas fijas de campos, `guard.ts` con el `Host` y
+  las cabeceras, `board-files.ts`). Lee las corridas con `PgRunReader`
+  (`modules/event-store/reader.ts`), que no es un puerto del núcleo. `CRM_TOOLS` vive en
+  `crm-client`. Sus pruebas con base: `database/test/circuit-server-db.test.ts`.
+- `apps/board`: el tablero, servido por circuit desde `dist`. Su estado sale solo de
+  `projectRun` (`src/projection.ts`); `useState`, `useReducer` y los temporizadores, solo en
+  `src/use-run-events.ts` (lo vigila `test/source-rules.test.ts`); los textos, en `src/texts.ts`.
+  No importa código de circuit: solo sus pruebas lo hacen (`test/support.ts`).
 
 Lo impone `apps/circuit/test/architecture/`: el mapa de dependencias (`module-map.ts`) y una
 prueba que revisa `src/` y `test/` contra él. Para agregar una dependencia hay que cambiar
@@ -290,7 +304,10 @@ más drizzle-orm 0.45.4 y pg 8.23.1. **Sin compilar** (ADR-0006 D1): Node 24 qui
 tipos, así que toda importación relativa termina en `.ts`, y `erasableSyntaxOnly` prohíbe
 `enum`, `namespace` y las propiedades de parámetro (TS1294).
 `apps/circuit` declara drizzle-orm 0.45.4 y pg 8.23.1 (ADR-0010 D18), comprobadas en el
-registro el 2026-11-26, las mismas que `apps/crm`; zod todavía no le hizo falta.
+registro el 2026-11-26, las mismas que `apps/crm`; desde F2.3a también fastify 5.12.8 y zod 4.6.7.
+`apps/board` (ADR-0011 B12), verificadas el 2026-11-26: react y react-dom 19.3.1, @types/react
+19.3.3, @types/react-dom 19.3.0, @fontsource/ibm-plex-sans y @fontsource/jetbrains-mono 5.3.0, y
+vite 8.3.8 (la que trae Vitest; no la 8.4.0), sin `@vitejs/plugin-react`.
 CI (`.github/workflows/ci.yml`): `ubuntu-24.04`, Node 24.20.0, actions/checkout v7.0.1 y
 actions/setup-node v7.1.0 fijadas por SHA, comprobados contra sus etiquetas el 2026-11-24.
 
@@ -531,6 +548,11 @@ Se registran con el formato de pitfall-log: regla, síntoma, causa, chequeo y fe
   reparó con `git restore --source=HEAD -- apps/` y `npm ci`. Regla: un worktree corre su
   propio `npm ci` y nunca recibe un enlace al clon. Chequeo: `git status --short` del clon da
   lo mismo antes y después de quitar el worktree.
+- **Chrome sin ventana se cuelga si ya hay un Chrome abierto, o si el mismo proceso sirve la
+  página** (2026-11-26, `board:shots`). Síntoma: `--screenshot` no termina y no deja archivo.
+  Causa: sin `--user-data-dir`, Chrome le entrega la orden a la instancia abierta; y
+  `execFileSync` bloquea el proceso de Node que es el servidor que Chrome lee. Regla: perfil
+  propio y `execFile` asíncrono con `timeout`. Chequeo: `npm run board:shots` deja 12 archivos.
 - **Fastify 5.12 deprecó `disableRequestLogging`** (2026-11-24). Con `logger: false` no hace
   falta: no hay registrador que escriba esas líneas. Chequeo: las pruebas no muestran
   `FSTDEP023`.
@@ -743,6 +765,18 @@ npm run db:users                                               # crm_app y circu
 git grep -nE "Math\.random|Date\.now|new Date|randomUUID|randomBytes" -- ':(glob)apps/circuit/src/modules/model/**' | wc -l   # D12: 0
 git grep -n "writeFile" -- apps/circuit/test/golden.test.ts | wc -l                                                          # D15 (M12): 0
 git diff --exit-code 8edc7d8 -- apps/crm database/migrations/0000_init.sql database/migrations/0001_crm_tables.sql database/migrations/0002_crm_security.sql database/migrations/0003_audit_author_format.sql database/migrations/0004_crm_owner.sql   # D19: 0
+```
+
+Verificados el 2026-11-26 en PowerShell (F2.3a, ADR-0011), con M1–M6, cada uno en rojo en su
+prueba y restaurado por hash:
+
+```powershell
+npx vitest run --project '@circuit/board'                        # B1–B3, B8, B9: proyección, marcado, textos, revelado y las reglas del código
+npx vitest run --project '@circuit/circuit' server config        # B5–B8, B13 en memoria
+npx vitest run --project database circuit-server                 # B4, B5, B13 sobre PostgreSQL, y el arranque
+npm run board:build                                              # apps/board/dist
+npm run circuit:start                                            # http://127.0.0.1:4020; Ctrl+C lo detiene
+npm run board:shots                                              # B10: 12 capturas en .shots/ (git las ignora)
 ```
 
 ## 10. Dónde está todo lo demás

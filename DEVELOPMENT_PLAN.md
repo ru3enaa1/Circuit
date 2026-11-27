@@ -273,6 +273,9 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   F2.2 hecha el 2026-11-26 sin empujar: el simulador y el cargador (`a51bb1b`), los tres
   documentos del programa, `simulator.json`, los cuatro casos dorados y los arreglos de las dos
   auditorías de ADR-0010. Desde ese día, sin auditorías (el dueño; CLAUDE.md §1b).
+  F2.3a hecha el 2026-11-26 sin empujar: el servidor de lectura de circuit en `127.0.0.1:4020`,
+  `apps/board` con `projectRun`, la órbita, sus siete apariencias, los nodos, la telemetría, el
+  muelle y el revelado de a uno (ADR-0011). Sigue F2.3b: entrar a una estación y volver.
 
 ### F3 · Modelo
 
