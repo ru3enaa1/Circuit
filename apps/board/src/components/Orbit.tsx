@@ -58,7 +58,8 @@ function Tube({ from, to, layout, taken, waiting }: { readonly from: Point; read
     <>
       <path className="edge__tube" d={d} strokeWidth={width} />
       <path className="edge__core" d={d} strokeWidth={round(width - 2 * RAIL_WIDTH)} />
-      {taken ? <path className={waiting ? 'edge__route is-now' : 'edge__route'} d={d} /> : null}
+      {/* The solid route is measured in one unit, so motion.css draws it from the station left (ADR-0016). */}
+      {taken ? <path className={waiting ? 'edge__route is-now' : 'edge__route'} d={d} pathLength={waiting ? undefined : 1} /> : null}
     </>
   );
 }

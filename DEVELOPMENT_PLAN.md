@@ -346,7 +346,8 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
 - **Trampas:** Docker en Windows y puertos ocupados; un GIF pesado que GitHub no muestra;
   cifras que no salen de corridas grabadas (sin fuente, no hay número).
 - **Estado:** abierta el 2026-11-27 en `feat/f6-demostracion`, que sale de `main` (`cf1384a`).
-  Primero R11 (las transiciones del tablero), antes del GIF.
+  Primero R11 (las transiciones del tablero), antes del GIF: **hecha el 2026-11-27** (ADR-0016,
+  `motion.css`), sin empujar.
 
 ### Segunda ronda (después del hito)
 
@@ -380,7 +381,7 @@ Lo que una respuesta recomienda y no se aplica en ese paso queda aquí hasta apl
 | R8 | Generar `database/schema.sql` desde una base migrada y compararlo en una prueba | Hoy se escribe a mano porque solo hay dos esquemas vacíos; con tablas se desvía | Claude, en F1.1 | Cerrada el 2026-11-24: `npm run db:dump-schema` lo regenera y `database/test/schema-dump-db.test.ts` falla si difiere (una columna plantada la puso en rojo) |
 | R9 | Hook de `pre-push` que corre `forbidden-phrases.local.txt` sobre lo versionado y `check-secrets.sh --range <remoto>..<local>` sobre cada commit que se publica | La lista privada no puede ir a CI, y CI corre después del push: detecta un secreto, no impide publicarlo (auditoría de ADR-0004, H1). Hoy depende de acordarse antes de cada push | El dueño. Hasta que exista, los dos comandos se corren a mano antes de cada push | Cerrada el 2026-11-24: `guards/hooks/pre-push`, activado con `git config core.hooksPath guards/hooks`, con la condición del dueño: nunca pregunta y para el push solo con un hallazgo o si no pudo revisar. Sus controles (`guards/pre-push.test.sh`, 10 casos, 7 mutantes en rojo) corren en CI |
 | R10 | `apps/crm` declara sus dependencias (`drizzle-orm`, `pg`) en su `package.json` | Hoy `apps/crm/src/db/schema.ts` importa `drizzle-orm` desde la raíz, donde es solo de desarrollo; el servidor del CRM, que en F6 corre en Compose, no puede depender de eso. F1.1 no podía tocar dependencias (ADR-0005 D17) | Claude, en F1.2, con la versión verificada ese día | Cerrada el 2026-11-24: `apps/crm/package.json` declara drizzle-orm 0.45.4, fastify 5.12.8, pg 8.23.1 y zod 4.6.7 (ADR-0006 D2) |
-| R11 | Suavizar las transiciones del tablero: el paso de una estación a la siguiente y la llegada del equipo hoy aparecen de golpe | El dueño lo vio en la app real el 2026-11-27 («salta sin transicionar»); el GIF y el video de F6 dependen de que el recorrido se vea fluido. Las transiciones siguen saliendo de los eventos guardados (CLAUDE.md §1) y se cortan con `prefers-reduced-motion` | Claude, después de F3 y antes del GIF de F6 | Abierta |
+| R11 | Suavizar las transiciones del tablero: el paso de una estación a la siguiente y la llegada del equipo hoy aparecen de golpe | El dueño lo vio en la app real el 2026-11-27 («salta sin transicionar»); el GIF y el video de F6 dependen de que el recorrido se vea fluido. Las transiciones siguen saliendo de los eventos guardados (CLAUDE.md §1) y se cortan con `prefers-reduced-motion` | Claude, después de F3 y antes del GIF de F6 | Hecha el 2026-11-27 (ADR-0016): animaciones de CSS en `motion.css`; quedan de golpe los brazos de una estación y el arco de tiempo (límites de la ADR) |
 
 ## 6. Mapa de documentos
 

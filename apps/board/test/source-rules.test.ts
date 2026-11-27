@@ -54,8 +54,8 @@ describe('the board source', () => {
     expect(block).toMatch(/\*::before/);
     expect(block).toMatch(/animation: none !important;/);
     expect(block).toMatch(/transition: none !important;/);
-    // The rooms move only by CSS animations, so the cut above reaches all of them.
-    expect(filesMatching(/@keyframes/)).toEqual(['room.css']);
+    // The rooms and the reveal move only by CSS animations (ADR-0016), so the cut above reaches all of them.
+    expect(filesMatching(/@keyframes/).sort()).toEqual(['motion.css', 'room.css']);
   });
 
   it('B7 · names no other origin, in the source or in index.html', () => {

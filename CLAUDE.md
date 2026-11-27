@@ -274,6 +274,11 @@ cumple su «terminado cuando»**: 1456 pruebas (una solo en Linux), cobertura 93
 46056206780, y en `main`, 46056514020). **F6 · Demostración abierta ese día en
 `feat/f6-demostracion`**, que sale de `main` (`cf1384a`); su primer paso es R11 (transiciones del
 tablero), antes del GIF. El README aún dice «fase F1» en su portada: F6 lo rehace.
+**R11 hecha el 2026-11-27, sin empujar (ADR-0016):** lo que un evento revelado monta entra con una
+animación de CSS de `apps/board/src/motion.css` (de 160 a 320 ms, dentro del paso de 700 ms) y la
+ruta se dibuja desde la estación que deja; sin estado ni temporizadores nuevos. `motion.test.ts`
+revisa cada par de cuadros de los casos dorados; T1–T7 en rojo. Revisado con cuadros en tiempo real
+(protocolo de DevTools), porque `board:shots` corre con tiempo virtual (§8).
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -344,7 +349,7 @@ el CRM aparte).
   rótulo y telemetría, y sus `obstacles`) e `src/icons.ts`. El equipo: `src/crew-poses.ts` (las
   poses de B7), `src/crew.ts` (semilla del id) y `components/Crew.tsx`; los paneles de la
   ultraancha: `src/side-panels.ts` y `components/SidePanels.tsx`. Todo puro: lee la escena, no
-  guarda nada.
+  guarda nada. El movimiento entre eventos (ADR-0016) es solo CSS, en `src/motion.css`.
 
 Lo impone `apps/circuit/test/architecture/`: el mapa de dependencias (`module-map.ts`) y una
 prueba que revisa `src/` y `test/` contra él. Para agregar una dependencia hay que cambiar
@@ -620,6 +625,13 @@ Se registran con el formato de pitfall-log: regla, síntoma, causa, chequeo y fe
   Causa: sin `--user-data-dir`, Chrome le entrega la orden a la instancia abierta; y
   `execFileSync` bloquea el proceso de Node que es el servidor que Chrome lee. Regla: perfil
   propio y `execFile` asíncrono con `timeout`. Chequeo: `npm run board:shots` deja 28 archivos.
+- **`--virtual-time-budget` no lleva las animaciones al paso de los temporizadores** (2026-11-27,
+  R11). Síntoma: una captura de `board:shots` a mitad del revelado muestra la ruta de un paso
+  anterior aún a medio dibujar y estaciones a medio aparecer. Causa: con tiempo virtual, Chrome
+  dispara los temporizadores en cuanto queda ocioso, pero los cuadros de animación no avanzan igual.
+  Regla: `board:shots` sirve para el estado final; el movimiento se mira con cuadros en tiempo real
+  (protocolo de DevTools). Chequeo: con `VIRTUAL_TIME_MS` en 3000, la captura `normal` muestra la
+  píldora en CRM y la ruta de Filtro a Clasificación aún a medio dibujar.
 - **Fastify 5.12 deprecó `disableRequestLogging`** (2026-11-24). Con `logger: false` no hace
   falta: no hay registrador que escriba esas líneas. Chequeo: las pruebas no muestran
   `FSTDEP023`.
@@ -893,6 +905,13 @@ npx vitest run --project '@circuit/circuit' simulator-contract   # K1–K6: la b
 npx vitest run --project '@circuit/circuit' anthropic-model      # F3.2: el adaptador sobre el transporte falso, sin red (13 pruebas; Y1–Y7 en rojo)
 npx vitest run --project '@circuit/circuit' anthropic-answer     # F3.3: el conocimiento con cita y la estación 4 en el motor (10 pruebas; Z1–Z8 en rojo)
 npx vitest run --project '@circuit/circuit' anthropic-crm anthropic-contract model-choice   # F3.4: herramientas, la batería con el adaptador y CIRCUIT_MODEL (W1–W14 en rojo)
+```
+
+Verificados el 2026-11-27 en PowerShell (R11, ADR-0016), con T1–T7, cada uno en rojo en su prueba
+y restaurado por hash:
+
+```powershell
+npx vitest run --project '@circuit/board' motion source-rules   # cada cuadro del revelado entra con motion.css; duraciones de 160 a 320 ms
 ```
 
 ## 10. Dónde está todo lo demás

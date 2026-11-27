@@ -4,7 +4,8 @@ import { POSE_BOX, type Accent, type Joint, type Pose } from '../crew-poses.ts';
 /**
  * The crew on the tubes (docs/diseno.md §11): each figure as B7 draws it, a short flat shadow,
  * limbs of line, joints of dot and a head of ball, with its props in the palette's colors.
- * Decoration: hidden from assistive technology, and it never moves (nothing here animates).
+ * Decoration: hidden from assistive technology, and it never walks: a figure only fades in when
+ * the run changes its poses (motion.css, ADR-0016).
  */
 
 const COLORS: Readonly<Record<Accent, string>> = {

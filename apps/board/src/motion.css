@@ -1,0 +1,128 @@
+/*
+ * How the board moves from one revealed event to the next (ADR-0016, R11; docs/diseno.md §14).
+ * The feed reveals a stored event every 700 ms and React paints the new projected view; this sheet
+ * only says how the difference arrives. What an event mounts (the fill of a station, the yellow
+ * route, the ring of the station the run is on, the telemetry, a figure of the crew, the clock)
+ * enters with an animation that runs when it mounts; what changes class on the same element
+ * changes with a transition. Nothing here decides what is shown, and nothing runs again on its own:
+ * no animation repeats, and none lasts past the next reveal. With reduced motion, the cut at the end
+ * of styles.css takes every one away and the view is the same, at once.
+ */
+
+:root {
+  /* The entrance, 240 ms (§14: from 160 to 320 ms). */
+  --enter: 240ms ease-out;
+  /* What a station shows about its event comes in after its fill, still inside the reveal step. */
+  --after-fill: 80ms;
+  /* The route takes the longest: it is the run going from one station to the next. */
+  --draw: 320ms cubic-bezier(0.3, 0, 0.2, 1);
+}
+
+/* A station reached: its fill and its nodes light up instead of replacing the outline at once. */
+.station__fill,
+.station__dots {
+  animation: motion-fade var(--enter) both;
+}
+
+/* A station that stops, waits for the person or is skipped: its outline and its mark fade in. */
+.station__outline,
+.station__hollow,
+.station__wait-ring,
+.station__stop-ring,
+.station__strike {
+  animation: motion-fade var(--enter) both;
+}
+
+.station__outline {
+  transition: stroke var(--ease);
+}
+
+.station__inside {
+  transition: color var(--ease);
+}
+
+/* The station the run is on: the yellow ring lands on it from a little farther out. */
+.station__selected {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: motion-land var(--enter) both;
+}
+
+/* The route draws from the station left toward the one reached (its path goes from → to, in one unit). */
+.edge__route {
+  animation: motion-draw var(--draw) both;
+}
+
+/* Toward a station that waits, the dashed route only fades in: its dashes are its own. */
+.edge__route.is-now {
+  animation: motion-fade var(--enter) both;
+}
+
+.edge__guide,
+.edge__stop {
+  transition: stroke var(--ease);
+}
+
+.edge__stop-square,
+.edge__label text {
+  transition: fill var(--ease);
+}
+
+/* What the event measured: the share of time, the telemetry and the names of the nodes. */
+.rings__time,
+.telemetry,
+.telemetry__lead,
+.node-label {
+  animation: motion-fade var(--enter) var(--after-fill) both;
+}
+
+.node-label,
+.telemetry__primary {
+  transition: fill var(--ease);
+}
+
+.confidence {
+  animation: motion-fade var(--enter) var(--after-fill) both;
+}
+
+/* The crew changes its poses with the run (§11): a figure fades in where it stands, and never walks. */
+.crew__figure {
+  animation: motion-fade var(--enter) both;
+}
+
+/* The header and the clock: what a new event writes there fades in. */
+.request__text,
+.clock__time,
+.clock__since,
+.clock__spent,
+.stop-card {
+  animation: motion-fade var(--enter) both;
+}
+
+.clock__state {
+  transition: color var(--ease);
+}
+
+@keyframes motion-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes motion-land {
+  from {
+    opacity: 0;
+    transform: scale(1.25);
+  }
+}
+
+@keyframes motion-draw {
+  from {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+  }
+}

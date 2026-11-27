@@ -8,6 +8,7 @@ import './panels.css';
 import './side-panels.css';
 import './room.css';
 import './decision.css';
+import './motion.css';
 
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
