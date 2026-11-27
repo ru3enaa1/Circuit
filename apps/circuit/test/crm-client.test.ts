@@ -36,6 +36,20 @@ describe('CRM_URL', () => {
   });
 });
 
+describe('ADR-0020 D2 · CRM_URL inside Compose', () => {
+  it('(control) http://crm:<port> is refused on the host', () => {
+    expect(() => readCrmUrl('http://crm:4010')).toThrow(CrmClientConfigError);
+    expect(() => readCrmUrl('http://crm:4010', false)).toThrow(/CRM_URL/);
+  });
+
+  it('inside a container it takes http://crm:<port>, and still refuses any other host', () => {
+    expect(readCrmUrl('http://crm:4010', true).href).toBe('http://crm:4010/');
+    expect(readCrmUrl(undefined, true).href).toBe('http://127.0.0.1:4010/');
+    expect(() => readCrmUrl('http://ejemplo.test:4010', true)).toThrow(CrmClientConfigError);
+    expect(() => readCrmUrl('https://crm:4010', true)).toThrow(CrmClientConfigError);
+  });
+});
+
 describe('CRM_AGENT_KEY_FILE', () => {
   let dir: string;
 

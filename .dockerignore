@@ -1,0 +1,21 @@
+# ADR-0020 D7: a list of what is allowed. Everything is left out first, so a new file in the clone
+# (a .env, a key, a backup, a private note) never reaches the image without anyone thinking of it.
+# database/test/dockerignore.test.ts checks what must stay out and what must go in.
+*
+
+!package.json
+!package-lock.json
+!.npmrc
+!tsconfig.base.json
+!tsconfig.json
+!drizzle.config.ts
+!apps
+!database
+!scenarios
+!docker
+
+# Inside what is allowed: what the image builds itself, and what never leaves the clone.
+apps/*/node_modules
+apps/board/dist
+database/backups
+database/dev

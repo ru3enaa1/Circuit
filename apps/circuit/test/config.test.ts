@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { CircuitConfigError, DEFAULT_CIRCUIT_PORT, DEFAULT_MENTOR, readCircuitConfig } from '../src/config.ts';
+import { CircuitConfigError, CONTAINER_MARK, DEFAULT_CIRCUIT_PORT, DEFAULT_MENTOR, readCircuitConfig } from '../src/config.ts';
 
 // ADR-0011 B6: the circuit server's configuration, from the environment only. It listens on
 // 127.0.0.1 whatever the environment says, and no variable can change that.
@@ -20,9 +20,9 @@ const VALID = {
   CRM_AGENT_KEY_FILE: '.secrets/crm-agent-key',
 } as const;
 
-function errorOf(env: Record<string, string | undefined>): string {
+function errorOf(env: Record<string, string | undefined>, inContainer?: () => boolean): string {
   try {
-    readCircuitConfig(env);
+    readCircuitConfig(env, inContainer);
   } catch (error) {
     expect(error).toBeInstanceOf(CircuitConfigError);
     return (error as Error).message;
@@ -139,5 +139,29 @@ describe('A7 · CIRCUIT_MENTOR (ADR-0012)', () => {
 
     expect(message).toContain('CIRCUIT_MENTOR');
     expect(message).not.toContain(value);
+  });
+});
+
+describe('ADR-0020 D2 · CIRCUIT_IN_CONTAINER', () => {
+  const inContainer = () => true;
+  const onTheHost = () => false;
+
+  it('(control) without it, circuit listens on 127.0.0.1 and finds the base there, even inside a container', () => {
+    expect(readCircuitConfig(VALID, inContainer)).toMatchObject({ host: '127.0.0.1', container: false, db: { host: '127.0.0.1' } });
+    expect(CONTAINER_MARK).toBe('/.dockerenv');
+  });
+
+  it('inside a container, it listens on 0.0.0.0 and finds the base at db', () => {
+    expect(readCircuitConfig({ ...VALID, CIRCUIT_IN_CONTAINER: '1' }, inContainer)).toMatchObject({ host: '0.0.0.0', container: true, db: { host: 'db' } });
+  });
+
+  it('on the host, it stops the start-up by its name: a .env cannot open circuit to the network', () => {
+    expect(errorOf({ ...VALID, CIRCUIT_IN_CONTAINER: '1' }, onTheHost)).toContain('CIRCUIT_IN_CONTAINER');
+  });
+
+  it.each(['true', 'yes', '0', ' 1'])('any value but 1 stops the start-up, without quoting it (%j)', (value) => {
+    const message = errorOf({ ...VALID, CIRCUIT_IN_CONTAINER: value }, inContainer);
+    expect(message).toContain('CIRCUIT_IN_CONTAINER');
+    expect(message).not.toContain(`«${value}»`);
   });
 });

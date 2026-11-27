@@ -1,26 +1,39 @@
-# Circuit, local only (ADR-0002). For now only the database: crm and circuit join when they
-# have a server (F1 and F2; ADR-0003, M5).
+# Circuit, local only (ADR-0002). `docker compose up` brings everything up with no .env and no key
+# (ADR-0020): the database, a one-time setup (migrations, users, seed), the CRM and circuit with
+# its board on http://127.0.0.1:4020. A .env, when there is one, sets the passwords and the ports;
+# without it, the database container generates the passwords once in the secrets volume (D4).
 name: circuit
+
+# The three Node services share one image, built from the Dockerfile (D1). They run in container
+# mode (D2): they listen inside the container and find the base at db and the CRM at crm.
+x-app: &app
+  build: .
+  image: circuit-app:local
 
 services:
   db:
     # Exact version and digest: every clone runs the same image (CLAUDE.md, Reproducible).
     # 18.7 and not 19.0: a fresh .0 release is not a base for a demo (checked 2026-11-24).
     image: postgres:18.7-trixie@sha256:c699303802144847d238196173655dbbecf7a96aeca1565f2b02eb671a1f0b6b
+    # Makes the passwords that are missing, then runs the image's own entry (D4).
+    entrypoint: ["sh", "/circuit/db-entrypoint.sh"]
     environment:
-      # `:?` stops Compose with the variable's name when .env is missing or incomplete.
-      POSTGRES_USER: ${POSTGRES_USER:?copy .env.example to .env}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
-      POSTGRES_DB: ${POSTGRES_DB:?copy .env.example to .env}
+      POSTGRES_USER: ${POSTGRES_USER:-circuit_admin}
+      # Empty without .env: db-entrypoint.sh takes the generated one.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+      POSTGRES_DB: ${POSTGRES_DB:-circuit}
     ports:
       # Loopback only: the database is never reachable from the local network
-      # (DEVELOPMENT_PLAN, F0 security). database/test/compose.test.ts enforces it.
-      - "127.0.0.1:${DB_PORT:?copy .env.example to .env}:5432"
+      # (DEVELOPMENT_PLAN, F0 security). database/test/compose.test.ts enforces it. Published for
+      # the tests and the tools that run on the host; the services reach it as db:5432.
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
     volumes:
       # Since PostgreSQL 18 the image keeps its data in /var/lib/postgresql/18/docker and
       # declares the volume on the parent; mounting the old /var/lib/postgresql/data path
       # would leave the data in an anonymous volume that a recreate throws away.
       - db-data:/var/lib/postgresql
+      - secrets:/run/circuit-secrets
+      - ./docker/db-entrypoint.sh:/circuit/db-entrypoint.sh:ro
     healthcheck:
       # Over TCP on purpose: during first-time init the entrypoint runs a temporary server
       # on the Unix socket only, so a socket check reports ready before the real server is.
@@ -29,5 +42,83 @@ services:
       timeout: 3s
       retries: 30
 
+  # Once per `up`: each step is safe to repeat (applied migrations, existing users and an account
+  # already seeded are left as they are), and it exits 0 before the CRM starts.
+  setup:
+    <<: *app
+    command: ["sh", "-c", "npm run --silent db:migrate && npm run --silent db:users && npm run --silent db:seed"]
+    restart: "no"
+    environment:
+      CIRCUIT_IN_CONTAINER: "1"
+      POSTGRES_USER: ${POSTGRES_USER:-circuit_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+      POSTGRES_DB: ${POSTGRES_DB:-circuit}
+      # The database's own port, on Compose's network; DB_PORT is only the one on the host.
+      DB_PORT: "5432"
+      CRM_DB_PASSWORD: ${CRM_DB_PASSWORD:-}
+      CIRCUIT_DB_PASSWORD: ${CIRCUIT_DB_PASSWORD:-}
+      CIRCUIT_SCENARIO: ${CIRCUIT_SCENARIO:-escuela}
+      CRM_AGENT_KEY_FILE: .secrets/crm-agent-key
+    volumes:
+      - secrets:/run/circuit-secrets:ro
+      # The seed writes the agent's key here (D5).
+      - agent-key:/app/.secrets
+    depends_on:
+      db:
+        condition: service_healthy
+
+  crm:
+    <<: *app
+    command: ["node", "apps/crm/src/main.ts"]
+    environment:
+      CIRCUIT_IN_CONTAINER: "1"
+      CRM_DB_PASSWORD: ${CRM_DB_PASSWORD:-}
+      POSTGRES_DB: ${POSTGRES_DB:-circuit}
+      DB_PORT: "5432"
+      CRM_PORT: "4010"
+    # No ports: only circuit talks to the CRM, over Compose's network (D3).
+    volumes:
+      - secrets:/run/circuit-secrets:ro
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4010/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  circuit:
+    <<: *app
+    command: ["node", "apps/circuit/src/main.ts"]
+    environment:
+      CIRCUIT_IN_CONTAINER: "1"
+      CIRCUIT_DB_PASSWORD: ${CIRCUIT_DB_PASSWORD:-}
+      POSTGRES_DB: ${POSTGRES_DB:-circuit}
+      DB_PORT: "5432"
+      CIRCUIT_SCENARIO: ${CIRCUIT_SCENARIO:-escuela}
+      CRM_AGENT_KEY_FILE: .secrets/crm-agent-key
+      CRM_URL: http://crm:4010
+      # The same port inside and out, so the Host and Origin checks of ADR-0011 B6 hold as they are.
+      CIRCUIT_PORT: ${CIRCUIT_PORT:-4020}
+      CIRCUIT_MENTOR: ${CIRCUIT_MENTOR:-mentor}
+      # No CIRCUIT_MODEL and no ANTHROPIC_API_KEY: always the simulator (D6, ADR-0015 A1).
+    ports:
+      - "127.0.0.1:${CIRCUIT_PORT:-4020}:${CIRCUIT_PORT:-4020}"
+    volumes:
+      - secrets:/run/circuit-secrets:ro
+      - agent-key:/app/.secrets:ro
+    depends_on:
+      crm:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:' + process.env.CIRCUIT_PORT + '/api/circuit').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))\""]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
 volumes:
   db-data:
+  # The passwords db-entrypoint.sh generates (D4), and the agent's key the seed writes (D5).
+  secrets:
+  agent-key:

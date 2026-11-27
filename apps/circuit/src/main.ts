@@ -170,7 +170,7 @@ export async function startCircuit(env: Readonly<Record<string, string | undefin
   const log = options.log ?? stdoutLog;
   const config = readCircuitConfig(env);
   const { scenario, replies, tryouts } = scenarioOf(config);
-  const endpoint = readCrmEndpoint(env, REPO_ROOT);
+  const endpoint = readCrmEndpoint(env, REPO_ROOT, config.container);
   const board = readBoardFiles(options.boardDir ?? BOARD_DIST_DIR);
   if (board.size === 0) log({ event: 'board_missing', fix: 'npm run board:build' });
   const pool = createPool(config.db, log);

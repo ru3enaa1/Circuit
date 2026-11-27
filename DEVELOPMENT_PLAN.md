@@ -353,8 +353,9 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   con el GIF regrabado. El README nuevo, hecho ese día, con el GIF en su portada. El dueño pidió
   más vida ese día (ADR-0019): el viaje es una trenza amarilla y rosada que al conectar queda de un
   color según el estado, y el equipo llega caminando por las dos líneas o por una puerta, y uno se va
-  en tobogán al cerrar; el GIF guarda solo lo que cambia (0,92 MB). Sigue `docker compose up` que
-  levante todo sin llave.
+  en tobogán al cerrar; el GIF guarda solo lo que cambia (0,92 MB). `docker compose up` de un comando,
+  hecho ese día (ADR-0020): sin `.env`, sin Node y sin llave, con un trabajo de CI que lo levanta en
+  limpio y recorre las siete estaciones. Siguen el video, la página del caso y el mensaje corto.
 
 ### Segunda ronda (después del hito)
 

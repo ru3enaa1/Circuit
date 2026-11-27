@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+
 import { isApprover } from './modules/circuit/index.ts';
 
 // What circuit reads from its environment. apps/circuit never imports the CRM's code (ADR-0003
@@ -41,6 +43,20 @@ export function readModelChoice(env: Readonly<Record<string, string | undefined>
 /** The server listens on loopback only (ADR-0002 D3). No variable changes it, on purpose (B6). */
 export const CIRCUIT_LISTEN_HOST = '127.0.0.1';
 export const CIRCUIT_DB_HOST = '127.0.0.1';
+
+/**
+ * ADR-0020 D2: inside a container, 127.0.0.1 is the container itself, so with CIRCUIT_IN_CONTAINER=1
+ * circuit listens on every interface of the container (Compose publishes its port on the host's 127.0.0.1 only; this amends B6) and finds the base at the Compose
+ * service db. The variable counts only where Docker left its mark, so a .env on the host cannot open
+ * circuit to the local network.
+ */
+export const CONTAINER_MARK = '/.dockerenv';
+export const CONTAINER_LISTEN_HOST = '0.0.0.0';
+export const CONTAINER_DB_HOST = 'db';
+const CONTAINER_VARIABLE = 'CIRCUIT_IN_CONTAINER';
+/** Whether this process runs in a Docker container; a test passes its own answer. */
+export type InContainer = () => boolean;
+const dockerMarkExists: InContainer = () => existsSync(CONTAINER_MARK);
 /** Next to the CRM's 4010 (ADR-0011, question 1). */
 export const DEFAULT_CIRCUIT_PORT = 4020;
 
@@ -59,7 +75,7 @@ export const DEFAULT_MENTOR = 'mentor';
 // CRM_AGENT_KEY_FILE is required since F2.4: circuit reads and writes the CRM with that key. Its
 // file and CRM_URL are read by crm-client (ADR-0012 A9), which knows their rules.
 const REQUIRED = ['CIRCUIT_DB_PASSWORD', 'POSTGRES_DB', 'DB_PORT', 'CIRCUIT_SCENARIO', 'CRM_AGENT_KEY_FILE'] as const;
-const OPTIONAL = ['CIRCUIT_PORT', 'CIRCUIT_MODEL', 'CIRCUIT_MENTOR', 'CRM_URL', 'ANTHROPIC_API_KEY'] as const;
+const OPTIONAL = ['CIRCUIT_PORT', 'CIRCUIT_MODEL', 'CIRCUIT_MENTOR', 'CRM_URL', 'ANTHROPIC_API_KEY', CONTAINER_VARIABLE] as const;
 /** Anthropic's keys are letters, digits, «-» and «_»; a space or a quote is a copy that went wrong. */
 const API_KEY_SHAPE = /^[A-Za-z0-9_-]{20,200}$/;
 
@@ -81,6 +97,8 @@ export interface CircuitConfig {
   readonly anthropicApiKey: string | null;
   /** The name every decision is signed with (A7). */
   readonly mentor: string;
+  /** ADR-0020 D2: running inside Compose, where the CRM is http://crm:<port>. */
+  readonly container: boolean;
   readonly db: CircuitDatabaseConfig;
 }
 
@@ -131,7 +149,17 @@ function apiKeyOf(env: Readonly<Record<string, string | undefined>>): string {
   return key;
 }
 
-export function readCircuitConfig(env: Readonly<Record<string, string | undefined>>): CircuitConfig {
+
+/** D2: true only with CIRCUIT_IN_CONTAINER=1 inside a container; any other use stops the start-up. */
+function containerMode(env: Readonly<Record<string, string | undefined>>, inContainer: InContainer): boolean {
+  const value = env[CONTAINER_VARIABLE];
+  if (value === undefined || value === '') return false;
+  if (value !== '1') throw new CircuitConfigError(`${CONTAINER_VARIABLE} debe ser 1 o no estar.`);
+  if (!inContainer()) throw new CircuitConfigError(`${CONTAINER_VARIABLE}=1 solo vale dentro de un contenedor de Docker (docker compose up).`);
+  return true;
+}
+
+export function readCircuitConfig(env: Readonly<Record<string, string | undefined>>, inContainer: InContainer = dockerMarkExists): CircuitConfig {
   const withBom = [...REQUIRED, ...OPTIONAL].filter((name) => env[name] === undefined && env[BYTE_ORDER_MARK + name] !== undefined);
   if (withBom.length > 0) throw new CircuitConfigError(`${withBom.join(', ')} empieza con un BOM: guarda .env como UTF-8 sin BOM.`);
   const missing = REQUIRED.filter((name) => !env[name]);
@@ -140,18 +168,20 @@ export function readCircuitConfig(env: Readonly<Record<string, string | undefine
   }
   const problems = problemsOf(env);
   if (problems.length > 0) throw new CircuitConfigError(problems.join(' '));
+  const container = containerMode(env, inContainer);
   const model = modelOf(env);
   const anthropicApiKey = model === 'anthropic' ? apiKeyOf(env) : null;
   const port = env['CIRCUIT_PORT'];
   return {
-    host: CIRCUIT_LISTEN_HOST,
+    host: container ? CONTAINER_LISTEN_HOST : CIRCUIT_LISTEN_HOST,
     port: port === undefined || port === '' ? DEFAULT_CIRCUIT_PORT : Number(port),
     scenario: env['CIRCUIT_SCENARIO'] as string,
     model,
     anthropicApiKey,
     mentor: env['CIRCUIT_MENTOR'] || DEFAULT_MENTOR,
+    container,
     db: {
-      host: CIRCUIT_DB_HOST,
+      host: container ? CONTAINER_DB_HOST : CIRCUIT_DB_HOST,
       port: Number(env['DB_PORT']),
       user: CIRCUIT_DB_USER,
       password: env['CIRCUIT_DB_PASSWORD'] as string,

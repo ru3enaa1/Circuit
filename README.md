@@ -12,6 +12,9 @@ camino, el modelo solo opina, y nada se escribe sin que una persona lo apruebe.*
 - Es una demostración local, con una escuela y unos datos inventados. Responde un simulador, así
   que el tablero no muestra tokens ni costos: no habría de dónde sacarlos.
 
+Para verlo en tu equipo basta Docker: `docker compose up --wait` y abrir http://127.0.0.1:4020
+(detalles en [Verlo en tu equipo](#verlo-en-tu-equipo)).
+
 ## Qué se ve en el GIF
 
 Una persona escribe a una escuela de negocios inventada (Escuela Andamio) para preguntar qué
@@ -39,22 +42,44 @@ Cada estación se puede abrir con un clic para ver lo que guardó.
 
 ## Verlo en tu equipo
 
-Hace falta Node 24 con npm 11, y Docker con Compose encendido (verificado con Node 24.20.0, npm
-11.19.0 y Docker 29.9.3). No hace falta ninguna llave de API.
+Basta Docker con Compose, encendido (verificado con Docker 29.9.3 y Compose 5.7.0). No hace falta
+Node, ni un archivo `.env`, ni ninguna llave de API.
 
 ```sh
 git clone https://github.com/ru3enaa1/Circuit.git
 cd Circuit
-npm ci
-cp .env.example .env
+docker compose up --wait
 ```
 
-Abrir `.env` y poner una contraseña distinta en `POSTGRES_PASSWORD`, `CRM_DB_PASSWORD` y
-`CIRCUIT_DB_PASSWORD` (de 16 a 128 letras, dígitos, `-`, `_`, `.` o `~`; `.env.example` trae un
-comando para generarlas), y guardarlo en UTF-8 sin BOM. Después:
+La orden vuelve cuando todo está listo: la base, los usuarios de permiso mínimo, la escuela
+inventada, el CRM y el tablero. La primera vez construye la imagen y tarda unos minutos; las
+siguientes, segundos. Después, abrir **http://127.0.0.1:4020**.
+
+En el tablero, **«Probar una solicitud»** (abajo a la derecha) elige una de las solicitudes de
+ejemplo y la manda al circuito. Hay una normal, una queja, una con confianza baja y una que intenta
+darle órdenes al modelo. Al llegar a Persona, un clic en ella abre la propuesta con sus tres
+botones: **Aprobar**, **Corregir** y **Rechazar**.
+
+`docker compose down` lo detiene y guarda lo hecho; `docker compose down -v` borra también la base
+y la próxima vez empieza de cero. Si el puerto 4020 o el 5432 ya está ocupado en tu equipo, crea un
+archivo `.env` con otro número libre, por ejemplo `CIRCUIT_PORT=4030` o `DB_PORT=5433`.
+
+Todo se publica solo en `127.0.0.1`: nada queda a la vista de la red local. Sin `.env`, el
+contenedor de la base genera las contraseñas la primera vez y las guarda en un volumen de Docker;
+ninguna entra a la imagen ni al repositorio
+([ADR-0020](docs/adr/0020-compose-de-un-comando.md)).
+
+### Para trabajar en el código
+
+Hace falta además Node 24 con npm 11 (verificado con Node 24.20.0 y npm 11.19.0); en Windows, npm se
+corre en PowerShell. `cp .env.example .env`, y poner en `.env` una contraseña distinta en
+`POSTGRES_PASSWORD`, `CRM_DB_PASSWORD` y `CIRCUIT_DB_PASSWORD` (de 16 a 128 letras, dígitos,
+`-`, `_`, `.` o `~`; `.env.example` trae un comando para generarlas), guardado en UTF-8 sin
+BOM. Después:
 
 ```sh
-docker compose up -d --wait db   # PostgreSQL, solo en 127.0.0.1
+npm ci
+docker compose up -d --wait db   # solo PostgreSQL, en 127.0.0.1
 npm run db:migrate               # las tablas
 npm run db:users                 # los usuarios de permiso mínimo del CRM y del circuito
 npm run db:seed                  # la escuela inventada y la llave del agente
@@ -62,11 +87,6 @@ npm run board:build              # el tablero
 npm run crm:start                # el CRM en http://127.0.0.1:4010 (déjalo abierto)
 npm run circuit:start            # en otra terminal: el tablero en http://127.0.0.1:4020
 ```
-
-En el tablero, **«Probar una solicitud»** (abajo a la derecha) elige una de las solicitudes de
-ejemplo y la manda al circuito. Hay una normal, una queja, una con confianza baja y una que intenta
-darle órdenes al modelo. Al llegar a Persona, un clic en ella abre la propuesta con sus tres
-botones: **Aprobar**, **Corregir** y **Rechazar**. En Windows, npm se corre en PowerShell.
 
 ## Cómo está hecho
 

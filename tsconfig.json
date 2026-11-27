@@ -1,6 +1,7 @@
 {
-  // Root files (test runner and drizzle-kit configs) and the database tooling. Each app
+  // Root files (test runner and drizzle-kit configs), the database tooling and the Compose smoke
+  // test (docker/smoke.ts). Each app
   // type-checks with its own tsconfig.
   "extends": "./tsconfig.base.json",
-  "include": ["vitest.config.ts", "drizzle.config.ts", "database"]
+  "include": ["vitest.config.ts", "drizzle.config.ts", "database", "docker"]
 }

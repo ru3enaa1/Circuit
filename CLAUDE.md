@@ -298,7 +298,20 @@ El equipo llega por la línea de entrada, por la de salida o por una puerta en s
 (`crew-moves.ts`, puro, con la semilla en `seed.ts`), y al cerrar la corrida uno camina a Cierre y se
 va en tobogán por la última línea. Sus viajes duran más que el paso; el circuito, no. El GIF guarda
 solo lo que cambia: de 5,38 a 0,92 MB, regrabado. V1–V12 en rojo. Higgsfield no hizo falta.
-Sigue `docker compose up` que levante todo sin llave.
+**`docker compose up` de un comando, hecho el 2026-11-27, sin empujar (ADR-0020):** sin `.env`, sin
+Node y sin llave. Cuatro servicios: `db`, `setup` (una vez: migra, crea los usuarios y siembra),
+`crm` y `circuit`; los tres de Node, de una imagen (`Dockerfile`, Node 24.20.0 por digest, usuario
+`node`). `CIRCUIT_IN_CONTAINER=1`, que solo vale donde existe `/.dockerenv`, los hace escuchar en
+`0.0.0.0` y buscar la base en `db` y el CRM en `crm`; se publican solo la base y el tablero, en
+`127.0.0.1`. Sin `.env`, `docker/db-entrypoint.sh` genera las contraseñas una vez en el volumen
+`secrets`; la llave del agente vive en el volumen `agent-key`. `.dockerignore` es una lista de lo
+permitido. El trabajo `compose` de CI lo levanta en limpio y corre `docker/smoke.ts` (la muestra
+`normal`, aprobada, siete estaciones completas). Visto en un proyecto aparte con un `.env` vacío: 28 s
+desde cero, el recorrido entero y el tablero en el navegador. 1551 pruebas (una solo en Linux),
+cobertura 93,85 / 87,02 / 93,91 / 96,02; Q1–Q8 en rojo. La base del dueño,
+respaldada (`database/backups/20261127-222421Z-antes-compose/`) y recreada con el `compose.yaml`
+nuevo. Si el dueño corre todo Compose sobre su base, la semilla rota la llave de su `.secrets/`.
+Sigue el resto de F6: el video de 90 s, la página del caso y el mensaje corto.
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -372,6 +385,10 @@ el CRM aparte).
   ultraancha: `src/side-panels.ts` y `components/SidePanels.tsx`. Todo puro: lee la escena, no
   guarda nada. El movimiento entre eventos (ADR-0016, con los tres tiempos de
   ADR-0018: salir, viajar, llegar) es solo CSS, en `src/motion.css`.
+- Compose (ADR-0020): `compose.yaml`, el `Dockerfile` de la imagen `circuit-app:local` y
+  `docker/` (`db-entrypoint.sh` y `with-secrets.sh`, las contraseñas; `smoke.ts`, la prueba de
+  humo). Las tres configuraciones (`apps/crm/src/config.ts`, `apps/circuit/src/config.ts` y
+  `database/connection.ts`) leen `CIRCUIT_IN_CONTAINER` con la misma regla.
 
 Lo impone `apps/circuit/test/architecture/`: el mapa de dependencias (`module-map.ts`) y una
 prueba que revisa `src/` y `test/` contra él. Para agregar una dependencia hay que cambiar
@@ -656,6 +673,12 @@ Se registran con el formato de pitfall-log: regla, síntoma, causa, chequeo y fe
   Regla: `board:shots` sirve para el estado final; el movimiento se mira con cuadros en tiempo real
   (protocolo de DevTools). Chequeo: con `VIRTUAL_TIME_MS` en 3000, la captura `normal` muestra la
   píldora en CRM y la ruta de Filtro a Clasificación aún a medio dibujar.
+- **El `umask` de un guion de entrada pasa a la imagen que llama** (2026-11-27, ADR-0020). Síntoma:
+  la base de Compose salía con 1 y «mkdir: cannot create directory '/var/lib/postgresql/18':
+  Permission denied». Causa: `docker/db-entrypoint.sh` ponía `umask 027` para las contraseñas, y
+  `docker-entrypoint.sh` de PostgreSQL, que hereda el proceso, creaba la carpeta de datos como root
+  sin permiso para `postgres`. Regla: el `umask` va en un subshell. Chequeo: `docker compose -p
+  circuit-limpio --env-file <vacío> up --wait` sale con 0 en un proyecto nuevo.
 - **Fastify 5.12 deprecó `disableRequestLogging`** (2026-11-24). Con `logger: false` no hace
   falta: no hay registrador que escriba esas líneas. Chequeo: las pruebas no muestran
   `FSTDEP023`.
@@ -959,6 +982,18 @@ cada uno en rojo en su prueba y restaurado por hash, y los cuadros de `board:gif
 ```powershell
 npx vitest run --project '@circuit/board' choreography crew-moves motion source-rules   # la trenza, las llegadas, el tobogán y sus topes
 npx vitest run --project '@circuit/circuit' readme-gif                                  # el GIF y onlyChanges (solo lo que cambia)
+```
+
+Verificados el 2026-11-27 en PowerShell (`docker compose up`, ADR-0020), con Q1–Q8 (y Q2b, Q2c),
+cada uno en rojo en su prueba y restaurado por hash, y el recorrido entero en un proyecto aparte, sin
+`.env`. Los puertos 55432 y 4030, porque la base del dueño ocupa 5432:
+
+```powershell
+npx vitest run --project database compose dockerignore connection   # D1–D7: los servicios, los puertos, la imagen y lo que entra en ella
+docker compose up --wait                                            # todo, con .env o sin él; vuelve cuando está listo
+docker compose exec -T circuit node docker/smoke.ts                 # la muestra normal, aprobada: 0 si las siete estaciones quedaron completas
+docker compose down                                                 # lo detiene; con -v borra también la base, las contraseñas y la llave
+Set-Content vacio.env $null; $env:DB_PORT='55432'; $env:CIRCUIT_PORT='4030'; docker compose -p circuit-limpio --env-file vacio.env up --wait   # un clon limpio, sin tocar la base del dueño
 ```
 
 ## 10. Dónde está todo lo demás

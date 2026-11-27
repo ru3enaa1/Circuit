@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { ConfigError, CRM_DB_USER, readCrmConfig } from '../src/config.ts';
+import { ConfigError, CONTAINER_MARK, CRM_DB_USER, readCrmConfig } from '../src/config.ts';
 
 // ADR-0006 D6: the configuration comes only from the environment, and every refusal names the
 // variable and never its value. Synthetic values only: nothing here reads .env.
@@ -9,9 +9,9 @@ const PASSWORD = 'clave-de-prueba-0123456789';
 const VALID = { CRM_DB_PASSWORD: PASSWORD, POSTGRES_DB: 'circuit', DB_PORT: '5432', CRM_PORT: '4010' } as const;
 const BOM = '﻿';
 
-function refusalOf(env: Readonly<Record<string, string | undefined>>): ConfigError {
+function refusalOf(env: Readonly<Record<string, string | undefined>>, inContainer?: () => boolean): ConfigError {
   try {
-    readCrmConfig(env);
+    readCrmConfig(env, inContainer);
   } catch (error) {
     if (error instanceof ConfigError) return error;
     throw error;
@@ -56,5 +56,30 @@ describe('D6 · the CRM configuration', () => {
     const { CRM_DB_PASSWORD: _password, ...rest } = VALID;
     const error = refusalOf({ ...rest, [`${BOM}CRM_DB_PASSWORD`]: PASSWORD });
     expect(error.message).toBe('CRM_DB_PASSWORD empieza con un BOM: guarda .env como UTF-8 sin BOM.');
+  });
+});
+
+describe('ADR-0020 D2 · CIRCUIT_IN_CONTAINER', () => {
+  const inContainer = () => true;
+  const onTheHost = () => false;
+
+  it('(control) without it, the CRM listens on 127.0.0.1 and finds the base there, even inside a container', () => {
+    expect(readCrmConfig(VALID, inContainer)).toMatchObject({ host: '127.0.0.1', db: { host: '127.0.0.1' } });
+    expect(CONTAINER_MARK).toBe('/.dockerenv');
+  });
+
+  it('inside a container, it listens on 0.0.0.0 and finds the base at db', () => {
+    expect(readCrmConfig({ ...VALID, CIRCUIT_IN_CONTAINER: '1' }, inContainer)).toMatchObject({ host: '0.0.0.0', db: { host: 'db' } });
+  });
+
+  it('on the host, it stops the start-up by its name: a .env cannot open the CRM to the network', () => {
+    const error = refusalOf({ ...VALID, CIRCUIT_IN_CONTAINER: '1' }, onTheHost);
+    expect(error.message).toContain('CIRCUIT_IN_CONTAINER');
+  });
+
+  it.each(['true', 'yes', '0', ' 1'])('any value but 1 stops the start-up, without quoting it (%j)', (value) => {
+    const error = refusalOf({ ...VALID, CIRCUIT_IN_CONTAINER: value }, inContainer);
+    expect(error.message).toContain('CIRCUIT_IN_CONTAINER');
+    expect(error.message).not.toContain(`«${value}»`);
   });
 });

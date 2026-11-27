@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+
 import { z } from 'zod';
 
 // The CRM's configuration (ADR-0006 D6), read once at start-up and only from the environment:
@@ -7,6 +9,20 @@ import { z } from 'zod';
 /** The CRM serves on loopback only, like the database it reads (compose.yaml, ADR-0002). */
 export const CRM_HOST = '127.0.0.1';
 export const CRM_DB_HOST = '127.0.0.1';
+
+/**
+ * ADR-0020 D2: inside a container, 127.0.0.1 is the container itself, so with CIRCUIT_IN_CONTAINER=1
+ * the CRM listens on every interface of the container (only Compose's own network reaches it: its port is not published) and finds the base at the Compose
+ * service db. The variable counts only where Docker left its mark, so a .env on the host cannot open
+ * the CRM to the local network.
+ */
+export const CONTAINER_MARK = '/.dockerenv';
+export const CONTAINER_LISTEN_HOST = '0.0.0.0';
+export const CONTAINER_DB_HOST = 'db';
+const CONTAINER_VARIABLE = 'CIRCUIT_IN_CONTAINER';
+/** Whether this process runs in a Docker container; a test passes its own answer. */
+export type InContainer = () => boolean;
+const dockerMarkExists: InContainer = () => existsSync(CONTAINER_MARK);
 /** The CRM's own login, created by `npm run db:users` (database/users.ts). Never the admin. */
 export const CRM_DB_USER = 'crm_app';
 
@@ -72,7 +88,18 @@ function isVariable(name: unknown): name is Variable {
   return typeof name === 'string' && (VARIABLES as readonly string[]).includes(name);
 }
 
-export function readCrmConfig(env: Readonly<Record<string, string | undefined>>): CrmConfig {
+
+/** D2: true only with CIRCUIT_IN_CONTAINER=1 inside a container; any other use stops the start-up. */
+function containerMode(env: Readonly<Record<string, string | undefined>>, inContainer: InContainer): boolean {
+  const value = env[CONTAINER_VARIABLE];
+  if (value === undefined || value === '') return false;
+  if (value !== '1') throw new ConfigError(`${CONTAINER_VARIABLE} debe ser 1 o no estar.`);
+  if (!inContainer()) throw new ConfigError(`${CONTAINER_VARIABLE}=1 solo vale dentro de un contenedor de Docker (docker compose up).`);
+  return true;
+}
+
+export function readCrmConfig(env: Readonly<Record<string, string | undefined>>, inContainer: InContainer = dockerMarkExists): CrmConfig {
+  const container = containerMode(env, inContainer);
   const withBom = VARIABLES.filter((name) => env[name] === undefined && env[BYTE_ORDER_MARK + name] !== undefined);
   if (withBom.length > 0) {
     throw new ConfigError(`${withBom.join(', ')} empieza con un BOM: guarda .env como UTF-8 sin BOM.`);
@@ -89,10 +116,10 @@ export function readCrmConfig(env: Readonly<Record<string, string | undefined>>)
   }
   const values = parsed.data;
   return {
-    host: CRM_HOST,
+    host: container ? CONTAINER_LISTEN_HOST : CRM_HOST,
     port: values.CRM_PORT,
     db: {
-      host: CRM_DB_HOST,
+      host: container ? CONTAINER_DB_HOST : CRM_DB_HOST,
       port: values.DB_PORT,
       user: CRM_DB_USER,
       password: values.CRM_DB_PASSWORD,

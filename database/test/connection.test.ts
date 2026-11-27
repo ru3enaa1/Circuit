@@ -52,6 +52,21 @@ describe('readAdminConnection', () => {
   });
 });
 
+describe('ADR-0020 D2 · readAdminConnection in a container', () => {
+  it('(control) without CIRCUIT_IN_CONTAINER, loopback, even inside a container', () => {
+    expect(readAdminConnection(COMPLETE, () => true).host).toBe('127.0.0.1');
+  });
+
+  it('inside a container, the Compose service db', () => {
+    expect(readAdminConnection({ ...COMPLETE, CIRCUIT_IN_CONTAINER: '1' }, () => true).host).toBe('db');
+  });
+
+  it('on the host, or with another value, it stops naming the variable', () => {
+    expect(() => readAdminConnection({ ...COMPLETE, CIRCUIT_IN_CONTAINER: '1' }, () => false)).toThrow(/CIRCUIT_IN_CONTAINER/);
+    expect(() => readAdminConnection({ ...COMPLETE, CIRCUIT_IN_CONTAINER: 'true' }, () => true)).toThrow(/CIRCUIT_IN_CONTAINER/);
+  });
+});
+
 describe('readLocalEnv', () => {
   const dir = mkdtempSync(join(tmpdir(), 'circuit-env-'));
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
