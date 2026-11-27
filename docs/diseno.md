@@ -108,7 +108,9 @@ La composición elegida es la órbita del boceto (la variante «libre» de B1, l
 
 Alrededor de cada estación, unidos por cuellos finos, van sus nodos secundarios. Toman el estado
 de su estación (sin eventos nuevos) y su texto sale del `detail` del evento. Si el evento no
-trae el dato, el nodo no se dibuja. Los títulos de los documentos los trae `GET /api/circuit`
+trae el dato, el nodo no se dibuja. **Enmienda del 2026-11-27 (el dueño pidió el circuito igual
+a B1):** en la órbita, junto a cada nodo va su nombre corto, como en B1 («intención», «cita»,
+«tarea»); el valor de la tabla de abajo queda en el tooltip del nodo y entero dentro de la sala. Los títulos de los documentos los trae `GET /api/circuit`
 del paquete del escenario, junto a la tabla y el umbral.
 
 | Estación | Nodos | De dónde sale cada texto |
@@ -252,6 +254,13 @@ al nombre «Circuit» (IBM Plex Sans 600) y a 16 px como ícono de pestaña.
 | Fuentes desde un servicio externo | Fuentes de `@fontsource`, en local | ADR-0011 B7: nada desde otro origen. Enmienda de B12 para los dos paquetes |
 | Logo provisional de dos bolas en la barra | El logo 4a (§12) | El dueño eligió 4a en B8 |
 | Las estaciones cambian con un temporizador del boceto | Cambian solo con eventos, revelados de a uno | CLAUDE.md §1 y ADR-0011 B1–B3 |
+| Junto a cada nodo, su nombre corto | Igual, desde el 2026-11-27 (ADR-0014 G8); el valor, en el tooltip y en la sala | El dueño pidió el circuito igual a B1 |
+| La estación «activa», llena con el anillo amarillo | Igual (antes, pintada de amarillo) | Ídem |
+| Telemetría «1,2 s» y debajo «840 tok · US$0,004» | Igual con un modelo que cuenta; con el simulador, solo la duración y el resultado («aprobado», «queja») | «Simulador» ya está en la cabecera; no se inventan cifras (principio 3) |
+| La tarjeta «Detenido en Filtro» con el texto tachado | La tarjeta, sin el texto | En una inyección el evento de Filtro no guarda texto (ADR-0010 A1) |
+| Nodos de Entrada «canal» y «remitente» | Un nodo, «texto» | Entrada no guarda canal ni remitente |
+| Línea de marca en mono, sin logo | En mono, con el logo 4a a 20 px | El dueño eligió el logo en B8 |
+| (§9 de este brief) En la ultraancha, el reloj pasa al panel derecho | El reloj sigue en su esquina, y el panel muestra el mismo tiempo | Si se iba, la esquina quedaba vacía (§3) |
 
 ## 16. Una decisión del dueño (elegida: a)
 

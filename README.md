@@ -115,6 +115,13 @@ Lo que se mira vive en la dirección de la página (`#/estacion/crm`, `#/estacio
 así que «atrás» del navegador también vuelve, y entrar nunca cambia la corrida
 ([ADR-0013](docs/adr/0013-entrar-a-una-estacion.md)).
 
+El dibujo sigue el boceto del autor: cada estación lleva sus nodos en brazos, los tubos tienen
+dos rieles y la ruta tomada va en amarillo por dentro. Sobre los tubos se paran de dos a cuatro
+figuras del equipo, siempre las mismas para la misma corrida; son decoración y nunca muestran un
+estado. En una ventana ultraancha, dos paneles a los lados de Persona muestran la cita, las
+acciones propuestas, la confianza y el tiempo de la corrida
+([ADR-0014](docs/adr/0014-logo-equipo-y-paneles.md)).
+
 ## Datos de ejemplo: la semilla
 
 ```sh

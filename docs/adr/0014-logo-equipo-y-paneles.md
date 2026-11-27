@@ -42,6 +42,7 @@ personaje que «avisa», un panel con su propia cuenta) o que el ícono de pesta
 | G4 | La misma corrida pone al equipo siempre igual; ninguna figura toca una estación, un nodo ni el muelle; con alto, falla o espera, solo poses serias; un accesorio rosado nunca junto a una estación rosada | `crew.test.ts`, sobre cada prefijo de cada caso dorado y las cuatro medidas de B10 |
 | G5 | Los paneles solo existen a más de 2,05 : 1 y cada cifra que muestran es la de la proyección | `panels-render.test.ts` |
 | G6 | B1, B2 y E5 siguen como están: ni estado ni temporizadores nuevos | `source-rules.test.ts`, sin cambiar sus listas |
+| G8 | (Enmienda del 2026-11-27, a pedido del dueño.) La órbita se dibuja como el boceto B1: cada estación es una forma (bola y nodos en brazos, unidos por cuellos tipo metaball) con ícono, nombre y número adentro; los nodos van en el hueco más ancho entre sus tubos; tubos rectos de dos rieles con la ruta amarilla adentro. Ningún texto de la órbita pisa una estación, un nodo, otro texto ni el muelle, en las medidas de §3 | `scene.test.ts`; B3 de `board-render.test.ts` |
 | G7 | Sin dependencias nuevas ni cambios fuera de `apps/board`, el guion de capturas, `package.json` (el guion) y los documentos | `git diff --stat a30dd2e` |
 
 ## Consecuencias
@@ -63,3 +64,36 @@ como `db:dump-schema`. M1 (Filtro a 242°), M2 (la rama en rosado), M3 (el porta
 posición), M4 (el ícono editado a mano) y M5 (el cuello sin recortar), en rojo y restaurados por
 hash. `npm run check` en 0: 1175 pruebas (una saltada, la de Linux), cobertura 93,7 / 87,38 /
 93,81 / 96,07. Siguen el equipo (G4) y los paneles (G5).
+
+**La fidelidad al boceto, el equipo y los paneles (2026-11-27, sobre `dc6b7e8`).** El dueño miró
+las capturas y pidió que el circuito se viera igual a su boceto B1 («le cambia mucho los
+circuitos, el color y los dots»). Eso es G8.
+
+- **G8** (`cab6432`): `shape.ts` (la geometría pura de B1: círculos, el cuello metaball, los
+  brazos en el hueco más ancho), `scene.ts` (dónde va cada cosa y los choques entre textos: la
+  telemetría se mueve primero, luego el nombre que todavía toque algo) e `icons.ts` (los íconos
+  de B1). La órbita, la sala y el muelle usan la misma forma y los mismos íconos. Lo que difiere
+  del brief queda en `docs/diseno.md` §15: junto a cada nodo va su nombre corto (B1), y su valor
+  queda en el tooltip y entero en la sala; la telemetría dice la duración y, con un modelo que
+  cuenta, tokens y costo (con el simulador no repite «simulador»: lo dice la cabecera); la
+  estación que sigue va llena con el anillo amarillo (B1), no pintada de amarillo; la línea de
+  la marca lleva el logo a 20 px y el texto en mono, como la de B1; cuando Filtro detiene la
+  corrida, la tarjeta de B1 reemplaza el rótulo del alto (sin el texto, que en una inyección no
+  se guarda). Mutantes N1 (sin empuje), N2 (los brazos fuera del hueco) y N3 (los nombres sin
+  empuje, que a 2560×1440 pisan el nodo vecino), en rojo. **N4 sobrevive**: que un nombre
+  empujado no caiga sobre otro nombre no pasa en ninguna medida de §3; queda como guarda.
+- **G4** (`df2b6ac`): `crew-poses.ts` (las doce poses de B7 como datos; la pose sentada pierde
+  su tubo propio, porque se sienta en el real), `crew.ts` y `components/Crew.tsx`. La semilla es
+  FNV-1a de `circuit-crew-<id>` y el generador, Mulberry32. Las figuras se paran en tubos de hasta
+  40° de pendiente, entre 0,3 y 0,7 de su largo; las poses con estación propia («escudo frente a
+  Filtro») prueban primero sus tubos. «Junto a una estación rosada» es estar en uno de sus tubos
+  o a menos de 3 radios de ella. Mutantes C1–C4 en rojo; **C5 sobrevive** (sin el marco del
+  muelle): ningún tubo llega a esa franja; queda como guarda explícita de §11.
+- **G5** (`134863a`, `8d91c2f`): `side-panels.ts`, `side-panels.css` y
+  `components/SidePanels.tsx`. El lugar se busca a cada lado de Persona, de cerca hacia afuera y
+  a su altura primero, sin tocar obstáculos ni tubos. **Desviación de la decisión:** el reloj se
+  queda en su esquina (si se iba al panel, la esquina quedaba vacía); el panel derecho muestra
+  el mismo tiempo guardado, nunca otro. Un panel sin datos no se dibuja. Mutantes P1–P5 en rojo.
+
+`npm run check` en 0: 1260 pruebas (una saltada, la de Linux), cobertura 94,53 / 86,97 / 94,9 /
+96,53. F2.3 queda hecha; falta B10 (el dueño mira `npm run board:shots`).

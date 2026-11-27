@@ -282,8 +282,12 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   a `main` el 2026-11-27 con el sí del dueño (fast-forward a `a30dd2e`; CI en verde en la rama,
   corrida 46002333304, y en `main`, 46002654942).
   F2.3c abierta el 2026-11-27 (ADR-0014): el logo 4a hecho (componente puro, la misma geometría
-  que la miniatura del portal, y el ícono de pestaña servido desde `dist`). Siguen el equipo y
-  los paneles de la ultraancha.
+  que la miniatura del portal, y el ícono de pestaña servido desde `dist`). El 2026-11-27, a
+  pedido del dueño, el circuito se redibujó igual al boceto B1 (G8: estaciones con brazos,
+  tubos de dos rieles, anillos, íconos, rótulos cortos, muelle con íconos; `cab6432`), y se
+  hicieron el equipo (G4, `df2b6ac`) y los paneles de la ultraancha (G5, `134863a`). **F2.3
+  hecha, sin empujar.** Pendiente: B10, la revisión del dueño de `npm run board:shots`. Sigue
+  F2.4.
 
 ### F3 · Modelo
 

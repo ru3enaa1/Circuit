@@ -233,7 +233,13 @@ rojo. **B10 (revisión del dueño de `npm run board:shots`, ahora con cuatro sal
 `Logo.tsx` (puro, colores como valores); el ícono de pestaña es `apps/board/public/favicon.svg`,
 el marcado del componente, vigilado por `favicon.test.ts` y reescrito con `npm run
 board:favicon`. 1175 pruebas (una solo en Linux), cobertura 93,7 / 87,38 / 93,81 / 96,07; M1–M5
-en rojo. Siguen el equipo (G4) y los paneles de la ultraancha (G5).
+en rojo. **El 2026-11-27 el dueño pidió el circuito igual a su boceto B1** («le cambia mucho los
+circuitos, el color y los dots»): G8 de ADR-0014 (`cab6432`), estaciones con brazos, tubos de
+dos rieles, anillos, íconos, rótulos cortos y el muelle con íconos. Ese día también el equipo
+(G4, `df2b6ac`) y los paneles de la ultraancha (G5, `134863a`, `8d91c2f`). **F2.3 hecha, sin
+empujar:** 1260 pruebas (una solo en Linux), cobertura 94,53 / 86,97 / 94,9 / 96,53; N1–N3,
+C1–C4 y P1–P5 en rojo; N4 y C5 sobreviven como guardas (las notas de la ADR). B10 (el dueño
+mira `npm run board:shots`) sigue pendiente. Sigue F2.4.
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -294,7 +300,12 @@ el CRM aparte).
   No importa código de circuit: solo sus pruebas lo hacen (`test/support.ts`). Lo que se mira
   (ADR-0013) es el fragmento de la dirección: `src/route.ts` lo lee y lo resuelve contra la vista,
   `src/use-route.ts` lo escucha, y `components/Room.tsx` y `Portal.tsx` dibujan la sala. La órbita en pequeño (ADR-0014) es
-  `src/mark.ts`, que usan el portal y el logo (`src/logo.ts`, `components/Logo.tsx`).
+  `src/mark.ts`, que usan el portal y el logo (`src/logo.ts`, `components/Logo.tsx`). El dibujo
+  de B1 (ADR-0014 G8): `src/shape.ts` (geometría pura), `src/scene.ts` (dónde va cada nodo,
+  rótulo y telemetría, y sus `obstacles`) e `src/icons.ts`. El equipo: `src/crew-poses.ts` (las
+  poses de B7), `src/crew.ts` (semilla del id) y `components/Crew.tsx`; los paneles de la
+  ultraancha: `src/side-panels.ts` y `components/SidePanels.tsx`. Todo puro: lee la escena, no
+  guarda nada.
 
 Lo impone `apps/circuit/test/architecture/`: el mapa de dependencias (`module-map.ts`) y una
 prueba que revisa `src/` y `test/` contra él. Para agregar una dependencia hay que cambiar
@@ -809,6 +820,14 @@ rojo en su prueba y restaurado por hash:
 ```powershell
 npx vitest run --project '@circuit/board' logo favicon   # G1–G3: la geometría de §12, una sola función con el portal y el ícono
 npm run board:favicon                                    # reescribe apps/board/public/favicon.svg desde <Logo>; leer el diff
+```
+
+Verificados el 2026-11-27 en PowerShell (G8, G4 y G5 de ADR-0014), con N1–N3, C1–C4 y P1–P5,
+cada uno en rojo en su prueba y restaurado por hash:
+
+```powershell
+npx vitest run --project '@circuit/board' scene crew panels-render   # el dibujo de B1, el equipo y los paneles: 3 archivos
+node apps/circuit/test/shots/board-shots.ts normal espera inyeccion  # solo esas capturas (después de board:build)
 ```
 
 ## 10. Dónde está todo lo demás
