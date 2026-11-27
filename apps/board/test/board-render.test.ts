@@ -110,11 +110,26 @@ describe('B3 · what the stations say', () => {
     expect(render([], { info: null, status: 'unreachable' })).toContain('No se pudo leer el circuito');
   });
 
-  it('each station is reachable with Tab, in the order of the circuit, with its name and state', () => {
+  it('each station is a link into its room, reached with Tab in the order of the circuit, with its name and state (ADR-0013)', () => {
     const markup = render(goldenEvents('normal').slice(0, 3));
-    const labels = [...markup.matchAll(/tabindex="0" aria-label="([^"]+)"/g)].map((match) => match[1]);
+    const links = [...markup.matchAll(/<a class="station-link" href="([^"]+)" aria-label="([^"]+)"/g)].map((match) => `${match[1]} ${match[2]}`);
 
-    expect(labels).toEqual(['Entrada, hecha', 'Filtro, hecha', 'Clasificación, hecha, confianza 0,70', 'Conocimiento, en curso', 'CRM, pendiente', 'Persona, pendiente', 'Cierre, pendiente']);
+    expect(links).toEqual([
+      '#/estacion/intake Entrada, hecha',
+      '#/estacion/filter Filtro, hecha',
+      '#/estacion/classification Clasificación, hecha, confianza 0,70',
+      '#/estacion/knowledge Conocimiento, en curso',
+      '#/estacion/crm CRM, pendiente',
+      '#/estacion/person Persona, pendiente',
+      '#/estacion/close Cierre, pendiente',
+    ]);
+  });
+
+  it('each pill of the dock is a link into its room', () => {
+    const markup = render(goldenEvents('normal'));
+    const pills = [...markup.matchAll(/data-dock-station="([^"]+)" href="([^"]+)"/g)].map((match) => `${match[1]} ${match[2]}`);
+
+    expect(pills).toEqual(['intake', 'filter', 'classification', 'knowledge', 'crm', 'person', 'close'].map((id) => `${id} #/estacion/${id}`));
   });
 });
 

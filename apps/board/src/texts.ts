@@ -80,6 +80,36 @@ export const RUN_TEXTS = {
   idle: juego('Nada por aquí. El equipo aprovecha para barrer.'),
 } as const satisfies Record<string, CatalogText>;
 
+/** Entering a station and coming back (docs/diseno.md §10, ADR-0013). */
+export const ROOM_TEXTS = {
+  circuit: serio('Circuito'),
+  whereYouAre: serio('Dónde estás'),
+  backTo: serio('Volver a'),
+  help: juego('Esc o el portal te devuelven al circuito.'),
+  helpAction: juego('Esc o el portal te devuelven a CRM.'),
+  exits: serio('Salidas'),
+  normalRoute: serio('ruta normal'),
+  stopRoute: serio('alto'),
+  endRoute: serio('salida'),
+  endOfCircuit: serio('fin del circuito'),
+  taken: serio('tomada'),
+  received: serio('Texto recibido, ya tachado'),
+  proposal: serio('Propuesta'),
+  proposedActions: serio('Acciones propuestas'),
+  nodes: serio('Lo que guardó'),
+  decision: serio('Decisión'),
+  notYet: serio('Todavía sin datos: la corrida no llegó aquí.'),
+  dueOn: serio('vence'),
+  waitingApproval: serio('espera aprobación'),
+  approved: serio('aprobada'),
+  corrected: serio('corregida'),
+  rejected: serio('rechazada'),
+  applied: serio('aplicada'),
+  notApplied: serio('no aplicada'),
+  action: serio('Acción'),
+  ofTotal: serio('de'),
+} as const satisfies Record<string, CatalogText>;
+
 /** The model's name, as the header shows it. An unknown one is shown as stored. */
 export const MODEL_NAMES: Readonly<Record<string, CatalogText>> = {
   simulator: serio('Simulador'),
@@ -146,6 +176,7 @@ export const CATALOG: readonly Readonly<Record<string, CatalogText>>[] = [
   OUTCOME_TAGS,
   FAILURE_REASONS,
   RUN_TEXTS,
+  ROOM_TEXTS,
   MODEL_NAMES,
   NODE_TEXTS,
   INTENTS,

@@ -1,0 +1,384 @@
+/*
+ * Inside a station (docs/diseno.md §10, ADR-0013): the room, its portal and the breadcrumb. The
+ * way in and the way back are CSS animations that run when a view mounts; none of them creates
+ * a state, and with «reduce motion» styles.css turns them into cuts. The variables come from
+ * styles.css, imported first.
+ */
+
+/* The room: the portal on the left, the station at the center, its nodes and ways out ahead. */
+.room {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) auto minmax(0, 1.5fr);
+  gap: clamp(24px, 4vw, 72px);
+  align-items: center;
+  padding: 132px clamp(24px, 4vw, 72px) 112px;
+  /* 300 ms going in: the camera reaches the bubble and goes through it. */
+  animation: room-enter 300ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.room__core,
+.room__detail,
+.portal {
+  /* 200 ms arriving, once inside. */
+  animation: room-arrive 200ms 300ms ease-out both;
+}
+
+.room__core {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.room__ball {
+  display: block;
+}
+
+.room__name {
+  margin: 6px 0 0;
+  font: 600 clamp(26px, 3vw, 44px) / 1.1 var(--sans);
+}
+
+.room__tag {
+  margin: 6px 0 0;
+  color: var(--text-2);
+  font: 10.5px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.room__state {
+  margin: 6px 0 0;
+  color: var(--label);
+  font: 500 15px var(--sans);
+}
+
+.room__state--waiting {
+  color: var(--yellow);
+}
+
+.room[data-room='person'] .room__state--waiting,
+.room__state--stopped,
+.room__state--failed {
+  color: var(--pink);
+}
+
+.room__telemetry {
+  margin: 8px 0 0;
+  color: var(--text-2);
+  font: 13px var(--mono);
+}
+
+.room__detail {
+  max-width: 60ch;
+  max-height: 100%;
+  overflow: auto;
+}
+
+.room__block + .room__block {
+  margin-top: 22px;
+}
+
+.room__block h3 {
+  margin: 0 0 8px;
+  color: var(--label);
+  font: 500 10.5px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.room__received {
+  margin: 0;
+  color: var(--bone);
+  font: 15px / 1.5 var(--sans);
+}
+
+.room__empty {
+  margin: 0;
+  color: var(--label);
+  font: 15px var(--sans);
+}
+
+/* The nodes, whole, on a neck: a thin line with a dot per node (§7). */
+.room__nodes {
+  margin: 0 0 0 4px;
+  padding: 0;
+  list-style: none;
+  border-left: 1px solid rgba(243, 241, 236, 0.25);
+}
+
+.room-node {
+  position: relative;
+  padding: 5px 0 5px 18px;
+  color: var(--text-2);
+  font: 15px / 1.45 var(--sans);
+}
+
+.room-node::before {
+  position: absolute;
+  top: 12px;
+  left: -5px;
+  width: 9px;
+  height: 9px;
+  content: '';
+  background: var(--bg);
+  border: 1.2px solid var(--label);
+  border-radius: 50%;
+}
+
+.room-node.is-filled {
+  color: var(--bone);
+}
+
+.room-node.is-filled::before {
+  background: var(--bone);
+  border-color: var(--bone);
+}
+
+.room-node a {
+  color: var(--bone);
+  text-decoration: underline;
+  text-decoration-color: var(--off);
+  text-underline-offset: 3px;
+  outline: none;
+}
+
+.room-node a:hover,
+.room-node a:focus-visible {
+  color: var(--yellow);
+  text-decoration-color: var(--yellow);
+}
+
+/* The ways out: the one taken in yellow and continuous; the others dashed (§10). */
+.room__exits ul {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.exit {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  padding: 8px 14px;
+  color: var(--label);
+  font: 13px var(--sans);
+  border: 1px dashed var(--off);
+  border-radius: 999px;
+}
+
+.exit::before {
+  content: '→';
+}
+
+.exit > a,
+.exit > span:first-child {
+  color: var(--bone);
+  font-weight: 600;
+  text-decoration: none;
+  outline: none;
+}
+
+.exit > a:hover,
+.exit > a:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.exit.is-taken {
+  color: var(--yellow);
+  border: 1.5px solid var(--yellow);
+}
+
+.exit.is-taken > a {
+  color: var(--yellow);
+}
+
+.exit__label,
+.exit__taken {
+  font: 10.5px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.exit__taken {
+  margin-left: auto;
+  font-weight: 500;
+}
+
+/* The portal: a ring of marks with the level above in miniature (§10). */
+.portal {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  justify-self: start;
+  color: var(--text-2);
+  text-align: center;
+  text-decoration: none;
+  outline: none;
+}
+
+.portal__ticks {
+  fill: none;
+  stroke: var(--label);
+  stroke-width: 3;
+  stroke-dasharray: 1 5;
+}
+
+.portal:hover .portal__ticks,
+.portal:focus-visible .portal__ticks {
+  stroke: var(--yellow);
+  stroke-width: 1.5;
+  stroke-dasharray: none;
+}
+
+.portal__label {
+  color: var(--bone);
+  font: 600 15px var(--sans);
+}
+
+.portal__help {
+  max-width: 22ch;
+  color: var(--label);
+  font: 13px var(--sans);
+}
+
+.mini__edge {
+  stroke: var(--bone);
+  stroke-width: 1.5;
+  opacity: 0.5;
+}
+
+.mini__edge.is-taken {
+  stroke: var(--yellow);
+  opacity: 1;
+}
+
+.mini__station {
+  fill: var(--bg);
+  stroke: var(--bone);
+  stroke-width: 1.5;
+}
+
+.mini--completed {
+  fill: var(--bone);
+}
+
+.mini--skipped {
+  stroke: var(--off);
+  stroke-dasharray: 2 2;
+}
+
+.mini--stopped,
+.mini--failed {
+  stroke: var(--pink);
+}
+
+.mini__station.is-here {
+  fill: var(--yellow);
+  stroke: var(--yellow);
+}
+
+/* The breadcrumb, where the request's title goes in the orbit: «Circuito › Clasificación». */
+.crumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font: 600 clamp(20px, 2.2vw, 30px) / 1.2 var(--sans);
+}
+
+.crumbs li + li::before {
+  margin-right: 8px;
+  color: var(--label);
+  content: '›';
+}
+
+.crumbs a {
+  color: var(--text-2);
+  text-decoration: none;
+  outline: none;
+}
+
+.crumbs a:hover,
+.crumbs a:focus-visible {
+  color: var(--yellow);
+}
+
+.crumbs [aria-current] {
+  color: var(--bone);
+}
+
+/* Half a screen: the portal and the station share a row; the nodes go below. */
+.room.is-narrow {
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-columns: auto 1fr;
+  gap: 16px 20px;
+  align-items: start;
+  padding: 104px 20px 84px;
+}
+
+.room.is-narrow .portal {
+  grid-row: 1;
+  grid-column: 1;
+}
+
+.room.is-narrow .room__core {
+  grid-row: 1;
+  grid-column: 2;
+}
+
+.room.is-narrow .room__detail {
+  grid-row: 2;
+  grid-column: 1 / -1;
+}
+
+.room.is-narrow .portal__help {
+  display: none;
+}
+
+/* The way back is the way in, reversed: the circuit comes out of the station left. */
+.orbit.is-returning {
+  animation: orbit-return 300ms cubic-bezier(0, 0, 0.2, 1) both;
+}
+
+@keyframes room-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.08);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes room-arrive {
+  from {
+    opacity: 0;
+    transform: scale(1.06);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes orbit-return {
+  from {
+    opacity: 0;
+    transform: scale(3);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

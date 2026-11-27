@@ -2,6 +2,7 @@ import type { CircuitInfo, CrmTool, RunEvent, RunSummary } from '../api.ts';
 import { formatCost, formatDuration, formatInteger, totalsOf } from '../format.ts';
 import { redactedText, runClock, runStateText } from '../nodes.ts';
 import { isFinished, type RunView } from '../projection.ts';
+import { routeHash } from '../route.ts';
 import { MODEL_NAMES, RUN_TEXTS, STATION_NAMES, STATUS_TEXTS, textOf } from '../texts.ts';
 
 /**
@@ -39,11 +40,16 @@ function stateLine(props: RequestPanelProps): string {
   return runStateText(props.view, props.events.at(-1) ?? null, stationName);
 }
 
+/** «Circuit · Escuela · Simulador» (§6). */
+export function brandLine(info: CircuitInfo): string {
+  return [RUN_TEXTS.brand.text, capitalized(info.scenario), textOf(MODEL_NAMES, info.model)].join(' · ');
+}
+
 /** The top left: the brand line, «Solicitud N.º 12», its state and its crossed-out text (§6). */
 export function RequestPanel(props: RequestPanelProps) {
   const { info, runs, runId } = props;
   const text = redactedText(props.events);
-  const brand = [RUN_TEXTS.brand.text, capitalized(info.scenario), textOf(MODEL_NAMES, info.model)].join(' · ');
+  const brand = brandLine(info);
   return (
     <header className="request">
       <p className="request__brand">{brand}</p>
@@ -108,19 +114,32 @@ export function ClockPanel({ view, events, runs, info }: ClockPanelProps) {
 export interface DockProps {
   readonly view: RunView;
   readonly narrow: boolean;
+  /** The station whose room is open (ADR-0013): the yellow bubble goes over it. */
+  readonly selected?: string | null;
 }
 
-/** The bottom: one pill per station, and the yellow bubble over the one the run is on (§6). */
-export function Dock({ view, narrow }: DockProps) {
+/**
+ * The bottom: one pill per station, and the yellow bubble over the one the run is on, or over the
+ * room that is open (§6). Each pill is a link into its station's room (§10).
+ */
+export function Dock({ view, narrow, selected = null }: DockProps) {
   const lastEvent = [...view.stations].reverse().find((station) => station.event !== null);
   const current = view.waitingAt ?? lastEvent?.id ?? null;
   return (
-    <nav className={narrow ? 'dock is-narrow' : 'dock'} aria-label={RUN_TEXTS.stations.text}>
+    <nav className={['dock', narrow ? 'is-narrow' : '', selected === null ? '' : 'has-selection'].filter((name) => name !== '').join(' ')} aria-label={RUN_TEXTS.stations.text}>
       <ol>
         {view.stations.map((station) => (
-          <li key={station.id} className={`pill pill--${station.status}${station.id === current ? ' is-current' : ''}`} data-dock-station={station.id}>
-            <span className="pill__number">{station.number}</span>
-            {narrow ? null : <span className="pill__name">{stationName(station.id)}</span>}
+          <li key={station.id}>
+            <a
+              className={`pill pill--${station.status}${station.id === current ? ' is-current' : ''}${station.id === selected ? ' is-selected' : ''}`}
+              data-dock-station={station.id}
+              href={routeHash({ kind: 'station', station: station.id })}
+              aria-label={stationName(station.id)}
+              aria-current={station.id === selected ? 'page' : undefined}
+            >
+              <span className="pill__number">{station.number}</span>
+              {narrow ? null : <span className="pill__name">{stationName(station.id)}</span>}
+            </a>
           </li>
         ))}
       </ol>

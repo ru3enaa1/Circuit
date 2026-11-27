@@ -2,6 +2,7 @@ import type { CircuitInfo } from '../api.ts';
 import { curvedPath, ellipseArc, straightPath, type Layout, type Point, type StationPlace } from '../layout.ts';
 import type { EdgeView, RunView, StationView } from '../projection.ts';
 import { RUN_TEXTS } from '../texts.ts';
+import { timeShares } from './StationBall.tsx';
 import { StationNode } from './StationNode.tsx';
 
 /**
@@ -14,6 +15,8 @@ export interface OrbitProps {
   readonly view: RunView;
   readonly layout: Layout;
   readonly info: CircuitInfo;
+  /** The station just left (ADR-0013): the circuit comes back out of it, and it takes the focus. */
+  readonly returningFrom?: string | null;
 }
 
 /** How far the stop's small bubble sits from Filtro, in radii, and its size. */
@@ -103,16 +106,13 @@ function EntryLine({ view, layout }: { readonly view: RunView; readonly layout: 
   );
 }
 
-/** Each completed station's share of the run's stored time (§7, the time ring). */
-function timeShares(view: RunView): ReadonlyMap<string, number> {
-  const total = view.stations.reduce((sum, station) => sum + (station.event?.durationMs ?? 0), 0);
-  return new Map(view.stations.map((station) => [station.id, total > 0 ? (station.event?.durationMs ?? 0) / total : 0]));
-}
-
-export function Orbit({ view, layout, info }: OrbitProps) {
+export function Orbit({ view, layout, info, returningFrom = null }: OrbitProps) {
   const shares = timeShares(view);
+  const from = returningFrom === null ? undefined : layout.places[returningFrom];
+  // The way back is the way in, reversed (§10): a CSS animation from the station left, run once on mount.
+  const style = from === undefined ? undefined : { transformOrigin: `${Math.round(from.x)}px ${Math.round(from.y)}px` };
   return (
-    <svg className="orbit" width={layout.width} height={layout.height} viewBox={`0 0 ${layout.width} ${layout.height}`} role="presentation">
+    <svg className={from === undefined ? 'orbit' : 'orbit is-returning'} style={style} width={layout.width} height={layout.height} viewBox={`0 0 ${layout.width} ${layout.height}`} role="presentation">
       <g className="orbit__edges">
         <EntryLine view={view} layout={layout} />
         {view.edges.map((edge) => (
@@ -123,7 +123,7 @@ export function Orbit({ view, layout, info }: OrbitProps) {
         {view.stations.map((station) => {
           const place = layout.places[station.id];
           return place === undefined ? null : (
-            <StationNode key={station.id} station={station} place={place} layout={layout} info={info} timeShare={shares.get(station.id) ?? 0} />
+            <StationNode key={station.id} station={station} place={place} layout={layout} info={info} timeShare={shares.get(station.id) ?? 0} focused={station.id === returningFrom} />
           );
         })}
       </g>

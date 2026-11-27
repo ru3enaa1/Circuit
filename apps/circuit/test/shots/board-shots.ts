@@ -46,11 +46,18 @@ const CHROME_CANDIDATES = [
   '/usr/bin/chromium',
 ];
 
-/** The last case is the run the board shows: the newest. A partial one shows a waiting station. */
-const SETS: Readonly<Record<string, { readonly cases: readonly GoldenCase[]; readonly keep?: number }>> = {
+/**
+ * The last case is the run the board shows: the newest. A partial one shows a waiting station.
+ * A `hash` opens a room (ADR-0013): the address is all it takes.
+ */
+const SETS: Readonly<Record<string, { readonly cases: readonly GoldenCase[]; readonly keep?: number; readonly hash?: string }>> = {
   normal: { cases: ['complaint', 'injection', 'low-confidence', 'normal'] },
   espera: { cases: ['normal', 'complaint'], keep: 3 },
   inyeccion: { cases: ['normal', 'injection'] },
+  'sala-clasificacion': { cases: ['normal'], hash: '#/estacion/classification' },
+  'sala-conocimiento': { cases: ['normal'], hash: '#/estacion/knowledge' },
+  'sala-accion': { cases: ['normal'], keep: 5, hash: '#/estacion/crm/accion/3' },
+  'sala-persona': { cases: ['normal'], keep: 5, hash: '#/estacion/person' },
 };
 
 function chrome(): string {
@@ -91,7 +98,7 @@ async function shoot(set: string, browser: string, profile: string): Promise<voi
     for (const [width, height] of SIZES) {
       const file = join(SHOTS_DIR, `${set}-${width}x${height}.png`);
       // A profile of its own: without it, Chrome hands the order to a Chrome already open and waits.
-      const args = ['--headless=new', '--disable-gpu', `--user-data-dir=${profile}`, '--hide-scrollbars', `--window-size=${width},${height}`, `--virtual-time-budget=${VIRTUAL_TIME_MS}`, `--screenshot=${file}`, `http://127.0.0.1:${port}/`];
+      const args = ['--headless=new', '--disable-gpu', `--user-data-dir=${profile}`, '--hide-scrollbars', `--window-size=${width},${height}`, `--virtual-time-budget=${VIRTUAL_TIME_MS}`, `--screenshot=${file}`, `http://127.0.0.1:${port}/${spec.hash ?? ''}`];
       await run(browser, args, { timeout: CAPTURE_TIMEOUT_MS });
       process.stdout.write(`${file}\n`);
     }

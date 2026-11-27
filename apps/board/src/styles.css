@@ -125,10 +125,6 @@ body,
 }
 
 /* A station: a bubble with a ring of marks (§5). */
-.station {
-  outline: none;
-}
-
 .station__ball {
   fill: var(--bg);
   stroke: var(--bone);
@@ -254,7 +250,17 @@ body,
   fill: var(--pink);
 }
 
-.station:focus-visible .station__ticks {
+/* A station is a link into its room (§14, ADR-0013): the focus is a yellow ring of 1.5 px. */
+.station-link {
+  cursor: pointer;
+  outline: none;
+}
+
+.station-link:hover .station__ticks {
+  opacity: 1;
+}
+
+.station-link:focus-visible .station__ticks {
   stroke: var(--yellow);
   stroke-width: 1.5;
   stroke-dasharray: none;
@@ -309,8 +315,12 @@ body,
   stroke-width: 2;
 }
 
+/* Reduced motion (§14, ADR-0013 E6): clean cuts, no zoom and no fade. */
 @media (prefers-reduced-motion: reduce) {
-  * {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
     transition: none !important;
   }
 }

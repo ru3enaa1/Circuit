@@ -47,6 +47,17 @@ describe('the board source', () => {
     expect(projection).not.toMatch(/\b(Date|Math\.random|fetch|performance|crypto)\b/);
   });
 
+  it('E6 · with reduced motion, every animation and transition is cut (ADR-0013)', () => {
+    const styles = sources().find((file) => file.name === 'styles.css')?.text ?? '';
+    const block = /@media \(prefers-reduced-motion: reduce\) \{([\s\S]*?)\n\}/.exec(styles)?.[1] ?? '';
+
+    expect(block).toMatch(/\*::before/);
+    expect(block).toMatch(/animation: none !important;/);
+    expect(block).toMatch(/transition: none !important;/);
+    // The rooms move only by CSS animations, so the cut above reaches all of them.
+    expect(filesMatching(/@keyframes/)).toEqual(['room.css']);
+  });
+
   it('B7 · names no other origin, in the source or in index.html', () => {
     const index = readFileSync(join(BOARD_ROOT, 'index.html'), 'utf8');
 

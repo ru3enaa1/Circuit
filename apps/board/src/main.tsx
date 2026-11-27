@@ -5,11 +5,13 @@ import '@fontsource/jetbrains-mono/latin-400.css';
 import '@fontsource/jetbrains-mono/latin-500.css';
 import './styles.css';
 import './panels.css';
+import './room.css';
 
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { Board } from './components/Board.tsx';
+import { useEscapeGoesUp, useRoute } from './use-route.ts';
 import { useRunFeed } from './use-run-events.ts';
 import { useViewport } from './use-viewport.ts';
 
@@ -19,6 +21,8 @@ import { useViewport } from './use-viewport.ts';
 function App() {
   const feed = useRunFeed();
   const { width, height } = useViewport();
+  const route = useRoute();
+  useEscapeGoesUp();
   return (
     <Board
       status={feed.status}
@@ -29,6 +33,7 @@ function App() {
       events={feed.received.slice(0, feed.revealed)}
       width={width}
       height={height}
+      route={route}
       onSelectRun={feed.select}
     />
   );

@@ -139,8 +139,19 @@
   color: var(--text-2);
   font: 500 13px var(--sans);
   white-space: nowrap;
+  text-decoration: none;
   border-radius: 999px;
+  outline: none;
   transition: color var(--ease), background var(--ease);
+}
+
+.pill:hover {
+  color: var(--bone);
+}
+
+.pill:focus-visible {
+  outline: 1.5px solid var(--yellow);
+  outline-offset: 2px;
 }
 
 .pill__number {
@@ -172,7 +183,22 @@
   background: var(--yellow);
 }
 
-.pill.is-current::before {
+/* In a room, the bubble goes over the station whose room is open (ADR-0013). */
+.pill.is-selected {
+  outline: 1.5px solid var(--yellow);
+}
+
+/* Yellow text only off the yellow pill of the run's current station, or it would not read. */
+.pill.is-selected:not(.is-current) {
+  color: var(--yellow);
+}
+
+.dock.has-selection .pill.is-current:not(.is-selected)::before {
+  display: none;
+}
+
+.pill.is-current::before,
+.pill.is-selected::before {
   position: absolute;
   top: -12px;
   left: 50%;

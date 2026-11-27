@@ -1,9 +1,11 @@
 import type { CircuitInfo } from '../api.ts';
 import { formatDecimal, shorten, telemetryOf } from '../format.ts';
-import { ringArc, ringPoint, type Layout, type StationPlace } from '../layout.ts';
+import type { Layout, StationPlace } from '../layout.ts';
 import { outcomeTag, secondaryNodes, statusText, type SecondaryNode } from '../nodes.ts';
 import type { StationView } from '../projection.ts';
+import { routeHash } from '../route.ts';
 import { NODE_TEXTS, STATION_NAMES, STATUS_TEXTS, textOf } from '../texts.ts';
+import { StationBall, focusOnMount, stationClass } from './StationBall.tsx';
 
 /**
  * One station as its projected view says (docs/diseno.md §5): seven looks, each with its own
@@ -17,6 +19,8 @@ export interface StationNodeProps {
   readonly info: CircuitInfo;
   /** This station's share of the run's stored time, 0 to 1: the yellow arc on its ring (§7). */
   readonly timeShare: number;
+  /** The station just left (ADR-0013): it takes the focus back when the circuit mounts. */
+  readonly focused?: boolean;
 }
 
 /** Past the ring of marks and the confidence arc (r + 20), so no text crosses them. */
@@ -35,39 +39,12 @@ const MIN_SIDE_CHARS = 8;
 const CENTER_NODE_GAP = 84;
 const CENTER_NODE_OFFSET = 80;
 
-function ariaLabel(station: StationView, name: string): string {
+/** «Clasificación, hecha, confianza 0,82» (§14): the name and the state, never the color alone. */
+export function stationLabel(station: StationView, name: string): string {
   const state = statusText(station) ?? STATUS_TEXTS[station.status === 'completed' ? 'completed' : 'pending'].text;
   const confidence = station.event?.detail['confidence'];
   const extra = typeof confidence === 'number' ? `, ${NODE_TEXTS.confidence.text} ${formatDecimal(confidence, 2)}` : '';
   return `${name}, ${state}${extra}`;
-}
-
-function Mark({ station, r }: { readonly station: StationView; readonly r: number }) {
-  if (station.status === 'completed') return <circle className="station__dot" r={r * 0.16} />;
-  if (station.status === 'stopped') return <rect className="station__icon" x={-r * 0.24} y={-r * 0.24} width={r * 0.48} height={r * 0.48} />;
-  if (station.status === 'failed') {
-    const d = r * 0.26;
-    return <path className="station__icon station__icon--line" d={`M ${-d} ${-d} L ${d} ${d} M ${d} ${-d} L ${-d} ${d}`} />;
-  }
-  if (station.status === 'skipped') return <path className="station__slash" d={`M ${-r * 0.7} ${r * 0.7} L ${r * 0.7} ${-r * 0.7}`} />;
-  if (station.status === 'waiting' && station.decidedBy === 'person') return <circle className="station__dot station__dot--person" r={r * 0.14} />;
-  return null;
-}
-
-function ConfidenceArc({ station, r, threshold }: { readonly station: StationView; readonly r: number; readonly threshold: number }) {
-  const confidence = station.event?.detail['confidence'];
-  if (typeof confidence !== 'number') return null;
-  const origin = { x: 0, y: 0 };
-  const arc = ringArc(origin, r, confidence);
-  const inner = ringPoint(origin, r - 5, threshold);
-  const outer = ringPoint(origin, r + 5, threshold);
-  return (
-    <g className="confidence" data-confidence={confidence}>
-      <circle className="confidence__track" r={r} />
-      {arc === null ? null : <path className="confidence__value" d={arc} />}
-      <line className="confidence__threshold" x1={inner.x} y1={inner.y} x2={outer.x} y2={outer.y} />
-    </g>
-  );
 }
 
 /** Where a station's texts go, and how many characters fit before the edge of the window. */
@@ -118,42 +95,32 @@ function SideTexts({ station, place, layout, nodes }: { readonly station: Statio
   );
 }
 
-export function StationNode({ station, place, layout, info, timeShare }: StationNodeProps) {
+export function StationNode({ station, place, layout, info, timeShare, focused }: StationNodeProps) {
   const name = textOf(STATION_NAMES, station.id);
   const state = statusText(station);
   const tag = outcomeTag(station);
-  const timeArc = station.status === 'completed' ? ringArc({ x: 0, y: 0 }, place.r + 7, timeShare) : null;
   const nodes = layout.narrow && place.side !== 'center' ? secondaryNodes(station, info).slice(0, 2) : secondaryNodes(station, info);
   const below = place.r + RING_CLEARANCE + 6;
+  // A link: Tab reaches it in the order of the circuit, Enter enters (ADR-0013). Entering changes what is seen, never the run.
   return (
-    <g
-      className={`station station--${station.status}${station.decidedBy === 'person' ? ' station--person' : ''}`}
-      data-station={station.id}
-      data-status={station.status}
-      transform={`translate(${Math.round(place.x)} ${Math.round(place.y)})`}
-      role="group"
-      tabIndex={0}
-      aria-label={ariaLabel(station, name)}
-    >
-      <circle className="station__ticks" r={place.r + 7} />
-      {timeArc === null ? null : <path className="station__time" d={timeArc} />}
-      {station.id === 'classification' ? <ConfidenceArc station={station} r={place.r + 15} threshold={info.lowConfidenceBelow} /> : null}
-      <circle className="station__ball" r={place.r} />
-      <Mark station={station} r={place.r} />
-      <text className="station__name" y={below} textAnchor="middle">
-        {name}
-      </text>
-      {tag === null ? null : (
-        <text className="station__tag" y={below + 16} textAnchor="middle">
-          {tag}
+    <a className="station-link" href={routeHash({ kind: 'station', station: station.id })} aria-label={stationLabel(station, name)} ref={focused ? focusOnMount : undefined}>
+      <g className={stationClass(station)} data-station={station.id} data-status={station.status} transform={`translate(${Math.round(place.x)} ${Math.round(place.y)})`}>
+        <StationBall station={station} r={place.r} threshold={info.lowConfidenceBelow} timeShare={timeShare} />
+        <text className="station__name" y={below} textAnchor="middle">
+          {name}
         </text>
-      )}
-      {state === null ? null : (
-        <text className="station__state" y={below + (tag === null ? 16 : 32)} textAnchor="middle">
-          {state}
-        </text>
-      )}
-      <SideTexts station={station} place={place} layout={layout} nodes={nodes} />
-    </g>
+        {tag === null ? null : (
+          <text className="station__tag" y={below + 16} textAnchor="middle">
+            {tag}
+          </text>
+        )}
+        {state === null ? null : (
+          <text className="station__state" y={below + (tag === null ? 16 : 32)} textAnchor="middle">
+            {state}
+          </text>
+        )}
+        <SideTexts station={station} place={place} layout={layout} nodes={nodes} />
+      </g>
+    </a>
   );
 }
