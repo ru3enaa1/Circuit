@@ -5,6 +5,7 @@ import '@fontsource/jetbrains-mono/latin-400.css';
 import '@fontsource/jetbrains-mono/latin-500.css';
 import './styles.css';
 import './panels.css';
+import './side-panels.css';
 import './room.css';
 
 import { StrictMode } from 'react';
