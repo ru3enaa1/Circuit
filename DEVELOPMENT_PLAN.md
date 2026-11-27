@@ -278,8 +278,12 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   muelle y el revelado de a uno (ADR-0011).
   F2.3b hecha el 2026-11-26 sin empujar (ADR-0013): entrar a una estación desde la órbita o el
   muelle, la sala con sus nodos enteros y sus salidas, el portal, la miga de pan, Esc y el
-  segundo nivel de CRM; lo que se mira vive en el fragmento de la dirección. Sigue F2.3c: el
-  logo, el equipo y los paneles de la ultraancha.
+  segundo nivel de CRM; lo que se mira vive en el fragmento de la dirección. Empujada e integrada
+  a `main` el 2026-11-27 con el sí del dueño (fast-forward a `a30dd2e`; CI en verde en la rama,
+  corrida 46002333304, y en `main`, 46002654942).
+  F2.3c abierta el 2026-11-27 (ADR-0014): el logo 4a hecho (componente puro, la misma geometría
+  que la miniatura del portal, y el ícono de pestaña servido desde `dist`). Siguen el equipo y
+  los paneles de la ultraancha.
 
 ### F3 · Modelo
 

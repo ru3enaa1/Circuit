@@ -225,7 +225,15 @@ en grande, sus nodos enteros y sus salidas con la tomada; el portal, la miga de 
 de a un nivel. Lo que se mira vive en el fragmento, leído con `useSyncExternalStore`: B1 y B2
 sin cambio. 1161 pruebas (una solo en Linux), cobertura 93,58 / 87,19 / 93,71 / 96,02; M1–M3 en
 rojo. **B10 (revisión del dueño de `npm run board:shots`, ahora con cuatro salas) pendiente.**
-Sigue F2.3c: el logo, el equipo y los paneles de la ultraancha.
+**F2.3b empujada e integrada a `main` el 2026-11-27** con el sí del dueño (fast-forward de
+`f72aa15` a `a30dd2e`, sin commit de merge; CI en verde en la rama, corrida 46002333304, y en
+`main`, 46002654942). F2 sigue abierta en la misma rama.
+**F2.3c abierta el 2026-11-27 (ADR-0014, aceptada por Claude):** el logo 4a hecho, sin empujar.
+`mark.ts` es la geometría de la órbita en pequeño que comparten la miniatura del portal y
+`Logo.tsx` (puro, colores como valores); el ícono de pestaña es `apps/board/public/favicon.svg`,
+el marcado del componente, vigilado por `favicon.test.ts` y reescrito con `npm run
+board:favicon`. 1175 pruebas (una solo en Linux), cobertura 93,7 / 87,38 / 93,81 / 96,07; M1–M5
+en rojo. Siguen el equipo (G4) y los paneles de la ultraancha (G5).
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -285,7 +293,8 @@ el CRM aparte).
   `src/use-run-events.ts` (lo vigila `test/source-rules.test.ts`); los textos, en `src/texts.ts`.
   No importa código de circuit: solo sus pruebas lo hacen (`test/support.ts`). Lo que se mira
   (ADR-0013) es el fragmento de la dirección: `src/route.ts` lo lee y lo resuelve contra la vista,
-  `src/use-route.ts` lo escucha, y `components/Room.tsx` y `Portal.tsx` dibujan la sala.
+  `src/use-route.ts` lo escucha, y `components/Room.tsx` y `Portal.tsx` dibujan la sala. La órbita en pequeño (ADR-0014) es
+  `src/mark.ts`, que usan el portal y el logo (`src/logo.ts`, `components/Logo.tsx`).
 
 Lo impone `apps/circuit/test/architecture/`: el mapa de dependencias (`module-map.ts`) y una
 prueba que revisa `src/` y `test/` contra él. Para agregar una dependencia hay que cambiar
@@ -792,6 +801,14 @@ prueba y restaurado por hash:
 ```powershell
 npx vitest run --project '@circuit/board' route room-render source-rules   # E1–E6: la ruta, las salas y el corte de movimiento
 node apps/circuit/test/shots/board-shots.ts sala-clasificacion sala-accion # solo algunas capturas (después de board:build)
+```
+
+Verificados el 2026-11-27 en PowerShell (el logo de F2.3c, ADR-0014), con M1–M5, cada uno en
+rojo en su prueba y restaurado por hash:
+
+```powershell
+npx vitest run --project '@circuit/board' logo favicon   # G1–G3: la geometría de §12, una sola función con el portal y el ícono
+npm run board:favicon                                    # reescribe apps/board/public/favicon.svg desde <Logo>; leer el diff
 ```
 
 ## 10. Dónde está todo lo demás
