@@ -249,8 +249,17 @@ Persona como aprobación y «Probar una solicitud»). 1378 pruebas (una solo en 
 (`database/backups/20261127-143511Z-antes-0006/`) y migrada a `0006`, con una corrida real
 aprobada (la 1) y sus tres escrituras en el CRM. **`circuit:start` ahora pide
 `CRM_AGENT_KEY_FILE`, y la `.env` del dueño sigue sin ella ni `CIRCUIT_SCENARIO`:** hay que
-copiar esas dos líneas de `.env.example`. F2 termina con F2.4: falta el push y la integración a
-`main`, que decide el dueño.
+copiar esas dos líneas de `.env.example` (el dueño las copió el 2026-11-27).
+**F2 cerrada e integrada a `main` el 2026-11-27** con el sí del dueño (fast-forward de `a30dd2e`
+a `71d0fcf`, sin commit de merge; CI en verde en la rama, corrida 46045777906, y en `main`,
+46046648965). El dueño la probó en la app real: funciona, con transiciones bruscas (R11 del plan,
+antes del GIF de F6). **F3 · Modelo abierta el 2026-11-27 en `feat/f3-modelo`**, que sale de
+`main` (`71d0fcf`). La `.env` del dueño aún no trae `ANTHROPIC_API_KEY`; F3.1 no la necesita.
+ADR-0015 aceptada ese día (Claude, §1b): el adaptador de Anthropic detrás de `ModelPort`
+(`claude-opus-5-5`, SDK 1.14.0, sin red en las pruebas), una batería de contrato común y la
+repetición de corridas grabadas. **F3.1 hecha, sin empujar:** la batería
+(`apps/circuit/test/model-contract/`), en verde con el simulador; 1393 pruebas; X1–X6 en rojo.
+Sigue F3.2 (el adaptador: clasificación).
 
 ## 3. Reglas de producto que gobiernan el código
 
@@ -857,6 +866,13 @@ cada uno en rojo en su prueba y restaurado por hash:
 ```powershell
 npx vitest run --project '@circuit/board' scene crew panels-render   # el dibujo de B1, el equipo y los paneles: 3 archivos
 node apps/circuit/test/shots/board-shots.ts normal espera inyeccion  # solo esas capturas (después de board:build)
+```
+
+Verificados el 2026-11-27 en PowerShell (F3.1, ADR-0015), con X1–X6 en el simulador, cada uno en
+rojo en la batería y restaurado por hash:
+
+```powershell
+npx vitest run --project '@circuit/circuit' simulator-contract   # K1–K6: la batería de contrato del modelo, con el simulador (15 pruebas)
 ```
 
 ## 10. Dónde está todo lo demás

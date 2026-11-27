@@ -291,8 +291,11 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   la aprobación del mentor como el evento de la 6, la 7 que aplica en el CRM solo lo aprobado,
   una vez y en orden (`0006`, `circuit.apply_claims`), la sala de Persona como aprobación y
   «Probar una solicitud». Aplicar en el CRM sin aprobación falla (A2), con un CRM falso y con el
-  real. **Con F2.4, los criterios de F2 se cumplen**; falta el push y la integración a `main`,
-  que decide el dueño.
+  real. **Con F2.4, los criterios de F2 se cumplen.**
+  **Cerrada e integrada a `main` el 2026-11-27** con el sí del dueño (fast-forward de `a30dd2e`
+  a `71d0fcf`, sin commit de merge; CI en verde en la rama, corrida 46045777906, y en `main`,
+  46046648965). El dueño la probó en la app real ese día: funciona, pero las transiciones se
+  ven bruscas (R11).
 
 ### F3 · Modelo
 
@@ -310,8 +313,12 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   guarda); solo datos sintéticos; la salida del modelo se valida con zod antes de usarse.
 - **Trampas:** pruebas que llaman a la API real en CI; una salida del modelo que «pide» otra
   estación (ADR-0001 D1); cifras de costo calculadas con precios sin fecha ni fuente.
-- **Estado:** pendiente. Sin tope de gasto (el dueño, 2026-11-23): la llave se usa solo en
-  local, en la máquina del autor, para grabar corridas.
+- **Estado:** abierta el 2026-11-27 en `feat/f3-modelo`, que sale de `main` (`71d0fcf`). Sin
+  tope de gasto (el dueño, 2026-11-23): la llave se usa solo en local, en la máquina del autor,
+  para grabar corridas. F3.1 no necesita la llave; la `.env` del dueño aún no la trae.
+  ADR-0015 aceptada el 2026-11-27 (Claude eligió sus recomendaciones, §1b). **F3.1 hecha ese día:**
+  la batería de contrato del puerto del modelo (`apps/circuit/test/model-contract/`), en verde con
+  el simulador; seis mutantes en rojo.
 
 ### F6 · Demostración
 
@@ -360,6 +367,7 @@ Lo que una respuesta recomienda y no se aplica en ese paso queda aquí hasta apl
 | R8 | Generar `database/schema.sql` desde una base migrada y compararlo en una prueba | Hoy se escribe a mano porque solo hay dos esquemas vacíos; con tablas se desvía | Claude, en F1.1 | Cerrada el 2026-11-24: `npm run db:dump-schema` lo regenera y `database/test/schema-dump-db.test.ts` falla si difiere (una columna plantada la puso en rojo) |
 | R9 | Hook de `pre-push` que corre `forbidden-phrases.local.txt` sobre lo versionado y `check-secrets.sh --range <remoto>..<local>` sobre cada commit que se publica | La lista privada no puede ir a CI, y CI corre después del push: detecta un secreto, no impide publicarlo (auditoría de ADR-0004, H1). Hoy depende de acordarse antes de cada push | El dueño. Hasta que exista, los dos comandos se corren a mano antes de cada push | Cerrada el 2026-11-24: `guards/hooks/pre-push`, activado con `git config core.hooksPath guards/hooks`, con la condición del dueño: nunca pregunta y para el push solo con un hallazgo o si no pudo revisar. Sus controles (`guards/pre-push.test.sh`, 10 casos, 7 mutantes en rojo) corren en CI |
 | R10 | `apps/crm` declara sus dependencias (`drizzle-orm`, `pg`) en su `package.json` | Hoy `apps/crm/src/db/schema.ts` importa `drizzle-orm` desde la raíz, donde es solo de desarrollo; el servidor del CRM, que en F6 corre en Compose, no puede depender de eso. F1.1 no podía tocar dependencias (ADR-0005 D17) | Claude, en F1.2, con la versión verificada ese día | Cerrada el 2026-11-24: `apps/crm/package.json` declara drizzle-orm 0.45.4, fastify 5.12.8, pg 8.23.1 y zod 4.6.7 (ADR-0006 D2) |
+| R11 | Suavizar las transiciones del tablero: el paso de una estación a la siguiente y la llegada del equipo hoy aparecen de golpe | El dueño lo vio en la app real el 2026-11-27 («salta sin transicionar»); el GIF y el video de F6 dependen de que el recorrido se vea fluido. Las transiciones siguen saliendo de los eventos guardados (CLAUDE.md §1) y se cortan con `prefers-reduced-motion` | Claude, después de F3 y antes del GIF de F6 | Abierta |
 
 ## 6. Mapa de documentos
 
