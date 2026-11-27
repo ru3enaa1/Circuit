@@ -135,3 +135,22 @@ difieren, el costo es nulo). El SDK 1.14.0 manda la llave como `Authorization: B
 `x-api-key`. Pruebas: `test/anthropic-model.test.ts` sobre el transporte falso
 `test/support/fake-anthropic.ts` (13); Y1–Y7 en rojo y restaurados por hash. `npm run check` en 0:
 1406 pruebas (una solo en Linux), cobertura 93,6 / 86,96 / 93,64 / 95,73.
+
+**F3.3 (2026-11-27, con A1).** `answer` pide salida estructurada `{answer, documentId, quote}`:
+`documentId` es uno de los ids del escenario o `null`, y `quote`, un texto o `null`, para que el
+modelo pueda decir que ningún documento responde; con cero documentos, `documentId` solo puede ser
+`null`. Quien decide si hay fuente sigue siendo `checkCitation`. Los límites de largo van en las
+instrucciones, tomados de `knowledge.ts`, y no en el esquema. El mensaje de sistema son dos
+bloques fijos para un escenario: las instrucciones y los documentos, cada uno como
+`<documento id="…">`, en el orden del escenario y con el punto de caché después de ellos (Opus 5.5
+cachea desde 512 tokens; los tres documentos son unos mil). La solicitud va sola en el turno del
+usuario (K9). Esfuerzo `medium`, el de Opus 5.5 por defecto, escrito a la vista; 8000 tokens
+de salida. Un documento cuyo id no tiene la forma del cargador, o cuyo texto trae `<documento` o
+`</documento>` (en mayúsculas o minúsculas), lanza `UnsafeDocument` antes de llamar a la red, sin
+el texto del documento: se rechaza en vez de escaparse. Los textos y esquemas de las dos estaciones
+pasaron a `modules/model/prompts.ts`. Pruebas: `test/anthropic-answer.test.ts` (10, con la
+estación 4 dentro del motor; la 5 sigue con un modelo de guion hasta F3.4). Z1–Z8 en rojo y
+restaurados por hash: la solicitud en el sistema, sin punto de caché, documentos sin id,
+`documentId` sin `null`, la revisión de etiquetas sensible a mayúsculas, sin revisión del id, los
+documentos armados dentro de la llamada y en otro orden. `npm run check` en 0: 1417 pruebas (una
+solo en Linux), cobertura 93,66 / 86,99 / 93,78 / 95,79.

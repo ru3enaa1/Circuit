@@ -324,7 +324,8 @@ descubrimiento (mercado, oferta, PRD). Lo que eso deja sin probar se dice:
   la batería de contrato del puerto del modelo (`apps/circuit/test/model-contract/`), en verde con
   el simulador; seis mutantes en rojo. El mismo día el dueño decidió no usar la llave (ADR-0015 A1):
   sin corridas reales, F3.5 fuera del hito. **F3.2 hecha:** el adaptador clasifica sobre un
-  transporte falso; 1406 pruebas; Y1–Y7 en rojo.
+  transporte falso; 1406 pruebas; Y1–Y7 en rojo. **F3.3 hecha:** el conocimiento con cita, con los
+  documentos delimitados y en caché; 1417 pruebas; Z1–Z8 en rojo.
 
 ### F6 · Demostración
 
