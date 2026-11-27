@@ -66,7 +66,14 @@ async function filter(state: RunState): Promise<StationResult> {
     return { outcome: 'injection', status: 'stopped', detail: { pattern }, usage: NO_USAGE };
   }
   const redaction = redact(state.text);
-  const detail = { hasEmail: redaction.email !== null, phones: redaction.phones, documents: redaction.documents };
+  // ADR-0010 A1 (the owner, 2026-11-26): the redacted text, undelimited, so the board can show what
+  // the person wrote. The email, phones and documents are already out of it; the raw text never is stored.
+  const detail = {
+    text: redaction.text,
+    hasEmail: redaction.email !== null,
+    phones: redaction.phones,
+    documents: redaction.documents,
+  };
   return completed('ok', detail, NO_USAGE, { request: delimit(redaction.text), email: redaction.email });
 }
 

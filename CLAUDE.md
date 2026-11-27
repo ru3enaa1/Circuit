@@ -177,9 +177,12 @@ en `main`, 45845951453, con 648 pruebas). **F2 · Circuito y mapa abierta el 202
 (`f72aa15`). Primero F2.0: los bocetos del dueño y el brief `docs/diseno.md`. Los bocetos
 (B0–B8, más sus referencias y los prompts) están listos desde el 2026-11-26 en
 `docs/privado/bocetos/Mockups_completados.zip`, que git ignora; el dueño eligió el logo
-**4a** de B8. `docs/diseno.md` escrito el 2026-11-26 (propuesta): la órbita con Persona al
+**4a** de B8. `docs/diseno.md` **aprobado por el dueño el 2026-11-26** (`adc60e2`): la órbita con Persona al
 centro, siete apariencias por estación, revelado de eventos de a uno y los paneles de la
-ultraancha; espera el sí del dueño y su respuesta a §16 (guardar o no el texto tachado).
+ultraancha. Con él, **ADR-0011 aceptada** (enmiendas: `@fontsource` en B12 y más campos en
+`GET /api/circuit`). Por §16 (a), ADR-0010 A1: el evento de Filtro guarda el texto ya tachado en
+`detail.text`; casos dorados regenerados; 897 pruebas (una solo en Linux). **F2.0 cerrada; sigue
+F2.3a** (servidor de lectura, `projectRun`, la órbita), en el orden de §17 del brief.
 Pedido al dueño, como insumo de F2: el material del programa que citará la estación 4.
 ADR-0010 (motor, eventos y simulador: F2.1 y F2.2) y ADR-0012 (aprobación y cierre: F2.4)
 **aceptadas el 2026-11-26** (el dueño aceptó sus nueve y cinco recomendaciones), con su línea

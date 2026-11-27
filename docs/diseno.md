@@ -1,7 +1,7 @@
 # Circuit · brief de diseño y UX (F2.0)
 
-- **Fecha:** 2026-11-26 · **Estado:** propuesta. Al aprobarlo el dueño, ADR-0011 queda aceptada
-  (su pregunta 4) y empieza F2.3.
+- **Fecha:** 2026-11-26 · **Estado:** aprobado por el dueño el 2026-11-26, con la opción (a) de
+  §16. ADR-0011 queda aceptada (su pregunta 4) y empieza F2.3.
 - **Sale de:** los bocetos B0 a B8 del dueño (locales, fuera de git) y del contrato de datos de
   ADR-0010 (los eventos), ADR-0011 (el tablero) y ADR-0012 (la aprobación). Donde el boceto y el
   contrato no coinciden, manda el contrato, y la diferencia queda en §15.
@@ -96,7 +96,8 @@ La composición elegida es la órbita del boceto (la variante «libre» de B1, l
 - **Líneas de borde:** de Entrada sale una línea fina hasta el borde de la pantalla (por ahí
   llegan las solicitudes), y de Cierre otra (por ahí salen). Son las únicas que tocan el borde.
 - **Arriba a la izquierda, la solicitud:** «Circuit · Escuela Andamio · Simulador», y debajo, en
-  grande, «Solicitud N.º 12» con su estado («en curso · Conocimiento»). Un clic abre la lista de
+  grande, «Solicitud N.º 12» con su estado («en curso · Conocimiento»), y el texto tachado de la
+  solicitud en dos líneas (60 caracteres de ancho), que aparece cuando llega el evento de Filtro. Un clic abre la lista de
   las últimas corridas (§8).
 - **Arriba a la derecha, el reloj de la corrida** (§7), los totales de tokens y costo, y cuántas
   corridas están en curso.
@@ -112,7 +113,7 @@ del paquete del escenario, junto a la tabla y el umbral.
 
 | Estación | Nodos | De dónde sale cada texto |
 |---|---|---|
-| Entrada | texto recibido | `detail.length`: «347 caracteres» |
+| Entrada | texto recibido | `detail.length`: «347 caracteres»; al entrar, el texto tachado del evento de Filtro |
 | Filtro | delimitar · inyección · datos personales | «delimitado»; «sin inyección» o el id del patrón; «1 correo aparte · 1 teléfono · 1 documento tachados» (de `hasEmail`, `phones`, `documents`), **nunca lo tachado** |
 | Clasificación | intención · programa · urgencia · confianza | `intent`, `topic` (el título del documento), `urgency` y el arco de confianza |
 | Conocimiento | documento · cita | `documentId` (el título del documento) y la cita entre comillas, recortada a 90 caracteres en el circuito y entera al entrar |
@@ -240,7 +241,7 @@ al nombre «Circuit» (IBM Plex Sans 600) y a 16 px como ícono de pestaña.
 
 | El boceto dice | Se construye | Por qué difieren |
 |---|---|---|
-| Arriba, «Lucía Restrepo Arango · Confecciones Hilo Verde» y la frase de su solicitud | «Solicitud N.º 12», su estado, y lo que las estaciones guardaron (programa, cita, acciones) | El texto de la solicitud no se guarda; solo su huella SHA-256 (ADR-0010 D6, pregunta 7). Ver §16 |
+| Arriba, «Lucía Restrepo Arango · Confecciones Hilo Verde» y la frase de su solicitud | «Solicitud N.º 12», su estado y el texto ya tachado, recortado a dos líneas | Se guarda el texto tachado, no el crudo (§16, ADR-0010 A1); el nombre del contacto no sale de ningún evento |
 | Rama «queja o fuera de alcance» | «queja, fuera de alcance o duda» | La rama también lleva la confianza baja (ADR-0010, tabla `CIRCUIT`) |
 | Telemetría «840 tok · US$0,004» en cada estación | «1,2 s · simulador» mientras responde el simulador | El simulador no cuenta tokens ni costo; inventarlos rompería el principio 3 |
 | Reloj que avanza («en espera 39,4 s») | «espera desde 09:00:00» | Un reloj que avanza es un temporizador fuera de `use-run-events.ts` (ADR-0011 B2) |
@@ -252,7 +253,7 @@ al nombre «Circuit» (IBM Plex Sans 600) y a 16 px como ícono de pestaña.
 | Logo provisional de dos bolas en la barra | El logo 4a (§12) | El dueño eligió 4a en B8 |
 | Las estaciones cambian con un temporizador del boceto | Cambian solo con eventos, revelados de a uno | CLAUDE.md §1 y ADR-0011 B1–B3 |
 
-## 16. Una decisión del dueño
+## 16. Una decisión del dueño (elegida: a)
 
 **¿Se guarda y se muestra el texto de la solicitud, ya tachado?** Hoy no se guarda, y por eso el
 tablero no puede mostrar «cada pedido grande pasa por mí…». Para quien ve la demostración, leer

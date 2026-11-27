@@ -43,7 +43,9 @@ describe('the engine walks the circuit by the table alone (ADR-0010 D1, D7)', ()
     expect(model.calls.proposeCrm).toHaveLength(0);
   });
 
-  it('stores the run with the SHA-256 of the raw text and never the text', async () => {
+  // ADR-0010 A1 (2026-11-26): the redacted text is kept, in the filter event only; the raw text and
+  // what was redacted out of it never are.
+  it('stores the run with the SHA-256 of the raw text, and only the redacted text in the filter event', async () => {
     const store = new MemoryStore();
 
     await startRun(engineDeps({ store }), NORMAL_TEXT);
@@ -51,7 +53,12 @@ describe('the engine walks the circuit by the table alone (ADR-0010 D1, D7)', ()
     expect(store.runs).toEqual([
       { scenario: 'prueba', inputSha256: expect.stringMatching(/^[0-9a-f]{64}$/), startedAt: '2026-11-26T09:00:00.000Z' },
     ]);
-    expect(JSON.stringify(store)).not.toContain('Cada pedido grande');
+    const stored = JSON.stringify(store);
+    expect(stored).not.toContain(NORMAL_TEXT);
+    expect(stored).not.toContain('lucia@hiloverde.test');
+    expect(stored).not.toContain('300 123 4567');
+    const withText = store.stored.filter((event) => 'text' in event.detail).map((event) => event.station);
+    expect(withText).toEqual(['filter']);
   });
 
   it('fails station 1 on a text it cannot take, and runs nothing after it', async () => {

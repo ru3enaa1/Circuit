@@ -1,8 +1,10 @@
 # ADR-0011 · El tablero dibuja el circuito solo con una proyección de los eventos guardados, que circuit sirve en 127.0.0.1
 
-- **Fecha:** 2026-11-26 · **Estado:** propuesta. El 2026-11-26 el dueño eligió las
-  recomendaciones de «Preguntas abiertas» («vamos con lo recomendado»); por la 4, se acepta
-  cuando el dueño apruebe `docs/diseno.md`, que B10 cita.
+- **Fecha:** 2026-11-26 · **Estado:** aceptada el 2026-11-26, al aprobar el dueño
+  `docs/diseno.md` (pregunta 4). El mismo día eligió las recomendaciones de «Preguntas
+  abiertas». Enmiendas del brief: B12 admite `@fontsource/ibm-plex-sans` y
+  `@fontsource/jetbrains-mono` (las fuentes en local de B7), y `GET /api/circuit` trae además
+  el umbral de confianza y los títulos de los documentos del escenario (§7 del brief).
 - **Tarea:** F2.3 de `DEVELOPMENT_PLAN.md`: «tablero que dibuja el recorrido solo desde los
   eventos». Terminado (parte de F2): el mapa coincide con los eventos guardados.
 - **Retroactiva:** no. No existen `apps/board`, ningún `.tsx`, ni un servidor HTTP en circuit

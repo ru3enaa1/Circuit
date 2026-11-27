@@ -20,7 +20,8 @@
     "detail": {
       "documents": 0,
       "hasEmail": true,
-      "phones": 1
+      "phones": 1,
+      "text": "Buenas tardes. Soy Andrés Gómez ([correo], [teléfono]). Este mes me cobraron dos veces la cuota del programa y nadie me responde. Necesito que me devuelvan el cobro repetido."
     },
     "durationMs": 10,
     "model": "code",

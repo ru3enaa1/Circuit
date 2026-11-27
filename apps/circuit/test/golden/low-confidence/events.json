@@ -20,7 +20,8 @@
     "detail": {
       "documents": 0,
       "hasEmail": true,
-      "phones": 0
+      "phones": 0,
+      "text": "Tengo una empresa de transporte de carga con 80 personas y quiero que crezca, pero no sé bien por dónde empezar ni si esto es para mí. Escríbanme a [correo]."
     },
     "durationMs": 10,
     "model": "code",

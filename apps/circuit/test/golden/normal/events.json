@@ -20,7 +20,8 @@
     "detail": {
       "documents": 1,
       "hasEmail": true,
-      "phones": 1
+      "phones": 1,
+      "text": "Hola, soy Lucía Restrepo, de Confecciones Hilo Verde. Les escribo desde [correo]; mi celular es [teléfono] y mi cédula [documento], por si la necesitan para inscribirme. La empresa factura bien, pero cada pedido grande pasa por mí y no sé en qué se me va la semana. ¿Qué programa me sirve para entender cómo funciona hoy la operación?"
     },
     "durationMs": 10,
     "model": "code",

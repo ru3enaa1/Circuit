@@ -277,6 +277,16 @@ Cada uno se planta a mano, se comprueba en rojo en su prueba y se restaura compr
   sistema a los dos lados de la arroba, así que «lucía@…» sale entero. Cada uno, con su prueba en
   rojo primero (15 casos en `filter.test.ts`).
 
+## Enmiendas
+
+- **A1 · D6, el texto tachado se guarda (el dueño, 2026-11-26, `docs/diseno.md` §16).** El evento
+  de la estación 2 guarda en `detail.text` el texto ya tachado y sin delimitar: sin el correo,
+  con `[teléfono]` y `[documento]`. Así el tablero muestra lo que escribió la persona. El texto
+  crudo sigue sin guardarse (`runs` guarda su SHA-256) y lo tachado tampoco; una inyección no
+  guarda texto (D5). Cambia la respuesta de la pregunta 7. Chequeo: «stores the redacted text in
+  its event» de `filter.test.ts`, «only the redacted text in the filter event» de
+  `engine.test.ts` y la regla de `personal` de `golden.test.ts`, sobre los casos regenerados.
+
 ## Preguntas abiertas
 
 Cada una tiene su **ASUNCIÓN** escrita en la cláusula. Respondidas el 2026-11-26: el dueño

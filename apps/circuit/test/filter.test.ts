@@ -95,6 +95,21 @@ describe('station 2 detects injection attempts on the normalized text (ADR-0010 
 });
 
 describe('station 2 redacts what the model does not need (ADR-0010 D6)', () => {
+  // The owner's choice of 2026-11-26 (docs/diseno.md §16, ADR-0010 A1): the filter event keeps the
+  // redacted text, undelimited, so the board can show what the person wrote. Nothing redacted is in it.
+  it('stores the redacted text in its event, without the email, the phone or the document', async () => {
+    const text = 'Soy Lucía, escribo desde lucia@hiloverde.test; mi celular es 300 123 4567 y mi cédula 52.345.678.';
+    const run = await startRun(engineDeps({ model: scriptedModel(NORMAL_REPLIES) }), text);
+
+    const filter = run.events.find((event) => event.station === 'filter');
+    expect(filter?.detail).toEqual({
+      text: `Soy Lucía, escribo desde ${EMAIL_MARK}; mi celular es ${PHONE_MARK} y mi cédula ${DOCUMENT_MARK}.`,
+      hasEmail: true,
+      phones: 1,
+      documents: 1,
+    });
+  });
+
   it('takes the first email out to its own field, lowercased, and marks every email in the text', () => {
     const result = redact('Escribo desde Lucia@HiloVerde.test. Copia a otra@ejemplo.test, gracias.');
 
