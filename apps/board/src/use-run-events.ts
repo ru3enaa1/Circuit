@@ -1,13 +1,27 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
-import { API, readCircuit, readEvents, readRuns, readTools, type CircuitInfo, type CrmTool, type RunEvent, type RunSummary } from './api.ts';
+import {
+  API,
+  readCircuit,
+  readCommandAnswer,
+  readEvents,
+  readRuns,
+  readTools,
+  type CircuitInfo,
+  type CommandAnswer,
+  type CrmTool,
+  type RunEvent,
+  type RunSummary,
+} from './api.ts';
 
 /**
  * Where the board's events come from (ADR-0011 B1, B2; docs/diseno.md §8), and the only file
  * with state or a timer. The feed asks the server for new events once a second, keeps them,
  * and reveals them one at a time, so the simulator's milliseconds become steps the eye can
  * follow. Each frame is the projection of a prefix of the stored events: the timer chooses how
- * many to show, never what a station looks like.
+ * many to show, never what a station looks like. It also sends the board's two commands (ADR-0012):
+ * try a sample and decide. What they change reaches the board as stored events, like any other;
+ * the feed only keeps whether a command is on its way or why the server refused it.
  */
 
 /** ADR-0011, question 2: a poll a second with `?after`. */
@@ -16,6 +30,28 @@ export const POLL_INTERVAL_MS = 1000;
 export const REVEAL_STEP_MS = 700;
 
 export type FeedStatus = 'loading' | 'ready' | 'unreachable';
+
+/** Why a command did not go through, as the board says it (texts.ts, COMMAND_TEXTS). */
+export type CommandProblem = 'conflict' | 'invalid' | 'refused' | 'unreachable';
+
+export type CommandKind = 'tryout' | 'decision';
+
+export interface CommandState {
+  readonly status: 'idle' | 'sending' | 'failed';
+  /** Which command it was, so its state shows where it was sent from. */
+  readonly kind: CommandKind | null;
+  readonly problem: CommandProblem | null;
+  /** The field the server named in a 400, never a value. */
+  readonly field: string | null;
+}
+
+const IDLE: CommandState = Object.freeze({ status: 'idle', kind: null, problem: null, field: null });
+
+function problemOf(answer: CommandAnswer): CommandProblem {
+  if (answer.status === 409) return 'conflict';
+  if (answer.status === 400) return 'invalid';
+  return 'refused';
+}
 
 export interface FeedSnapshot {
   readonly status: FeedStatus;
@@ -28,10 +64,13 @@ export interface FeedSnapshot {
   readonly received: readonly RunEvent[];
   /** How many of `received` are shown. */
   readonly revealed: number;
+  readonly command: CommandState;
 }
 
 export interface FeedDeps {
   fetchJson(url: string): Promise<unknown>;
+  /** A POST with a JSON body; it throws only when nothing answered. */
+  postJson(url: string, body: unknown): Promise<CommandAnswer>;
   setTimer(run: () => void, ms: number): unknown;
   clearTimer(handle: unknown): void;
   /** prefers-reduced-motion: everything at once, no reveal (§14). */
@@ -45,9 +84,13 @@ export interface RunFeed {
   stop(): void;
   /** Shows a run chosen from the list, whole and at once (§8). */
   select(runId: number): void;
+  /** Starts a run with a sample and follows the newest run, which is that one (A12). */
+  tryout(sampleId: string): Promise<void>;
+  /** Sends the mentor's decision for the run (A6). */
+  decide(runId: number, body: unknown): Promise<void>;
 }
 
-const INITIAL: FeedSnapshot = { status: 'loading', info: null, tools: [], runs: [], runId: null, following: true, received: [], revealed: 0 };
+const INITIAL: FeedSnapshot = { status: 'loading', info: null, tools: [], runs: [], runId: null, following: true, received: [], revealed: 0, command: IDLE };
 
 export function createRunFeed(deps: FeedDeps): RunFeed {
   let snapshot = INITIAL;
@@ -120,6 +163,34 @@ export function createRunFeed(deps: FeedDeps): RunFeed {
       });
   };
 
+  /** Asks at once instead of at the next second, so what a command stored shows sooner. */
+  const pollNow = () => {
+    if (running && pollTimer !== null) {
+      deps.clearTimer(pollTimer);
+      tick();
+    }
+  };
+
+  /** One command at a time: a second click while one is on its way does nothing. */
+  const send = async (kind: CommandKind, url: string, body: unknown, done: () => void) => {
+    if (snapshot.command.status === 'sending') return;
+    update({ command: { status: 'sending', kind, problem: null, field: null } });
+    let answer: CommandAnswer;
+    try {
+      answer = await deps.postJson(url, body);
+    } catch {
+      update({ command: { status: 'failed', kind, problem: 'unreachable', field: null } });
+      return;
+    }
+    if (answer.status < 200 || answer.status > 299) {
+      update({ command: { status: 'failed', kind, problem: problemOf(answer), field: answer.field } });
+      return;
+    }
+    update({ command: IDLE });
+    done();
+    pollNow();
+  };
+
   return {
     subscribe(listener) {
       listeners.add(listener);
@@ -140,11 +211,10 @@ export function createRunFeed(deps: FeedDeps): RunFeed {
     select(runId) {
       instantNext = true;
       showRun(runId, runId === snapshot.runs[0]?.id);
-      if (running && pollTimer !== null) {
-        deps.clearTimer(pollTimer);
-        tick();
-      }
+      pollNow();
     },
+    tryout: (sampleId) => send('tryout', API.tryout, { sample: sampleId }, () => update({ following: true })),
+    decide: (runId, body) => send('decision', API.decision(runId), body, () => undefined),
   };
 }
 
@@ -156,6 +226,17 @@ export function browserFeedDeps(): FeedDeps {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return (await response.json()) as unknown;
     },
+    async postJson(url, body) {
+      // Same origin: the browser sends the board's Origin, which the server checks (A6).
+      const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json' }, body: JSON.stringify(body), cache: 'no-store' });
+      let value: unknown = null;
+      try {
+        value = await response.json();
+      } catch {
+        // An answer with no JSON body still has its status.
+      }
+      return readCommandAnswer(response.status, value);
+    },
     setTimer: (run, ms) => window.setTimeout(run, ms),
     clearTimer: (handle) => window.clearTimeout(handle as number),
     reducedMotion: () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
@@ -163,12 +244,12 @@ export function browserFeedDeps(): FeedDeps {
 }
 
 /** The feed for one page: started on mount, stopped on unmount. */
-export function useRunFeed(): FeedSnapshot & { readonly select: (runId: number) => void } {
+export function useRunFeed(): FeedSnapshot & Pick<RunFeed, 'select' | 'tryout' | 'decide'> {
   const [feed] = useState(() => createRunFeed(browserFeedDeps()));
   useEffect(() => {
     feed.start();
     return () => feed.stop();
   }, [feed]);
   const snapshot = useSyncExternalStore(feed.subscribe, feed.getSnapshot, feed.getSnapshot);
-  return { ...snapshot, select: feed.select };
+  return { ...snapshot, select: feed.select, tryout: feed.tryout, decide: feed.decide };
 }

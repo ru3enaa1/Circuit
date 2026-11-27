@@ -112,6 +112,39 @@ export const ROOM_TEXTS = {
   ofTotal: serio('de'),
 } as const satisfies Record<string, CatalogText>;
 
+/**
+ * The person station's room as the approval (docs/diseno.md §10, ADR-0012), and «Probar una
+ * solicitud» (§8). All serious: a decision and a refusal are not the place for a joke.
+ */
+export const DECISION_TEXTS = {
+  approve: serio('Aprobar'),
+  correct: serio('Corregir'),
+  reject: serio('Rechazar'),
+  approveCorrection: serio('Aprobar la corrección'),
+  keep: serio('Conservar'),
+  nothingProposed: serio('Sin acciones propuestas: aprobar cierra sin escribir en el CRM.'),
+  signedBy: serio('Firma en la bitácora del CRM:'),
+  sending: serio('Enviando…'),
+  enterToDecide: serio('entrar para decidir'),
+  body: serio('Nota'),
+  title: serio('Título'),
+  dueOn: serio('Vence'),
+  stage: serio('Etapa'),
+  fullName: serio('Nombre'),
+} as const satisfies Record<string, CatalogText>;
+
+export const COMMAND_TEXTS = {
+  conflict: serio('La corrida ya no espera una decisión.'),
+  invalid: serio('El servidor no aceptó la decisión; revisa el campo'),
+  refused: serio('El servidor rechazó la orden.'),
+  unreachable: serio('No se pudo enviar: el servidor no responde.'),
+} as const satisfies Record<string, CatalogText>;
+
+export const TRYOUT_TEXTS = {
+  open: serio('Probar una solicitud'),
+  hint: serio('Arranca una corrida con una solicitud de ejemplo del escenario.'),
+} as const satisfies Record<string, CatalogText>;
+
 /** The two panels of an ultrawide window (§9, ADR-0014 G5). */
 export const PANEL_TEXTS = {
   quote: serio('La cita'),
@@ -219,6 +252,9 @@ export const CATALOG: readonly Readonly<Record<string, CatalogText>>[] = [
   FAILURE_REASONS,
   RUN_TEXTS,
   ROOM_TEXTS,
+  DECISION_TEXTS,
+  COMMAND_TEXTS,
+  TRYOUT_TEXTS,
   PANEL_TEXTS,
   MODEL_NAMES,
   NODE_TEXTS,

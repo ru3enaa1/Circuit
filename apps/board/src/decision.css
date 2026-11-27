@@ -1,0 +1,261 @@
+/*
+ * Persona's room as the approval and «Probar una solicitud» (docs/diseno.md §8, §10; ADR-0012).
+ * The three ways out keep the exits' pill shape: Aprobar is the primary, solid bone; Corregir is an
+ * outline; Rechazar is pink and dashed, with the stop's square. Each says itself in words too, never
+ * by its color alone (§14).
+ */
+
+.decision__ways {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.way {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  padding: 9px 18px;
+  font: 600 13px var(--sans);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: opacity var(--ease);
+}
+
+.way:focus-visible {
+  outline: 2px solid var(--yellow);
+  outline-offset: 3px;
+}
+
+.way:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.way--approve {
+  color: var(--bg);
+  background: var(--bone);
+  border: 1.5px solid var(--bone);
+}
+
+.way--correct {
+  color: var(--bone);
+  background: transparent;
+  border: 1.5px solid var(--bone);
+  list-style: none;
+}
+
+.way--correct::-webkit-details-marker {
+  display: none;
+}
+
+.way--reject {
+  color: var(--pink);
+  background: transparent;
+  border: 1.5px dashed var(--pink);
+}
+
+.decision__icon {
+  fill: currentColor;
+}
+
+/* The correction opens in place, under its button: the approval never leaves the room. */
+.decision__correct[open] {
+  flex-basis: 100%;
+  order: 3;
+}
+
+.decision__correct[open] > .way--correct {
+  color: var(--yellow);
+  border-color: var(--yellow);
+}
+
+.correction-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.correction {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 14px 12px;
+  border: 1px solid var(--off);
+  border-radius: 14px;
+}
+
+.correction legend {
+  padding: 0 6px;
+}
+
+.correction__keep {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--bone);
+  font: 600 13px var(--sans);
+}
+
+.correction__keep input {
+  accent-color: var(--yellow);
+}
+
+.correction__field {
+  display: grid;
+  gap: 4px;
+  color: var(--label);
+  font: 500 10.5px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.correction__field input,
+.correction__field textarea {
+  width: 100%;
+  padding: 7px 10px;
+  color: var(--bone);
+  font: 13px/1.45 var(--sans);
+  text-transform: none;
+  letter-spacing: normal;
+  background: var(--dock);
+  border: 1px solid var(--off);
+  border-radius: 8px;
+  color-scheme: dark;
+}
+
+.correction__field textarea {
+  resize: vertical;
+}
+
+.correction__field input:focus-visible,
+.correction__field textarea:focus-visible {
+  outline: 2px solid var(--yellow);
+  outline-offset: 1px;
+}
+
+.correction-form > .way {
+  justify-self: start;
+}
+
+.decision__note,
+.decision__signed,
+.decision__status {
+  margin: 12px 0 0;
+  color: var(--text-2);
+  font: 12px/1.45 var(--sans);
+}
+
+.decision__signed code {
+  color: var(--bone);
+  font: 12px var(--mono);
+}
+
+.decision__problem,
+.tryout__problem {
+  margin: 12px 0 0;
+  color: var(--pink);
+  font: 600 12.5px/1.45 var(--sans);
+}
+
+/* Beside the dock, bottom right: the tools list has the bottom left. Its list opens upward. */
+.tryout {
+  position: absolute;
+  right: 22px;
+  bottom: 22px;
+  z-index: 3;
+}
+
+.tryout__open {
+  padding: 10px 18px;
+  color: var(--bone);
+  font: 600 13px var(--sans);
+  background: var(--dock);
+  border: 1.5px solid var(--off);
+  border-radius: 999px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.tryout__open::-webkit-details-marker {
+  display: none;
+}
+
+.tryout__open::before {
+  content: '+ ';
+  color: var(--yellow);
+}
+
+.tryout details[open] > .tryout__open,
+.tryout__open:focus-visible {
+  border-color: var(--yellow);
+  outline: none;
+}
+
+.tryout__menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  width: 300px;
+  padding: 12px;
+  background: var(--dock);
+  border: 1px solid var(--off);
+  border-radius: 16px;
+}
+
+.tryout__hint {
+  margin: 0 0 8px;
+  color: var(--label);
+  font: 12px/1.4 var(--sans);
+}
+
+.tryout__menu ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tryout__menu button {
+  width: 100%;
+  padding: 8px 10px;
+  color: var(--bone);
+  font: 13px var(--sans);
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.tryout__menu button:hover,
+.tryout__menu button:focus-visible {
+  border-color: var(--yellow);
+  outline: none;
+}
+
+.tryout__menu button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.tryout__problem {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  width: 260px;
+  text-align: right;
+}
+
+/* With the list open, the list takes the place above the button. */
+.tryout:has(details[open]) .tryout__problem {
+  display: none;
+}
+
+/* Half a screen: the dock fills the bottom, so the button goes above its right end. */
+.board.is-narrow .tryout {
+  right: 16px;
+  bottom: 92px;
+}

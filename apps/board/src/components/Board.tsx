@@ -10,7 +10,10 @@ import { Crew } from './Crew.tsx';
 import { Orbit } from './Orbit.tsx';
 import { BrandLine, ClockPanel, Dock, RequestPanel, StopCard, ToolList, runState, type FeedStatus } from './Panels.tsx';
 import { Room, RoomHeader } from './Room.tsx';
+import type { DecisionBody } from './Decision.tsx';
 import { SidePanels } from './SidePanels.tsx';
+import { Tryout } from './Tryout.tsx';
+import type { CommandState } from '../use-run-events.ts';
 
 /**
  * The whole page as a function of what the feed holds (ADR-0011 B1): the table, the runs, the
@@ -32,10 +35,17 @@ export interface BoardProps {
   /** What is looked at, as the address says it; the circuit when absent. */
   readonly route?: Route;
   readonly onSelectRun?: (id: number) => void;
+  /** The board's two commands (ADR-0012) and their state; absent in a rendering to a string. */
+  readonly command?: CommandState;
+  readonly onTryout?: (sampleId: string) => void;
+  readonly onDecide?: (runId: number, body: DecisionBody) => void;
 }
+
+const IDLE_COMMAND: CommandState = { status: 'idle', kind: null, problem: null, field: null };
 
 export function Board(props: BoardProps) {
   const { info } = props;
+  const command = props.command ?? IDLE_COMMAND;
   if (info === null) {
     return (
       <main className="board board--empty">
@@ -68,13 +78,14 @@ export function Board(props: BoardProps) {
       ) : (
         <>
           {/* Keyed by the address, so each room mounts anew and its way in plays again (§10). */}
-          <Room key={routeHash(route)} view={view} info={info} layout={layout} route={route} />
+          <Room key={routeHash(route)} view={view} info={info} layout={layout} route={route} runId={props.runId} command={command} onDecide={props.onDecide} />
           <RoomHeader brand={<BrandLine info={info} />} view={view} route={route} />
         </>
       )}
       <ClockPanel state={state} view={view} events={props.events} runs={props.runs} info={info} />
       <Dock view={view} narrow={layout.narrow} selected={route.kind === 'circuit' ? null : route.station} />
       {layout.narrow || route.kind !== 'circuit' ? null : <ToolList tools={props.tools} />}
+      {route.kind === 'circuit' ? <Tryout samples={info.samples} command={command} onTryout={props.onTryout} /> : null}
     </main>
   );
 }

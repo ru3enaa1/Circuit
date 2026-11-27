@@ -3,7 +3,7 @@ import { formatDuration, measureOf } from './format.ts';
 import type { Layout, Point, StationPlace } from './layout.ts';
 import { outcomeTag, secondaryNodes, statusText } from './nodes.ts';
 import type { EdgeView, RunView, StationView } from './projection.ts';
-import { RUN_TEXTS } from './texts.ts';
+import { DECISION_TEXTS, RUN_TEXTS } from './texts.ts';
 import { INNER_RING_GAP, OUTER_RING_SCALE, armDistance, armRadius, armsOf, planArms, toward, type Arm } from './shape.ts';
 
 /**
@@ -143,6 +143,8 @@ function telemetryLines(station: StationView, layout: Layout): { primary: string
     return { primary: formatDuration(event.durationMs), secondary: layout.shortTelemetry || parts.length === 0 ? null : parts.join(' · ') };
   }
   if (state === null) return null;
+  // Persona waiting is a door (§10): «espera a la persona · entrar para decidir».
+  if (station.status === 'waiting' && station.decidedBy === 'person') return { primary: state, secondary: DECISION_TEXTS.enterToDecide.text };
   const duration = event === null || layout.shortTelemetry ? null : formatDuration(event.durationMs);
   return { primary: state, secondary: duration };
 }

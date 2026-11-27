@@ -62,8 +62,11 @@ describe.each(GOLDEN_CASES)('E2 · the rooms of the golden case %s', (name) => {
       for (const station of STATIONS) {
         const markup = render(prefix, { kind: 'station', station });
         const exits = [...markup.matchAll(/data-exit="([^"]+)" data-taken="([^"]+)"/g)].map((match) => `${match[1]}:${match[2]}`);
-        const expected = view.edges.filter((edge) => edge.from === station).map((edge) => `${edge.to}:${edge.taken}`);
+        // ADR-0012: while Persona waits, its ways out are the decision's buttons, not the list.
+        const deciding = station === 'person' && view.waitingAt === 'person';
+        const expected = deciding ? [] : view.edges.filter((edge) => edge.from === station).map((edge) => `${edge.to}:${edge.taken}`);
         expect(exits, `${station}, ${prefix.length} eventos`).toEqual(expected);
+        expect(markup.includes('data-decision-card'), `${station}, ${prefix.length} eventos`).toBe(deciding);
       }
     }
   });
@@ -127,15 +130,23 @@ describe('E3 · what a room says', () => {
     expect(closed).toMatch(/data-action-state="true">aplicada</);
   });
 
-  it('Persona shows the proposal it decides on, and its three ways out', () => {
+  it('Persona shows the proposal it decides on, and its three ways out as the buttons (ADR-0012)', () => {
     const markup = render(normal.slice(0, 5), { kind: 'station', station: 'person' });
 
     expect(markup).toContain('data-proposal');
     expect(markup).toContain('<h3>Decisión</h3>');
     expect(markup).not.toContain('Lo que guardó');
     expect(markup).toContain('etapa: programa propuesto');
-    for (const way of ['aprobar', 'corregir', 'rechazar']) expect(markup).toContain(way);
+    expect(attribute(markup, 'data-way')).toEqual(['approved', 'corrected', 'rejected']);
+    for (const way of ['Aprobar', 'Corregir', 'Rechazar']) expect(markup).toContain(way);
     expect(markup).toContain('espera a la persona');
+  });
+
+  it('once decided, Persona shows the decision and its way out again, with no buttons', () => {
+    const markup = render(normal, { kind: 'station', station: 'person' });
+
+    expect(markup).not.toContain('data-decision-card');
+    expect(attribute(markup, 'data-exit')).toEqual(['close']);
   });
 
   it('a room the run has not reached says so, and draws no instrument', () => {

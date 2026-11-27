@@ -8,6 +8,8 @@ import type { RunView, StationView } from '../projection.ts';
 import { actionFacts, exitsOf } from '../room.ts';
 import { actionsOf, routeHash, type Route } from '../route.ts';
 import { ROOM_TEXTS, STATION_NAMES, STATUS_TEXTS, textOf } from '../texts.ts';
+import type { CommandState } from '../use-run-events.ts';
+import { DecisionCard, type DecisionBody } from './Decision.tsx';
 import { Portal } from './Portal.tsx';
 import { armDistance, armRadius, planArms } from '../shape.ts';
 import { StationBall, stationClass } from './StationBall.tsx';
@@ -26,7 +28,14 @@ export interface RoomProps {
   readonly layout: Layout;
   /** Resolved against the view (resolveRoute): its station and its action exist. */
   readonly route: RoomRoute;
+  /** The shown run, and the decision's command: the person station's room is the approval (ADR-0012). */
+  readonly runId?: number | null;
+  readonly command?: CommandState;
+  readonly onDecide?: ((runId: number, body: DecisionBody) => void) | undefined;
 }
+
+/** Nothing on its way and nothing refused: the state of a room no command touched. */
+const NO_COMMAND: CommandState = { status: 'idle', kind: null, problem: null, field: null };
 
 /** The room's bubble: large, but never more than a third of the band between the header and the dock. */
 const ROOM_SCALE = 2.2;
@@ -81,7 +90,7 @@ const actionLink = (node: SecondaryNode): string | null => {
   return match?.[1] === undefined ? null : routeHash({ kind: 'action', station: 'crm', index: Number(match[1]) + 1 });
 };
 
-function Facts({ station, view, info }: { readonly station: StationView; readonly view: RunView; readonly info: CircuitInfo }) {
+function Facts({ station, view, info, deciding }: { readonly station: StationView; readonly view: RunView; readonly info: CircuitInfo; readonly deciding: boolean }) {
   const nodes = secondaryNodes(station, info, { whole: true });
   const received = station.id === 'intake' ? redactedText(view.stations.flatMap((entry) => (entry.event === null ? [] : [entry.event]))) : null;
   const proposal = station.decidedBy === 'person' ? actionsOf(view.stations.find((entry) => entry.id === 'crm')).flatMap((action) => actionText(action, true) ?? []) : [];
@@ -106,10 +115,13 @@ function Facts({ station, view, info }: { readonly station: StationView; readonl
           </ul>
         </section>
       )}
-      <section className="room__block">
-        <h3>{station.id === 'crm' ? ROOM_TEXTS.proposedActions.text : station.decidedBy === 'person' ? ROOM_TEXTS.decision.text : ROOM_TEXTS.nodes.text}</h3>
-        <NodeList nodes={nodes} linkOf={station.id === 'crm' ? actionLink : undefined} />
-      </section>
+      {/* While the person decides, the decision card takes the place of the three outlined nodes. */}
+      {deciding ? null : (
+        <section className="room__block">
+          <h3>{station.id === 'crm' ? ROOM_TEXTS.proposedActions.text : station.decidedBy === 'person' ? ROOM_TEXTS.decision.text : ROOM_TEXTS.nodes.text}</h3>
+          <NodeList nodes={nodes} linkOf={station.id === 'crm' ? actionLink : undefined} />
+        </section>
+      )}
     </>
   );
 }
@@ -133,8 +145,20 @@ function Exits({ view, station }: { readonly view: RunView; readonly station: St
   );
 }
 
-function StationCore({ station, view, info, layout }: { readonly station: StationView; readonly view: RunView; readonly info: CircuitInfo; readonly layout: Layout }) {
+interface StationCoreProps {
+  readonly station: StationView;
+  readonly view: RunView;
+  readonly info: CircuitInfo;
+  readonly layout: Layout;
+  readonly runId: number | null;
+  readonly command: CommandState;
+  readonly onDecide: RoomProps['onDecide'];
+}
+
+function StationCore({ station, view, info, layout, runId, command, onDecide }: StationCoreProps) {
   const tag = outcomeTag(station);
+  // Persona waiting is the approval (§10): its ways out are the three buttons.
+  const deciding = station.decidedBy === 'person' && station.status === 'waiting' && runId !== null;
   const state = statusText(station) ?? STATUS_TEXTS[station.status === 'completed' ? 'completed' : 'pending'].text;
   const telemetry = station.event === null || station.status === 'failed' ? null : telemetryOf(station.event);
   return (
@@ -147,8 +171,12 @@ function StationCore({ station, view, info, layout }: { readonly station: Statio
         {telemetry === null ? null : <p className="room__telemetry">{telemetry}</p>}
       </div>
       <div className="room__detail">
-        <Facts station={station} view={view} info={info} />
-        <Exits view={view} station={station} />
+        <Facts station={station} view={view} info={info} deciding={deciding} />
+        {deciding && runId !== null ? (
+          <DecisionCard runId={runId} info={info} actions={actionsOf(view.stations.find((entry) => entry.id === 'crm'))} command={command} onDecide={onDecide} />
+        ) : (
+          <Exits view={view} station={station} />
+        )}
       </div>
     </>
   );
@@ -183,7 +211,7 @@ function ActionCore({ station, view, info, layout, index }: { readonly station: 
   );
 }
 
-export function Room({ view, info, layout, route }: RoomProps) {
+export function Room({ view, info, layout, route, runId = null, command = NO_COMMAND, onDecide }: RoomProps) {
   const station = view.stations.find((entry) => entry.id === route.station);
   if (station === undefined) return null;
   const place = layout.places[station.id];
@@ -192,7 +220,7 @@ export function Room({ view, info, layout, route }: RoomProps) {
   return (
     <section className={layout.narrow ? 'room is-narrow' : 'room'} style={style} data-room={station.id} data-room-kind={route.kind}>
       <Portal view={view} layout={layout} route={route} />
-      {route.kind === 'action' ? <ActionCore station={station} view={view} info={info} layout={layout} index={route.index} /> : <StationCore station={station} view={view} info={info} layout={layout} />}
+      {route.kind === 'action' ? <ActionCore station={station} view={view} info={info} layout={layout} index={route.index} /> : <StationCore station={station} view={view} info={info} layout={layout} runId={runId} command={command} onDecide={onDecide} />}
     </section>
   );
 }

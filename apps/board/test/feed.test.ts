@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { RunEvent, RunSummary } from '../src/api.ts';
+import { readCommandAnswer, type CommandAnswer, type RunEvent, type RunSummary } from '../src/api.ts';
 import { POLL_INTERVAL_MS, REVEAL_STEP_MS, createRunFeed, type FeedDeps } from '../src/use-run-events.ts';
 import { boardInfo, goldenEvents } from './support.ts';
 
@@ -12,6 +12,12 @@ interface FakeServer {
   events: Record<number, RunEvent[]>;
   fail: boolean;
   readonly asked: string[];
+  /** Every POST, with its body. */
+  readonly posted: { readonly url: string; readonly body: unknown }[];
+  /** What the next POST answers; null when nothing answers at all. */
+  answer: CommandAnswer | null;
+  /** Holds every POST until released, to see the state while one is on its way. */
+  hold: Promise<void> | null;
 }
 
 function summary(id: number, events: readonly RunEvent[]): RunSummary {
@@ -20,7 +26,7 @@ function summary(id: number, events: readonly RunEvent[]): RunSummary {
 }
 
 function harness(options: { readonly reducedMotion?: boolean } = {}) {
-  const server: FakeServer = { runs: [], events: {}, fail: false, asked: [] };
+  const server: FakeServer = { runs: [], events: {}, fail: false, asked: [], posted: [], answer: readCommandAnswer(200, {}), hold: null };
   let now = 0;
   let nextHandle = 1;
   const timers = new Map<number, { at: number; run: () => void }>();
@@ -44,6 +50,12 @@ function harness(options: { readonly reducedMotion?: boolean } = {}) {
       timers.delete(handle as number);
     },
     reducedMotion: () => options.reducedMotion ?? false,
+    async postJson(url, body) {
+      server.posted.push({ url, body });
+      if (server.hold !== null) await server.hold;
+      if (server.answer === null) throw new Error('sin servidor');
+      return server.answer;
+    },
   };
   const feed = createRunFeed(deps);
   /** Runs every timer due within `ms`, in order, letting the fetches settle between them. */
@@ -221,6 +233,82 @@ describe('the feed of the board', () => {
 
     expect(seen).toBeGreaterThan(0);
     expect(calls).toBe(seen);
+    feed.stop();
+  });
+});
+
+describe("the board's two commands (ADR-0012)", () => {
+  it('tryout posts the sample, follows the newest run, and asks at once instead of a second later', async () => {
+    const { feed, server, advance } = harness();
+    const older = goldenEvents('complaint');
+    server.runs = [summary(2, older), summary(1, older)];
+    server.events[1] = [...older];
+    server.events[2] = [...older];
+    feed.start();
+    await advance(0);
+    // An older run chosen from the list: the board no longer follows the newest one.
+    feed.select(1);
+    await advance(0);
+    expect(feed.getSnapshot()).toMatchObject({ runId: 1, following: false });
+    server.answer = readCommandAnswer(201, { runId: 3 });
+    server.runs = [summary(3, []), summary(2, older), summary(1, older)];
+    const asked = server.asked.length;
+
+    await feed.tryout('normal');
+    await advance(0);
+
+    expect(server.posted).toEqual([{ url: '/api/runs', body: { sample: 'normal' } }]);
+    expect(feed.getSnapshot()).toMatchObject({ runId: 3, following: true, command: { status: 'idle', kind: null } });
+    expect(server.asked.length).toBeGreaterThan(asked);
+    feed.stop();
+  });
+
+  it("decide posts the body to the run's route, says it is on its way, and one click at a time", async () => {
+    const { feed, server, advance } = harness();
+    feed.start();
+    await advance(0);
+    let release = () => undefined as void;
+    server.hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    const first = feed.decide(4, { decision: 'approved' });
+    await settle();
+    const second = feed.decide(4, { decision: 'rejected' });
+
+    expect(feed.getSnapshot().command).toEqual({ status: 'sending', kind: 'decision', problem: null, field: null });
+    release();
+    await Promise.all([first, second]);
+    expect(server.posted).toEqual([{ url: '/api/runs/4/decision', body: { decision: 'approved' } }]);
+    expect(feed.getSnapshot().command.status).toBe('idle');
+    feed.stop();
+  });
+
+  it.each([
+    [409, { error: 'no_espera_decision' }, 'conflict', null],
+    [400, { error: 'entrada_invalida', field: 'actions[0].body' }, 'invalid', 'actions[0].body'],
+    [403, { error: 'origen_no_permitido' }, 'refused', null],
+  ])('a %i says why, and names the field only when the server did', async (status, body, problem, field) => {
+    const { feed, server, advance } = harness();
+    feed.start();
+    await advance(0);
+    server.answer = readCommandAnswer(status, body);
+
+    await feed.decide(4, { decision: 'approved' });
+
+    expect(feed.getSnapshot().command).toEqual({ status: 'failed', kind: 'decision', problem, field });
+    feed.stop();
+  });
+
+  it('nothing answering is «unreachable», for a tryout as for a decision', async () => {
+    const { feed, server, advance } = harness();
+    feed.start();
+    await advance(0);
+    server.answer = null;
+
+    await feed.tryout('normal');
+
+    expect(feed.getSnapshot().command).toEqual({ status: 'failed', kind: 'tryout', problem: 'unreachable', field: null });
     feed.stop();
   });
 });

@@ -47,6 +47,10 @@ export interface CircuitInfo extends CircuitTable {
   readonly model: string;
   readonly lowConfidenceBelow: number;
   readonly documents: readonly { readonly id: string; readonly title: string }[];
+  /** «Probar una solicitud» (ADR-0012 A12): each sample's id and label, never its text. */
+  readonly samples: readonly { readonly id: string; readonly label: string }[];
+  /** Who signs the decisions (A7). */
+  readonly mentor: string;
 }
 
 export interface RunSummary {
@@ -69,6 +73,10 @@ export const API = {
   runs: '/api/runs',
   tools: '/api/tools',
   events: (runId: number, after: number) => `/api/runs/${runId}/events?after=${after}`,
+  /** POST: starts a run with one of the scenario's samples (ADR-0012 A12). */
+  tryout: '/api/runs',
+  /** POST: the mentor's decision for a run that waits at the person station (A6). */
+  decision: (runId: number) => `/api/runs/${runId}/decision`,
 } as const;
 
 /** A payload of another shape: the board shows it failed instead of painting half of it. */
@@ -88,10 +96,28 @@ export function readCircuit(value: unknown): CircuitInfo {
   arrayField(value, 'stations');
   arrayField(value, 'transitions');
   arrayField(value, 'documents');
+  arrayField(value, 'samples');
   if (!isObject(value) || typeof value['lowConfidenceBelow'] !== 'number') throw new UnexpectedPayload('lowConfidenceBelow');
+  if (typeof value['mentor'] !== 'string') throw new UnexpectedPayload('mentor');
   return value as unknown as CircuitInfo;
 }
 
 export const readRuns = (value: unknown): readonly RunSummary[] => arrayField(value, 'runs') as RunSummary[];
 export const readTools = (value: unknown): readonly CrmTool[] => arrayField(value, 'tools') as CrmTool[];
 export const readEvents = (value: unknown): readonly RunEvent[] => arrayField(value, 'events') as RunEvent[];
+
+/** What a command answered: its status and the error's name, when the server sent one. */
+export interface CommandAnswer {
+  readonly status: number;
+  readonly error: string | null;
+  readonly field: string | null;
+  readonly runId: number | null;
+}
+
+/** The server's answer to a POST, read only for the fields the board uses. */
+export function readCommandAnswer(status: number, value: unknown): CommandAnswer {
+  const body = isObject(value) ? value : {};
+  const text = (key: string) => (typeof body[key] === 'string' ? (body[key] as string) : null);
+  const runId = typeof body['runId'] === 'number' && Number.isSafeInteger(body['runId']) ? (body['runId'] as number) : null;
+  return { status, error: text('error'), field: text('field'), runId };
+}

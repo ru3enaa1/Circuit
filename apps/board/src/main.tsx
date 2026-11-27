@@ -7,6 +7,7 @@ import './styles.css';
 import './panels.css';
 import './side-panels.css';
 import './room.css';
+import './decision.css';
 
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -36,6 +37,9 @@ function App() {
       height={height}
       route={route}
       onSelectRun={feed.select}
+      command={feed.command}
+      onTryout={(sampleId) => void feed.tryout(sampleId)}
+      onDecide={(runId, body) => void feed.decide(runId, body)}
     />
   );
 }
