@@ -1,43 +1,30 @@
-import type { CircuitInfo } from '../api.ts';
-import { formatDecimal, shorten, telemetryOf } from '../format.ts';
-import type { Layout, StationPlace } from '../layout.ts';
-import { outcomeTag, secondaryNodes, statusText, type SecondaryNode } from '../nodes.ts';
+import { formatDecimal } from '../format.ts';
+import type { Layout } from '../layout.ts';
+import { statusText } from '../nodes.ts';
 import type { StationView } from '../projection.ts';
 import { routeHash } from '../route.ts';
+import type { ArmLabel, StationScene, Telemetry } from '../scene.ts';
 import { NODE_TEXTS, STATION_NAMES, STATUS_TEXTS, textOf } from '../texts.ts';
 import { StationBall, focusOnMount, stationClass } from './StationBall.tsx';
 
 /**
- * One station as its projected view says (docs/diseno.md §5): seven looks, each with its own
- * shape and text as well as its color. It keeps nothing: the same view paints the same station.
+ * One station in the orbit as its projected view and the scene say (docs/diseno.md §5 and §7):
+ * the bubble with its nodes, each node's short name, and the telemetry at the end of its guide
+ * line. It keeps nothing: the same view paints the same station.
  */
 
 export interface StationNodeProps {
-  readonly station: StationView;
-  readonly place: StationPlace;
+  readonly scene: StationScene;
   readonly layout: Layout;
-  readonly info: CircuitInfo;
-  /** This station's share of the run's stored time, 0 to 1: the yellow arc on its ring (§7). */
-  readonly timeShare: number;
+  readonly threshold: number;
+  /** The station the run is on: the yellow ring. */
+  readonly selected: boolean;
   /** The station just left (ADR-0013): it takes the focus back when the circuit mounts. */
   readonly focused?: boolean;
 }
 
-/** Past the ring of marks and the confidence arc (r + 20), so no text crosses them. */
-const RING_CLEARANCE = 24;
-/** One line of nodes: 13 px text at 1.45. */
-const NODE_LINE_PX = 19;
-/** On half a screen the texts must fit beside a small bubble. */
-const NARROW_TEXT_MAX = 22;
-/** The average width of a character of the side texts, in px, to know what fits. */
-const CHARACTER_WIDTH = 7;
-/** Kept free between a text and the edge of the window. */
-const EDGE_MARGIN = 12;
-/** Fewer characters than this say nothing useful: the side texts are left out. */
-const MIN_SIDE_CHARS = 8;
-/** Persona's three ways out, side by side under its name, its tag and its state. */
-const CENTER_NODE_GAP = 84;
-const CENTER_NODE_OFFSET = 80;
+/** One line of the telemetry: 10.5 px mono at 13 px. */
+const TELEMETRY_LINE = 13;
 
 /** «Clasificación, hecha, confianza 0,82» (§14): the name and the state, never the color alone. */
 export function stationLabel(station: StationView, name: string): string {
@@ -47,79 +34,54 @@ export function stationLabel(station: StationView, name: string): string {
   return `${name}, ${state}${extra}`;
 }
 
-/** Where a station's texts go, and how many characters fit before the edge of the window. */
-function sideGeometry(place: StationPlace, layout: Layout) {
-  const gap = place.r + RING_CLEARANCE;
-  const room = place.side === 'left' ? place.x - gap - EDGE_MARGIN : place.side === 'right' ? layout.width - place.x - gap - EDGE_MARGIN : Infinity;
-  const maxChars = Math.min(layout.narrow ? NARROW_TEXT_MAX : Infinity, Math.floor(room / CHARACTER_WIDTH));
-  // A station in the upper half stacks its nodes upwards, away from the necks that leave it downwards.
-  const upwards = place.side !== 'center' && place.y < layout.center.y - place.r / 2;
-  return {
-    anchor: place.side === 'left' ? 'end' : place.side === 'right' ? 'start' : 'middle',
-    x: place.side === 'left' ? -gap : place.side === 'right' ? gap : 0,
-    maxChars,
-    nodeY: (index: number, count: number) =>
-      place.side === 'center' ? place.r + CENTER_NODE_OFFSET : upwards ? -10 - (count - index) * NODE_LINE_PX : 18 + index * NODE_LINE_PX,
-  } as const;
+const round = (value: number) => Math.round(value * 10) / 10;
+
+function Label({ label, dx, dy }: { readonly label: ArmLabel; readonly dx: number; readonly dy: number }) {
+  if (label.label === '') return null;
+  const className = ['node-label', label.filled ? 'is-filled' : '', label.muted ? 'is-muted' : ''].filter((name) => name !== '').join(' ');
+  return (
+    <text className={className} data-node={label.key} x={round(label.x - dx)} y={round(label.y - dy)}>
+      <title>{label.title}</title>
+      {label.label}
+    </text>
+  );
 }
 
-function SideTexts({ station, place, layout, nodes }: { readonly station: StationView; readonly place: StationPlace; readonly layout: Layout; readonly nodes: readonly SecondaryNode[] }) {
-  const { anchor, x, maxChars, nodeY } = sideGeometry(place, layout);
-  // Too little room beside the bubble: the station keeps its name and state, and nothing is cut by the edge.
-  if (maxChars < MIN_SIDE_CHARS) return null;
-  const telemetry = station.event === null || station.status === 'failed' || place.side === 'center' ? null : telemetryOf(station.event);
-  const shown = telemetry !== null && layout.shortTelemetry ? (telemetry.split(' · ')[0] ?? telemetry) : telemetry;
-  const fit = (text: string) => shorten(text, maxChars);
+function TelemetryLabel({ telemetry, dx, dy }: { readonly telemetry: Telemetry; readonly dx: number; readonly dy: number }) {
+  const x = round(telemetry.x - dx);
+  const top = telemetry.y - dy - telemetry.h / 2;
   return (
-    <g className="station__side" textAnchor={anchor}>
-      {shown === null ? null : (
-        <text className="telemetry" x={x} y={-10}>
-          {fit(shown)}
+    <g className="telemetry">
+      <rect className="telemetry__back" x={round(x - telemetry.w / 2)} y={round(top)} width={round(telemetry.w)} height={round(telemetry.h)} />
+      <text className="telemetry__primary" x={x} y={round(top + 1 + TELEMETRY_LINE / 2)}>
+        {telemetry.primary}
+      </text>
+      {telemetry.secondary === null ? null : (
+        <text className="telemetry__secondary" x={x} y={round(top + 1 + TELEMETRY_LINE * 1.5)}>
+          {telemetry.secondary}
         </text>
       )}
-      {nodes.map((node, index) => {
-        // Beside the bubble the nodes stack; under the center station they make one row.
-        const nodeX = place.side === 'center' ? (index - (nodes.length - 1) / 2) * CENTER_NODE_GAP : x;
-        const y = nodeY(index, nodes.length);
-        const dotX = place.side === 'left' ? nodeX + 8 : place.side === 'right' ? nodeX - 8 : nodeX;
-        return (
-          <g key={node.key} className={node.filled ? 'node is-filled' : 'node'} data-node={node.key}>
-            <circle className="node__dot" cx={dotX} cy={place.side === 'center' ? y - 18 : y - 4} r={place.side === 'center' ? 5 : 3} />
-            <text x={nodeX} y={y}>
-              {fit(node.text)}
-            </text>
-          </g>
-        );
-      })}
     </g>
   );
 }
 
-export function StationNode({ station, place, layout, info, timeShare, focused }: StationNodeProps) {
+export function StationNode({ scene, layout, threshold, selected, focused }: StationNodeProps) {
+  const { station, place, telemetry } = scene;
   const name = textOf(STATION_NAMES, station.id);
-  const state = statusText(station);
-  const tag = outcomeTag(station);
-  const nodes = layout.narrow && place.side !== 'center' ? secondaryNodes(station, info).slice(0, 2) : secondaryNodes(station, info);
-  const below = place.r + RING_CLEARANCE + 6;
+  const dx = place.x;
+  const dy = place.y;
   // A link: Tab reaches it in the order of the circuit, Enter enters (ADR-0013). Entering changes what is seen, never the run.
   return (
     <a className="station-link" href={routeHash({ kind: 'station', station: station.id })} aria-label={stationLabel(station, name)} ref={focused ? focusOnMount : undefined}>
-      <g className={stationClass(station)} data-station={station.id} data-status={station.status} transform={`translate(${Math.round(place.x)} ${Math.round(place.y)})`}>
-        <StationBall station={station} r={place.r} threshold={info.lowConfidenceBelow} timeShare={timeShare} />
-        <text className="station__name" y={below} textAnchor="middle">
-          {name}
-        </text>
-        {tag === null ? null : (
-          <text className="station__tag" y={below + 16} textAnchor="middle">
-            {tag}
-          </text>
+      <g className={stationClass(station)} data-station={station.id} data-status={station.status} transform={`translate(${round(place.x)} ${round(place.y)})`}>
+        {telemetry === null ? null : (
+          <path className="telemetry__lead" d={`M${round(telemetry.lead.from.x - dx)} ${round(telemetry.lead.from.y - dy)}L${round(telemetry.lead.to.x - dx)} ${round(telemetry.lead.to.y - dy)}`} />
         )}
-        {state === null ? null : (
-          <text className="station__state" y={below + (tag === null ? 16 : 32)} textAnchor="middle">
-            {state}
-          </text>
-        )}
-        <SideTexts station={station} place={place} layout={layout} nodes={nodes} />
+        <StationBall station={station} r={place.r} base={layout.radius} armAngles={scene.arms.map((arm) => arm.angle)} threshold={threshold} selected={selected} />
+        {telemetry === null ? null : <TelemetryLabel telemetry={telemetry} dx={dx} dy={dy} />}
+        {scene.labels.map((label) => (
+          <Label key={label.key} label={label} dx={dx} dy={dy} />
+        ))}
       </g>
     </a>
   );

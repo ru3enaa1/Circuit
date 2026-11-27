@@ -62,7 +62,6 @@ export const RUN_TEXTS = {
   stopped: serio('detenida en Filtro'),
   failed: serio('falló'),
   branch: serio('queja, fuera de alcance o duda'),
-  stopNote: serio('Detenido en Filtro · instrucción dentro del texto · registrado'),
   latestRuns: serio('Últimas corridas'),
   noRuns: serio('Sin corridas todavía.'),
   inProgress: serio('en curso'),
@@ -73,6 +72,9 @@ export const RUN_TEXTS = {
   unmeasured: serio('sin medida'),
   tools: serio('Herramientas del CRM'),
   stations: serio('Estaciones'),
+  stopLabel: serio('alto por inyección'),
+  stopTitle: serio('Detenido en Filtro'),
+  stopDetail: serio('instrucción dentro del texto · registrado'),
   reads: serio('lee'),
   writes: serio('escribe'),
   loading: serio('Cargando el circuito…'),
@@ -136,6 +138,36 @@ export const NODE_TEXTS = {
   notApplied: serio('no aplicada'),
 } as const satisfies Record<string, CatalogText>;
 
+/**
+ * The short name beside each node's bubble in the orbit, as boceto B1 writes it: what the node is,
+ * never its value. The value is in the node's tooltip and, whole, inside the station's room.
+ */
+export const NODE_LABELS = {
+  text: serio('texto'),
+  delimit: serio('delimitar'),
+  injection: serio('inyección'),
+  personal: serio('datos pers.'),
+  intent: serio('intención'),
+  topic: serio('programa'),
+  urgency: serio('urgencia'),
+  confidence: serio('confianza'),
+  document: serio('documento'),
+  quote: serio('cita'),
+  noSource: serio('sin fuente'),
+  noActions: serio('sin acciones'),
+  log: serio('bitácora'),
+  notApplied: serio('no aplicada'),
+} as const satisfies Record<string, CatalogText>;
+
+/** The short name of each CRM action beside its node (B1: «contacto», «nota», «tarea», «etapa»). */
+export const ACTION_LABELS: Readonly<Record<string, CatalogText>> = {
+  create_contact: serio('contacto'),
+  update_contact: serio('contacto'),
+  add_note: serio('nota'),
+  create_task: serio('tarea'),
+  move_stage: serio('etapa'),
+};
+
 export const INTENTS: Readonly<Record<string, CatalogText>> = {
   request: serio('solicitud'),
   complaint: serio('queja'),
@@ -179,6 +211,8 @@ export const CATALOG: readonly Readonly<Record<string, CatalogText>>[] = [
   ROOM_TEXTS,
   MODEL_NAMES,
   NODE_TEXTS,
+  NODE_LABELS,
+  ACTION_LABELS,
   INTENTS,
   URGENCIES,
   ACTION_NAMES,

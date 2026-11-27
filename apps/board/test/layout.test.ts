@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { CENTER_SCALE, STATION_ANGLES, curvedPath, ellipseArc, layoutFor, radiusFor, ringArc, ringPoint, straightPath } from '../src/layout.ts';
+import { CENTER_SCALE, STATION_ANGLES, layoutFor, radiusFor, ringArc, ringPoint } from '../src/layout.ts';
 import { boardInfo } from './support.ts';
 
 // docs/diseno.md §6 and §9: the orbit is recomposed for each window, never scaled.
@@ -51,6 +51,8 @@ describe('the orbit at each size', () => {
 
     expect(layout.rx).toBeLessThanOrEqual(layout.ry * 2.2 + 1e-9);
     expect(layout.narrow).toBe(false);
+    expect(layout.wide).toBe(true);
+    expect(layoutFor(1536, 864, stations).wide).toBe(false);
   });
 
   it('half a screen is narrow, with a tall ellipse; 1280×720 shows the duration only', () => {
@@ -71,17 +73,6 @@ describe('the orbit at each size', () => {
 
 describe('the paths', () => {
   const layout = layoutFor(1536, 864, stations);
-
-  it('the arc between two stations is clockwise, small or large as the turn asks', () => {
-    expect(ellipseArc(layout, 195, 242)).toMatch(/^M [\d.]+ [\d.]+ A [\d.]+ [\d.]+ 0 0 1 /);
-    expect(ellipseArc(layout, 10, 305)).toMatch(/ 0 1 1 /);
-  });
-
-  it('straight and curved paths start and end at their points', () => {
-    expect(straightPath({ x: 0, y: 0 }, { x: 10, y: 5 })).toBe('M 0 0 L 10 5');
-    expect(curvedPath({ x: 0, y: 0 }, { x: 10, y: 0 }, 4)).toBe('M 0 0 Q 5 -4 10 0');
-    expect(curvedPath({ x: 1, y: 1 }, { x: 1, y: 1 }, 4)).toBe('M 1 1 Q 1 1 1 1');
-  });
 
   it('ring arcs: none for nothing, small and large arcs, and the threshold mark', () => {
     expect(ringArc({ x: 0, y: 0 }, 10, 0)).toBeNull();

@@ -9,7 +9,8 @@ import { actionFacts, exitsOf } from '../room.ts';
 import { actionsOf, routeHash, type Route } from '../route.ts';
 import { ROOM_TEXTS, STATION_NAMES, STATUS_TEXTS, textOf } from '../texts.ts';
 import { Portal } from './Portal.tsx';
-import { StationBall, stationClass, timeShares } from './StationBall.tsx';
+import { armDistance, armRadius, planArms } from '../shape.ts';
+import { StationBall, stationClass } from './StationBall.tsx';
 
 /**
  * Inside a station (docs/diseno.md §10, ADR-0013): the station at the center, large, with its
@@ -32,19 +33,27 @@ const ROOM_SCALE = 2.2;
 const ROOM_BAND_SHARE = 0.3;
 /** The action's bubble is smaller than its station's: it is a part of CRM. */
 const ACTION_SCALE = 0.7;
-/** Room around the bubble for its ring of marks and the confidence arc. */
-const RING_ROOM = 26;
+/** Room around the bubble and its nodes for the confidence arc and the selection ring. */
+const RING_ROOM = 16;
+/** Inside a room the nodes and the texts in the bubble are sized by this share of its radius. */
+const ROOM_BASE_SHARE = 0.6;
+/** The room's way in is on the left (the portal): the nodes reach to the right, toward the facts. */
+const WAY_IN = Math.PI;
 
 function roomRadius(layout: Layout): number {
   return Math.round(Math.min(layout.radius * ROOM_SCALE, (layout.height - layout.top - layout.bottom) * ROOM_BAND_SHARE));
 }
 
-function Ball({ station, r, info, view, action }: { readonly station: StationView; readonly r: number; readonly info: CircuitInfo; readonly view: RunView; readonly action?: number }) {
-  const size = Math.ceil((r + RING_ROOM) * 2);
+function Ball({ station, r, info, action }: { readonly station: StationView; readonly r: number; readonly info: CircuitInfo; readonly action?: number }) {
+  const base = r * ROOM_BASE_SHARE;
+  // An action's room shows the action alone: no nodes of its station around it.
+  const arms = action === undefined ? planArms([WAY_IN], secondaryNodes(station, info).length).arms : [];
+  const reach = arms.length === 0 ? r : armDistance(r, base) + armRadius(base);
+  const size = Math.ceil((reach + RING_ROOM) * 2);
   return (
     <svg className="room__ball" width={size} height={size} viewBox={`${-size / 2} ${-size / 2} ${size} ${size}`} aria-hidden="true">
       <g className={stationClass(station)} data-station={station.id} data-status={station.status} data-action={action}>
-        <StationBall station={station} r={r} threshold={info.lowConfidenceBelow} timeShare={timeShares(view).get(station.id) ?? 0} />
+        <StationBall station={station} r={r} base={base} armAngles={arms} threshold={info.lowConfidenceBelow} />
       </g>
     </svg>
   );
@@ -131,7 +140,7 @@ function StationCore({ station, view, info, layout }: { readonly station: Statio
   return (
     <>
       <div className="room__core">
-        <Ball station={station} r={roomRadius(layout)} info={info} view={view} />
+        <Ball station={station} r={roomRadius(layout)} info={info} />
         <h2 className="room__name">{textOf(STATION_NAMES, station.id)}</h2>
         {tag === null ? null : <p className="room__tag">{tag}</p>}
         <p className={`room__state room__state--${station.status}`}>{state}</p>
@@ -152,7 +161,7 @@ function ActionCore({ station, view, info, layout, index }: { readonly station: 
   return (
     <>
       <div className="room__core">
-        <Ball station={station} r={Math.round(roomRadius(layout) * ACTION_SCALE)} info={info} view={view} action={index} />
+        <Ball station={station} r={Math.round(roomRadius(layout) * ACTION_SCALE)} info={info} action={index} />
         <h2 className="room__name">{facts.name}</h2>
         <p className="room__tag">{`${ROOM_TEXTS.action.text} ${index} ${ROOM_TEXTS.ofTotal.text} ${total}`}</p>
         <p className={facts.decided ? 'room__state' : 'room__state room__state--waiting'} data-action-state>

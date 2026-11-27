@@ -74,7 +74,13 @@ describe('B3 · what the stations say', () => {
 
     expect(markup).toContain('Solicitud N.º 12');
     expect(markup).toContain('[teléfono]');
-    expect(markup).toContain('10 ms · simulador');
+    // The simulator counts no tokens: the telemetry says the time and nothing made up; the header names the model.
+    expect(markup).toContain('<text class="telemetry__primary" x=');
+    expect(markup).toMatch(/class="telemetry__primary"[^>]*>10 ms</);
+    expect(markup).not.toContain('tok ·');
+    expect(markup).toContain('Simulador');
+    // Beside each node its short name (B1); its value, from the event, in its tooltip.
+    for (const label of ['intención', 'programa', 'urgencia', 'confianza', 'cita', 'bitácora']) expect(markup).toContain(`>${label}</text>`);
     expect(markup).toContain('Radiografía de la operación');
     expect(markup).toContain('confianza 0,70');
     expect(markup).toContain('etapa: programa propuesto');
@@ -95,6 +101,19 @@ describe('B3 · what the stations say', () => {
     expect(markup).toContain('detenida · inyección');
     expect(markup).toContain('detenida en Filtro');
     expect(markup).toContain('inyección: ignora-instrucciones');
+    // The stop's card replaces the stop's quiet label (B1), and appears only when Filtro stopped the run.
+    expect(markup).toContain('data-stop-card');
+    expect(markup).toContain('Detenido en Filtro');
+    expect(markup).not.toContain('>alto por inyección<');
+    expect(render(goldenEvents('normal'))).not.toContain('data-stop-card');
+    expect(render(goldenEvents('normal'))).toContain('>alto por inyección<');
+  });
+
+  it('the station the run is on carries the yellow ring, and only that one', () => {
+    const markup = render(goldenEvents('normal').slice(0, 3));
+    const rings = [...markup.matchAll(/data-station="([^"]+)"(?:(?!data-station=).)*?class="station__selected"/gs)].map((match) => match[1]);
+
+    expect(rings).toEqual(['knowledge']);
   });
 
   it('with no run, the circuit is idle and says so in the play tone', () => {

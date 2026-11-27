@@ -1,67 +1,36 @@
+import type { ReactNode } from 'react';
+
 import type { CircuitInfo } from '../api.ts';
-import { curvedPath, ellipseArc, straightPath, type Layout, type Point, type StationPlace } from '../layout.ts';
+import type { Layout, Point } from '../layout.ts';
 import type { EdgeView, RunView, StationView } from '../projection.ts';
+import { currentStation, type Box, type EdgeScene, type Scene } from '../scene.ts';
+import { RAIL_WIDTH, TUBE_SCALE, circlePath, segmentPath } from '../shape.ts';
 import { RUN_TEXTS } from '../texts.ts';
-import { timeShares } from './StationBall.tsx';
+import { StationRings, timeShares } from './StationBall.tsx';
 import { StationNode } from './StationNode.tsx';
 
 /**
- * The circuit (docs/diseno.md §6): the necks in the order of the route, the branch to Persona,
- * the injection stop and the two lines that reach the edge of the screen. Every color and dash
- * comes from the projected view: an edge is lit because an event took it.
+ * The circuit (docs/diseno.md §6), as boceto B1 draws it: tubes of two rails between the
+ * stations, the route in yellow inside the tubes the run took, the branch to Persona, the
+ * injection stop and the two lines that reach the edge of the screen. Every color and dash comes
+ * from the projected view: a tube is lit because an event took it.
  */
 
 export interface OrbitProps {
   readonly view: RunView;
   readonly layout: Layout;
   readonly info: CircuitInfo;
+  readonly scene: Scene;
   /** The station just left (ADR-0013): the circuit comes back out of it, and it takes the focus. */
   readonly returningFrom?: string | null;
+  /** What stands on the tubes, under the stations: the crew (§11). */
+  readonly children?: ReactNode;
 }
 
-/** How far the stop's small bubble sits from Filtro, in radii, and its size. */
-const STOP_DISTANCE = 2.3;
-const STOP_SCALE = 0.42;
-/** Up and to the right: away from the request's text on the top left and from Filtro's nodes. */
-const STOP_DIRECTION_DEGREES = 315;
-const BRANCH_BOW = 0.35;
-/** The branch's label sits this far outside its curve, so the line never crosses the text. */
-const LABEL_CLEARANCE = 16;
+/** The small square of the stop, against its bubble. */
+const STOP_SQUARE = 0.6;
 
-interface EdgeShape {
-  readonly path: string;
-  readonly label: Point | null;
-  readonly stop: Point | null;
-}
-
-const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
-
-function stopPoint(from: StationPlace): Point {
-  const distance = from.r * STOP_DISTANCE;
-  return { x: from.x + distance * Math.cos(toRadians(STOP_DIRECTION_DEGREES)), y: from.y + distance * Math.sin(toRadians(STOP_DIRECTION_DEGREES)) };
-}
-
-function shapeOf(edge: EdgeView, layout: Layout): EdgeShape | null {
-  const from = layout.places[edge.from];
-  if (from === undefined) return null;
-  if (edge.kind === 'stop') {
-    const stop = stopPoint(from);
-    return { path: straightPath(from, stop), label: null, stop };
-  }
-  if (edge.kind === 'exit') return { path: straightPath(from, { x: 0, y: from.y }), label: null, stop: null };
-  const to = layout.places[edge.to];
-  if (to === undefined) return null;
-  if (edge.kind === 'branch') {
-    const bow = Math.hypot(to.x - from.x, to.y - from.y) * BRANCH_BOW;
-    // The curve's middle is halfway from the chord's middle to the control point; the label goes a little further out.
-    const length = Math.hypot(to.x - from.x, to.y - from.y) || 1;
-    const out = (BRANCH_BOW * length) / 2 + LABEL_CLEARANCE;
-    const middle = { x: (from.x + to.x) / 2 + ((to.y - from.y) / length) * out, y: (from.y + to.y) / 2 - ((to.x - from.x) / length) * out };
-    return { path: curvedPath(from, to, bow), label: middle, stop: null };
-  }
-  if (from.angle !== null && to.angle !== null) return { path: ellipseArc(layout, from.angle, to.angle), label: null, stop: null };
-  return { path: straightPath(from, to), label: null, stop: null };
-}
+const round = (value: number) => Math.round(value * 10) / 10;
 
 function edgeClass(edge: EdgeView, stations: readonly StationView[]): string {
   const statusOf = (id: string) => stations.find((station) => station.id === id)?.status;
@@ -71,61 +40,100 @@ function edgeClass(edge: EdgeView, stations: readonly StationView[]): string {
     .join(' ');
 }
 
-function Edge({ edge, view, layout }: { readonly edge: EdgeView; readonly view: RunView; readonly layout: Layout }) {
-  const shape = shapeOf(edge, layout);
-  if (shape === null) return null;
-  const className = edgeClass(edge, view.stations);
+function BoxLabel({ box, text, className }: { readonly box: Box; readonly text: string; readonly className: string }) {
   return (
-    <g className={className} data-edge={`${edge.from}>${edge.to}`} data-taken={edge.taken ? 'true' : 'false'}>
-      <path d={shape.path} />
-      {shape.label === null ? null : (
-        <text className="edge__label" x={shape.label.x} y={shape.label.y} textAnchor="middle">
-          {RUN_TEXTS.branch.text}
-        </text>
-      )}
-      {shape.stop === null ? null : (
-        <g className="edge__stop" transform={`translate(${Math.round(shape.stop.x)} ${Math.round(shape.stop.y)})`}>
-          <circle r={layout.radius * STOP_SCALE} />
-          <rect x={-layout.radius * 0.12} y={-layout.radius * 0.12} width={layout.radius * 0.24} height={layout.radius * 0.24} />
-        </g>
-      )}
+    <g className={className}>
+      <rect x={round(box.x - box.w / 2)} y={round(box.y - box.h / 2)} width={round(box.w)} height={round(box.h)} />
+      <text x={round(box.x)} y={round(box.y)}>
+        {text}
+      </text>
     </g>
   );
 }
 
-/** The way in: from the edge of the screen to the first station, lit once the request arrived. */
-function EntryLine({ view, layout }: { readonly view: RunView; readonly layout: Layout }) {
+function Tube({ from, to, layout, taken, waiting }: { readonly from: Point; readonly to: Point; readonly layout: Layout; readonly taken: boolean; readonly waiting: boolean }) {
+  const width = round(layout.radius * TUBE_SCALE);
+  const d = segmentPath(from, to);
+  return (
+    <>
+      <path className="edge__tube" d={d} strokeWidth={width} />
+      <path className="edge__core" d={d} strokeWidth={round(width - 2 * RAIL_WIDTH)} />
+      {taken ? <path className={waiting ? 'edge__route is-now' : 'edge__route'} d={d} /> : null}
+    </>
+  );
+}
+
+function Edge({ scene, view, layout }: { readonly scene: EdgeScene; readonly view: RunView; readonly layout: Layout }) {
+  const { edge, from, to, stop, label } = scene;
+  const attributes = { className: edgeClass(edge, view.stations), 'data-edge': `${edge.from}>${edge.to}`, 'data-taken': edge.taken ? 'true' : 'false' };
+  if (stop !== null) {
+    const square = stop.r * STOP_SQUARE;
+    const stopped = view.stations.some((station) => station.status === 'stopped');
+    return (
+      <g {...attributes}>
+        <path className="edge__guide" d={segmentPath(from, stop.center)} />
+        <path className="edge__stop" d={circlePath(stop.center, stop.r)} />
+        <rect className="edge__stop-square" x={round(stop.center.x - square / 2)} y={round(stop.center.y - square / 2)} width={round(square)} height={round(square)} />
+        {stopped ? null : <BoxLabel box={stop.label} text={RUN_TEXTS.stopLabel.text} className="edge__label edge__label--stop" />}
+      </g>
+    );
+  }
+  if (edge.kind === 'exit') {
+    return (
+      <g {...attributes}>
+        <path className="edge__line" d={segmentPath(from, to)} />
+      </g>
+    );
+  }
+  return (
+    <g {...attributes}>
+      <Tube from={from} to={to} layout={layout} taken={edge.taken} waiting={edge.toWaiting} />
+      {label === null ? null : <BoxLabel box={label} text={RUN_TEXTS.branch.text} className="edge__label" />}
+    </g>
+  );
+}
+
+/** The way in: from past the edge of the screen to the first station, lit once the request arrived. */
+function EntryLine({ view, scene }: { readonly view: RunView; readonly scene: Scene }) {
   const first = view.stations[0];
-  const place = first === undefined ? undefined : layout.places[first.id];
-  if (first === undefined || place === undefined) return null;
-  const arrived = first.status !== 'pending';
+  if (first === undefined || scene.entry === null) return null;
   return (
-    <g className={`edge edge--entry${arrived ? ' is-taken' : ''}`} data-edge="entry">
-      <path d={straightPath({ x: 0, y: place.y }, place)} />
+    <g className={`edge edge--entry${first.status === 'pending' ? '' : ' is-taken'}`} data-edge="entry">
+      <path className="edge__line" d={segmentPath(scene.entry.to, scene.entry.from)} />
     </g>
   );
 }
 
-export function Orbit({ view, layout, info, returningFrom = null }: OrbitProps) {
+/** A run that ended on its route: the yellow line dims a little, as B1 does with a closed run. */
+function orbitClass(view: RunView, returning: boolean): string {
+  const closed = view.finished && view.stations.every((station) => station.status === 'completed' || station.status === 'skipped');
+  return ['orbit', returning ? 'is-returning' : '', closed ? 'is-closed' : ''].filter((name) => name !== '').join(' ');
+}
+
+export function Orbit({ view, layout, info, scene, returningFrom = null, children }: OrbitProps) {
   const shares = timeShares(view);
   const from = returningFrom === null ? undefined : layout.places[returningFrom];
+  const current = currentStation(view);
   // The way back is the way in, reversed (§10): a CSS animation from the station left, run once on mount.
   const style = from === undefined ? undefined : { transformOrigin: `${Math.round(from.x)}px ${Math.round(from.y)}px` };
   return (
-    <svg className={from === undefined ? 'orbit' : 'orbit is-returning'} style={style} width={layout.width} height={layout.height} viewBox={`0 0 ${layout.width} ${layout.height}`} role="presentation">
-      <g className="orbit__edges">
-        <EntryLine view={view} layout={layout} />
-        {view.edges.map((edge) => (
-          <Edge key={`${edge.from}>${edge.to}`} edge={edge} view={view} layout={layout} />
+    <svg className={orbitClass(view, from !== undefined)} style={style} width={layout.width} height={layout.height} viewBox={`0 0 ${layout.width} ${layout.height}`} role="presentation">
+      <g className="orbit__rings">
+        {scene.stations.map((entry) => (
+          <StationRings key={entry.station.id} station={entry.station} x={entry.place.x} y={entry.place.y} outer={entry.outerRing} inner={entry.innerRing} timeShare={shares.get(entry.station.id) ?? 0} />
         ))}
       </g>
+      <g className="orbit__edges">
+        <EntryLine view={view} scene={scene} />
+        {scene.edges.map((entry) => (
+          <Edge key={`${entry.edge.from}>${entry.edge.to}`} scene={entry} view={view} layout={layout} />
+        ))}
+      </g>
+      {children}
       <g className="orbit__stations">
-        {view.stations.map((station) => {
-          const place = layout.places[station.id];
-          return place === undefined ? null : (
-            <StationNode key={station.id} station={station} place={place} layout={layout} info={info} timeShare={shares.get(station.id) ?? 0} focused={station.id === returningFrom} />
-          );
-        })}
+        {scene.stations.map((entry) => (
+          <StationNode key={entry.station.id} scene={entry} layout={layout} threshold={info.lowConfidenceBelow} selected={entry.station.id === current} focused={entry.station.id === returningFrom} />
+        ))}
       </g>
     </svg>
   );

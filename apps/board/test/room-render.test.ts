@@ -181,14 +181,16 @@ describe('E4 · the way back', () => {
   });
 
   it('coming back, the circuit grows out of the station left; without a station, it does not move', () => {
-    expect(render(normal, { kind: 'circuit', from: 'crm' })).toContain('class="orbit is-returning"');
-    expect(render(normal, { kind: 'circuit', from: null })).toContain('class="orbit"');
+    expect(render(normal, { kind: 'circuit', from: 'crm' })).toMatch(/class="orbit is-returning( is-closed)?"/);
+    expect(render(normal, { kind: 'circuit', from: null })).toMatch(/class="orbit( is-closed)?"/);
   });
 
   it('in a room the dock marks the room’s station as the one selected', () => {
     const markup = render(normal, { kind: 'station', station: 'filter' });
 
-    expect(markup).toMatch(/class="pill pill--completed is-selected" data-dock-station="filter"/);
+    expect(markup).toMatch(/class="pill pill--completed is-selected is-marked" data-dock-station="filter"/);
+    // The run is on Cierre, but only the open room carries the outline and the yellow bar.
+    expect([...markup.matchAll(/is-marked/g)]).toHaveLength(1);
     expect(markup).toContain('class="dock has-selection"');
   });
 });

@@ -80,6 +80,16 @@ export function telemetryOf(event: RunEvent): string {
   return `${duration} · ${formatInteger(tokensIn + tokensOut)} ${RUN_TEXTS.tokens.text} · ${formatCost(costMicroUsd)}`;
 }
 
+/**
+ * «840 tok · US$0,004», or null when there is no measure to show: work of code or of the person,
+ * or a model that does not count (the simulator). Never a made-up number (§7).
+ */
+export function measureOf(event: RunEvent): string | null {
+  const { tokensIn, tokensOut, costMicroUsd } = event;
+  if (UNMEASURED_WORKERS.has(event.model) || tokensIn === null || tokensOut === null || costMicroUsd === null) return null;
+  return `${formatInteger(tokensIn + tokensOut)} ${RUN_TEXTS.tokens.text} · ${formatCost(costMicroUsd)}`;
+}
+
 export interface RunTotals {
   readonly durationMs: number;
   /** How many events a model worked: with none, there is nothing to add up and no line is shown. */

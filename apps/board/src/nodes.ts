@@ -1,7 +1,7 @@
 import type { CircuitInfo, JsonValue, RunEvent } from './api.ts';
 import { formatClock, formatDecimal, formatDueDate, formatInteger, shorten } from './format.ts';
 import type { RunView, StationView } from './projection.ts';
-import { ACTION_NAMES, DECISION_NODES, FAILURE_REASONS, INTENTS, NODE_TEXTS, OUTCOME_TAGS, RUN_TEXTS, STATUS_TEXTS, URGENCIES, textOf } from './texts.ts';
+import { ACTION_LABELS, ACTION_NAMES, DECISION_NODES, FAILURE_REASONS, INTENTS, NODE_LABELS, NODE_TEXTS, OUTCOME_TAGS, RUN_TEXTS, STATUS_TEXTS, URGENCIES, textOf } from './texts.ts';
 
 /**
  * The texts around each station (docs/diseno.md §5 and §7), read only from its event's detail.
@@ -11,6 +11,9 @@ import { ACTION_NAMES, DECISION_NODES, FAILURE_REASONS, INTENTS, NODE_TEXTS, OUT
 
 export interface SecondaryNode {
   readonly key: string;
+  /** What the node is, short, beside its bubble in the orbit (B1): «intención», «cita». */
+  readonly label: string;
+  /** Its value, from the event: the node's tooltip, and whole inside the room. */
   readonly text: string;
   /** Persona's decision taken: drawn filled, the others in outline. */
   readonly filled: boolean;
@@ -24,7 +27,7 @@ type Detail = RunEvent['detail'];
 
 const text = (value: JsonValue | undefined): string | null => (typeof value === 'string' && value.length > 0 ? value : null);
 const count = (value: JsonValue | undefined): number => (typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : 0);
-const node = (key: string, value: string, filled = false): SecondaryNode => ({ key, text: value, filled });
+const node = (key: string, label: string, value: string, filled = false): SecondaryNode => ({ key, label, text: value, filled });
 
 /** In the orbit the texts are cut to fit; inside a room they are whole. */
 export interface NodeOptions {
@@ -50,9 +53,9 @@ export function personalSummary(detail: Detail): string {
 
 function filterNodes(event: RunEvent): SecondaryNode[] {
   if (event.outcome === 'injection') {
-    return [node('delimit', NODE_TEXTS.delimited.text), node('injection', `${NODE_TEXTS.injection.text}: ${text(event.detail['pattern']) ?? '—'}`)];
+    return [node('delimit', NODE_LABELS.delimit.text, NODE_TEXTS.delimited.text), node('injection', NODE_LABELS.injection.text, `${NODE_TEXTS.injection.text}: ${text(event.detail['pattern']) ?? '—'}`)];
   }
-  return [node('delimit', NODE_TEXTS.delimited.text), node('injection', NODE_TEXTS.noInjection.text), node('personal', personalSummary(event.detail))];
+  return [node('delimit', NODE_LABELS.delimit.text, NODE_TEXTS.delimited.text), node('injection', NODE_LABELS.injection.text, NODE_TEXTS.noInjection.text), node('personal', NODE_LABELS.personal.text, personalSummary(event.detail))];
 }
 
 function classificationNodes(event: RunEvent, info: CircuitInfo): SecondaryNode[] {
@@ -62,18 +65,18 @@ function classificationNodes(event: RunEvent, info: CircuitInfo): SecondaryNode[
   const urgency = text(detail['urgency']);
   const confidence = detail['confidence'];
   return [
-    ...(intent === null ? [] : [node('intent', textOf(INTENTS, intent))]),
-    ...(topic === null ? [] : [node('topic', topic)]),
-    ...(urgency === null ? [] : [node('urgency', `${NODE_TEXTS.urgency.text} ${textOf(URGENCIES, urgency)}`)]),
-    ...(typeof confidence === 'number' ? [node('confidence', `${NODE_TEXTS.confidence.text} ${formatDecimal(confidence, 2)}`)] : []),
+    ...(intent === null ? [] : [node('intent', NODE_LABELS.intent.text, textOf(INTENTS, intent))]),
+    ...(topic === null ? [] : [node('topic', NODE_LABELS.topic.text, topic)]),
+    ...(urgency === null ? [] : [node('urgency', NODE_LABELS.urgency.text, `${NODE_TEXTS.urgency.text} ${textOf(URGENCIES, urgency)}`)]),
+    ...(typeof confidence === 'number' ? [node('confidence', NODE_LABELS.confidence.text, `${NODE_TEXTS.confidence.text} ${formatDecimal(confidence, 2)}`)] : []),
   ];
 }
 
 function knowledgeNodes(event: RunEvent, info: CircuitInfo, whole: boolean): SecondaryNode[] {
-  if (event.outcome === 'no_source') return [node('source', NODE_TEXTS.noSource.text)];
+  if (event.outcome === 'no_source') return [node('source', NODE_LABELS.noSource.text, NODE_TEXTS.noSource.text)];
   const title = titleOf(info, text(event.detail['documentId']));
   const quote = text(event.detail['quote']);
-  return [...(title === null ? [] : [node('document', title)]), ...(quote === null ? [] : [node('quote', `«${whole ? quote : shorten(quote, QUOTE_MAX_LENGTH)}»`)])];
+  return [...(title === null ? [] : [node('document', NODE_LABELS.document.text, title)]), ...(quote === null ? [] : [node('quote', NODE_LABELS.quote.text, `«${whole ? quote : shorten(quote, QUOTE_MAX_LENGTH)}»`)])];
 }
 
 /** «nota», «etapa: programa propuesto», «tarea: Agendar la conversación… · 1 dic». */
@@ -93,16 +96,22 @@ export function actionText(action: JsonValue, whole = false): string | null {
   return name;
 }
 
+/** The action's short name beside its node: «nota», «tarea»; an unknown type, as it came. */
+function actionLabel(action: JsonValue): string {
+  const record = typeof action === 'object' && action !== null && !Array.isArray(action) ? (action as { readonly [key: string]: JsonValue }) : {};
+  return textOf(ACTION_LABELS, text(record['type']) ?? '');
+}
+
 function listOf(value: JsonValue | undefined): readonly JsonValue[] {
   return Array.isArray(value) ? value : [];
 }
 
 function crmNodes(event: RunEvent, whole: boolean): SecondaryNode[] {
   const actions = listOf(event.detail['actions']);
-  if (actions.length === 0) return [node('none', NODE_TEXTS.noActions.text)];
+  if (actions.length === 0) return [node('none', NODE_LABELS.noActions.text, NODE_TEXTS.noActions.text)];
   return actions.flatMap((action, index) => {
     const value = actionText(action, whole);
-    return value === null ? [] : [node(`action-${index}`, value)];
+    return value === null ? [] : [node(`action-${index}`, actionLabel(action), value)];
   });
 }
 
@@ -110,16 +119,19 @@ function closeNodes(event: RunEvent): SecondaryNode[] {
   const results = listOf(event.detail['results']).flatMap((entry, index) => {
     if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) return [];
     const record = entry as { readonly [key: string]: JsonValue };
-    const name = textOf(ACTION_NAMES, text(record['type']) ?? '');
-    const result = text(record['result']);
-    const outcome = result === 'applied' ? NODE_TEXTS.applied.text : (text(record['reason']) ?? NODE_TEXTS.notApplied.text);
-    return [node(`result-${index}`, `${name} · ${outcome}`)];
+    const type = text(record['type']) ?? '';
+    const applied = text(record['result']) === 'applied';
+    const outcome = applied ? NODE_TEXTS.applied.text : (text(record['reason']) ?? NODE_TEXTS.notApplied.text);
+    // What was not applied says so beside the node too: it is a result, not a detail.
+    const short = textOf(ACTION_LABELS, type);
+    const label = applied ? short : `${short} · ${NODE_LABELS.notApplied.text}`;
+    return [node(`result-${index}`, label, `${textOf(ACTION_NAMES, type)} · ${outcome}`)];
   });
-  return [...(results.length === 0 ? [node('none', NODE_TEXTS.noActions.text)] : results), node('log', NODE_TEXTS.log.text)];
+  return [...(results.length === 0 ? [node('none', NODE_LABELS.noActions.text, NODE_TEXTS.noActions.text)] : results), node('log', NODE_LABELS.log.text, NODE_TEXTS.log.text)];
 }
 
 function personNodes(station: StationView): SecondaryNode[] {
-  return DECISION_NODES.map(({ outcome, label }) => node(outcome, label.text, station.outcome === outcome));
+  return DECISION_NODES.map(({ outcome, label }) => node(outcome, label.text, label.text, station.outcome === outcome));
 }
 
 /** The nodes of one station: its state's own (Persona's three ways out) and its event's. */
@@ -130,7 +142,7 @@ export function secondaryNodes(station: StationView, info: CircuitInfo, options:
   if (event === null || event.status === 'failed') return [];
   switch (station.id) {
     case 'intake':
-      return count(event.detail['length']) > 0 ? [node('length', `${formatInteger(count(event.detail['length']))} ${NODE_TEXTS.characters.text}`)] : [];
+      return count(event.detail['length']) > 0 ? [node('length', NODE_LABELS.text.text, `${formatInteger(count(event.detail['length']))} ${NODE_TEXTS.characters.text}`)] : [];
     case 'filter':
       return filterNodes(event);
     case 'classification':

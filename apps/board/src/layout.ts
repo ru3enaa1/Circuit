@@ -16,12 +16,28 @@ const MAX_RADIUS = 80;
 export const CENTER_SCALE = 1.3;
 /** Past this, the ellipse stops widening and leaves room for the side panels (§9, F2.3c). */
 const MAX_ELLIPSE_RATIO = 2.2;
+/** Wider than this, the two side panels fill the center of the orbit (§9, ADR-0014 G5). */
+const WIDE_RATIO = 2.05;
 /** Narrower than this (half a screen), the header stacks and the ellipse turns tall (§9). */
 const NARROW_RATIO = 1.05;
 /** On half a screen the ellipse turns tall (§9): its width stays under its height. */
 const NARROW_ELLIPSE_RATIO = 0.95;
 /** Below this R the telemetry shows the duration only (§9, 1280×720). */
 const SHORT_TELEMETRY_BELOW = 45;
+/**
+ * The orbit as boceto B1 places it, in px at the working size: the dock's band at the bottom, the
+ * ellipse a little under the middle, and the room each side keeps for a station's nodes and
+ * texts. The header lives in the empty corners, so no band is kept for it.
+ */
+const DOCK_BAND = 80;
+const ORBIT_DROP = 12;
+const SIDE_ROOM = 168;
+const END_ROOM = 92;
+const NARROW_DROP = 44;
+const NARROW_SIDE_ROOM = 92;
+const NARROW_END_ROOM = 140;
+/** What a room keeps at the top for the header and the breadcrumb (ADR-0013). */
+const ROOM_HEADER = 150;
 
 /** Degrees, 0 to the right and growing downwards, as the screen's y (§6). */
 export const STATION_ANGLES: Readonly<Record<string, number>> = {
@@ -53,11 +69,13 @@ export interface Layout {
   readonly center: Point;
   readonly rx: number;
   readonly ry: number;
-  /** Half a screen: the dock shows numbers only, the texts are shorter. */
+  /** Half a screen: the dock shows icons only, the texts are shorter. */
   readonly narrow: boolean;
+  /** An ultrawide window: two panels of data fill the center (§9). */
+  readonly wide: boolean;
   /** Small bubbles: the telemetry says the duration only. */
   readonly shortTelemetry: boolean;
-  /** Room kept at the top for the request and the clock, and at the bottom for the dock. */
+  /** What a room keeps at the top for its header, and the circuit at the bottom for the dock. */
   readonly top: number;
   readonly bottom: number;
   readonly places: Readonly<Record<string, StationPlace>>;
@@ -83,17 +101,16 @@ function angleOf(id: string, index: number): number {
 
 export function layoutFor(width: number, height: number, stations: readonly CircuitStation[]): Layout {
   const radius = radiusFor(width, height);
-  const scale = radius / BASE_RADIUS;
   const narrow = width / height < NARROW_RATIO;
-  // The header takes two lines and the request's text; the dock, one row of pills.
-  const top = (narrow ? 190 : 150) * Math.min(1, height / WORK_HEIGHT) + radius * 0.4;
-  const bottom = 96 * Math.min(1, height / WORK_HEIGHT);
-  const band = height - top - bottom;
-  const center = { x: width / 2, y: top + band / 2 };
-  // Below each bubble go its name and its state; at the sides, its telemetry and its nodes.
-  const ry = Math.max(radius * 2, band / 2 - radius - 40 * scale);
-  const sideRoom = narrow ? 34 * scale : 200 * scale;
-  const rx = Math.max(radius * 2, Math.min(width / 2 - radius - sideRoom, ry * (narrow ? NARROW_ELLIPSE_RATIO : MAX_ELLIPSE_RATIO)));
+  const wide = width / height > WIDE_RATIO;
+  const fit = Math.min(1, height / WORK_HEIGHT);
+  const top = ROOM_HEADER * fit + radius * 0.4;
+  const bottom = DOCK_BAND;
+  const band = height - bottom;
+  const center = { x: width / 2, y: band / 2 + (narrow ? NARROW_DROP : ORBIT_DROP) };
+  const ry = Math.max(radius * 2, band / 2 - radius - (narrow ? NARROW_END_ROOM : END_ROOM));
+  const widest = width / 2 - radius - (narrow ? NARROW_SIDE_ROOM : SIDE_ROOM);
+  const rx = Math.max(radius * 2, Math.min(widest, ry * (narrow ? NARROW_ELLIPSE_RATIO : MAX_ELLIPSE_RATIO)));
 
   const places: Record<string, StationPlace> = {};
   stations.forEach((station, index) => {
@@ -105,30 +122,10 @@ export function layoutFor(width: number, height: number, stations: readonly Circ
     const point = onEllipse(center, rx, ry, angle);
     places[station.id] = { ...point, r: radius, angle, side: point.x < center.x ? 'left' : 'right' };
   });
-  return { width, height, radius, center, rx, ry, narrow, shortTelemetry: radius < SHORT_TELEMETRY_BELOW, top, bottom, places };
+  return { width, height, radius, center, rx, ry, narrow, wide, shortTelemetry: radius < SHORT_TELEMETRY_BELOW, top, bottom, places };
 }
 
 const round = (value: number) => Math.round(value * 10) / 10;
-
-/** The arc of the ellipse from one angle to the next, clockwise: the necks between stations. */
-export function ellipseArc(layout: Layout, from: number, to: number): string {
-  const start = onEllipse(layout.center, layout.rx, layout.ry, from);
-  const end = onEllipse(layout.center, layout.rx, layout.ry, to);
-  const sweep = (to - from + 360) % 360;
-  return `M ${round(start.x)} ${round(start.y)} A ${round(layout.rx)} ${round(layout.ry)} 0 ${sweep > 180 ? 1 : 0} 1 ${round(end.x)} ${round(end.y)}`;
-}
-
-export function straightPath(from: Point, to: Point): string {
-  return `M ${round(from.x)} ${round(from.y)} L ${round(to.x)} ${round(to.y)}`;
-}
-
-/** A curve that bows away from the straight line, so the branch never covers a neck. */
-export function curvedPath(from: Point, to: Point, bow: number): string {
-  const middle = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
-  const length = Math.hypot(to.x - from.x, to.y - from.y) || 1;
-  const control = { x: middle.x + ((to.y - from.y) / length) * bow, y: middle.y - ((to.x - from.x) / length) * bow };
-  return `M ${round(from.x)} ${round(from.y)} Q ${round(control.x)} ${round(control.y)} ${round(to.x)} ${round(to.y)}`;
-}
 
 /** The arc of a circle from the top, clockwise, over a share of the turn (0 to 1). */
 export function ringArc(center: Point, r: number, share: number): string | null {

@@ -1,7 +1,8 @@
 /*
- * The board's look (docs/diseno.md §4, §5, §14). Flat: no shadows or gradients but the yellow
- * halo of what is active. Every state has a shape and a text as well as its color. The movement
- * is CSS transitions between two projected views (ADR-0011 B2); none of them creates a state.
+ * The board's look (docs/diseno.md §4, §5, §14), with boceto B1's strokes and opacities. Flat: no
+ * shadows or gradients but the yellow halo of what is active. Every state has a shape and a text
+ * as well as its color. The movement is CSS transitions between two projected views (ADR-0011
+ * B2); none of them creates a state.
  */
 
 :root {
@@ -16,6 +17,7 @@
   --sans: 'IBM Plex Sans', system-ui, sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, monospace;
   --ease: 240ms ease;
+  --halo: drop-shadow(0 0 6px rgba(255, 210, 63, 0.7));
   color-scheme: dark;
 }
 
@@ -57,197 +59,222 @@ body,
   display: block;
 }
 
-/* Necks: bone at rest, yellow once an event took them, dashed while the next station waits. */
-.edge path {
+/* The faint rings around each station, and its share of the run's time in yellow (§7). */
+.rings__ring {
   fill: none;
   stroke: var(--bone);
-  stroke-width: 1.5;
-  opacity: 0.55;
-  transition: stroke var(--ease), opacity var(--ease);
-}
-
-.edge.is-taken path {
-  stroke: var(--yellow);
-  stroke-width: 2.5;
-  opacity: 1;
-}
-
-.edge.is-waiting path {
-  stroke-dasharray: 7 6;
-}
-
-.edge.is-off path {
-  stroke: var(--off);
-  stroke-dasharray: 2 5;
-  opacity: 0.8;
-}
-
-.edge--entry path,
-.edge--exit path {
+  stroke-opacity: 0.13;
   stroke-width: 1;
 }
 
-.edge--stop path {
-  stroke-dasharray: 4 4;
-}
-
-.edge--stop.is-taken path {
-  stroke: var(--pink);
-}
-
-.edge__stop circle {
-  fill: var(--bg);
-  stroke: var(--label);
+.rings__time {
+  fill: none;
+  stroke: var(--yellow);
+  stroke-opacity: 0.75;
   stroke-width: 1.5;
-}
-
-.edge__stop rect {
-  fill: var(--label);
-}
-
-.edge--stop.is-taken .edge__stop circle {
-  stroke: var(--pink);
-}
-
-.edge--stop.is-taken .edge__stop rect {
-  fill: var(--pink);
-}
-
-.edge__label {
-  fill: var(--label);
-  font: 10.5px var(--mono);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.edge--branch.is-taken .edge__label {
-  fill: var(--yellow);
-}
-
-/* A station: a bubble with a ring of marks (§5). */
-.station__ball {
-  fill: var(--bg);
-  stroke: var(--bone);
-  stroke-width: 2;
-  transition: fill var(--ease), stroke var(--ease);
-}
-
-.station__ticks {
-  fill: none;
-  stroke: var(--label);
-  stroke-width: 3;
-  stroke-dasharray: 1 6;
-  opacity: 0.6;
-}
-
-.station__time {
-  fill: none;
-  stroke: var(--yellow);
-  stroke-width: 2;
-}
-
-.station__name {
-  fill: var(--bone);
-  font: 600 15px var(--sans);
-}
-
-.station__tag {
-  fill: var(--text-2);
-  font: 10.5px var(--mono);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.station__state {
-  fill: var(--label);
-  font: 500 13px var(--sans);
-}
-
-.station--completed .station__ball {
-  fill: var(--bone);
-}
-
-.station__dot {
-  fill: var(--bg);
-}
-
-.station--waiting .station__ball {
-  fill: var(--yellow);
-  stroke: var(--yellow);
-  filter: drop-shadow(0 0 6px rgba(255, 210, 63, 0.7));
-}
-
-.station--waiting .station__ticks {
-  stroke: var(--yellow);
-  opacity: 1;
-}
-
-.station--waiting .station__state {
-  fill: var(--yellow);
-}
-
-/* Persona waiting: a thick pink ring, hollow, with a pink dot (§5). */
-.station--person.station--waiting .station__ball {
-  fill: var(--bg);
-  stroke: var(--pink);
-  stroke-width: 6;
-  filter: none;
-}
-
-.station--person.station--waiting .station__ticks {
-  stroke: var(--pink);
-}
-
-.station__dot--person {
-  fill: var(--pink);
-}
-
-.station--person.station--waiting .station__state {
-  fill: var(--pink);
-}
-
-.station--skipped .station__ball {
-  stroke: var(--off);
-  stroke-dasharray: 3 5;
-}
-
-.station--skipped .station__name {
-  fill: var(--off);
-  text-decoration: line-through;
-}
-
-.station--skipped .station__state {
-  fill: var(--off);
-}
-
-.station__slash {
-  stroke: var(--off);
-  stroke-width: 1.5;
-}
-
-.station--stopped .station__ball {
-  stroke: var(--pink);
-  stroke-dasharray: 8 5;
-}
-
-.station--failed .station__ball {
-  stroke: var(--pink);
-}
-
-.station__icon {
-  fill: var(--pink);
-}
-
-.station__icon--line {
-  fill: none;
-  stroke: var(--pink);
-  stroke-width: 3;
   stroke-linecap: round;
 }
 
-.station--stopped .station__state,
-.station--failed .station__state {
+/* Tubes of two rails: a bone stroke with a dark core, bright where the run went (B1). */
+.edge__tube {
+  fill: none;
+  stroke: var(--bone);
+  stroke-opacity: 0.3;
+  stroke-linecap: round;
+  transition: stroke-opacity var(--ease);
+}
+
+.edge.is-taken .edge__tube {
+  stroke-opacity: 0.7;
+}
+
+.edge.is-off .edge__tube {
+  stroke: var(--off);
+  stroke-dasharray: 2 6;
+}
+
+.edge__core {
+  fill: none;
+  stroke: var(--bg);
+  stroke-linecap: round;
+}
+
+/* The route: a yellow line inside the tubes the run took; dashed toward the station that waits. */
+.edge__route {
+  fill: none;
+  stroke: var(--yellow);
+  stroke-width: 1.5;
+}
+
+.edge__route.is-now {
+  stroke-dasharray: 6 6;
+}
+
+.orbit.is-closed .edge__route {
+  stroke-opacity: 0.6;
+}
+
+/* The lines to the edge of the screen: where the requests come in and go out. */
+.edge__line {
+  fill: none;
+  stroke: var(--bone);
+  stroke-opacity: 0.4;
+  stroke-width: 1;
+}
+
+/* The injection stop: a dashed guide to a small bubble with the stop's square. */
+.edge__guide {
+  fill: none;
+  stroke: var(--label);
+  stroke-width: 1.2;
+  stroke-dasharray: 5 5;
+}
+
+.edge__stop {
+  fill: var(--bg);
+  stroke: var(--label);
+  stroke-width: 1.2;
+  stroke-dasharray: 5 5;
+}
+
+.edge__stop-square {
+  fill: var(--label);
+}
+
+.edge--stop.is-taken .edge__guide,
+.edge--stop.is-taken .edge__stop {
+  stroke: var(--pink);
+  stroke-width: 2;
+}
+
+.edge--stop.is-taken .edge__stop-square {
   fill: var(--pink);
+}
+
+/* A label on a line: mono 10 px over a patch of background, so the line never crosses it. */
+.edge__label rect {
+  fill: var(--bg);
+}
+
+.edge__label text {
+  fill: var(--label);
+  font: 10px var(--mono);
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.edge--branch.is-taken .edge__label text {
+  fill: var(--yellow);
+}
+
+/* A station (§5): one shape, filled or outlined, with its icon, name and number inside. */
+.station__fill {
+  fill: var(--bone);
+}
+
+.station__dots {
+  fill: var(--bg);
+}
+
+.station__outline {
+  fill: none;
+  stroke: var(--bone);
+  stroke-width: 3;
+}
+
+.station__hollow {
+  fill: var(--bg);
+}
+
+.station--skipped .station__outline {
+  stroke: var(--off);
+  stroke-width: 3.4;
+  stroke-dasharray: 2 5;
+  stroke-linecap: round;
+}
+
+.station--stopped .station__outline,
+.station--failed .station__outline {
+  stroke: var(--pink);
+}
+
+.station--person.station--waiting .station__outline {
+  stroke: var(--pink);
+  stroke-width: 3.4;
+}
+
+.station__wait-ring {
+  fill: none;
+  stroke: var(--pink);
+}
+
+.station__stop-ring {
+  fill: none;
+  stroke: var(--pink);
+  stroke-width: 2.5;
+  stroke-dasharray: 8 6;
+}
+
+.station__strike {
+  stroke: var(--off);
+  stroke-width: 1.5;
+}
+
+/* The station the run is on: a yellow ring with the halo, the only glow of the page (§4). */
+.station__selected {
+  fill: none;
+  stroke: var(--yellow);
+  stroke-width: 1.5;
+  filter: var(--halo);
+}
+
+/* Inside the bubble: dark on a filled one, bone on an outline, grey when left behind, pink on alert. */
+.station__inside {
+  color: var(--bone);
+}
+
+.station--completed .station__inside,
+.station--waiting .station__inside {
+  color: var(--bg);
+}
+
+.station--person.station--waiting .station__inside,
+.station--stopped .station__inside,
+.station--failed .station__inside {
+  color: var(--pink);
+}
+
+.station--skipped .station__inside {
+  color: var(--off);
+}
+
+.station__icon {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.station__name {
+  fill: currentColor;
+  font-family: var(--sans);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.station--skipped .station__name {
+  text-decoration: line-through;
+}
+
+.station__number {
+  fill: currentColor;
+  font-family: var(--mono);
+  opacity: 0.6;
+  text-anchor: middle;
+  dominant-baseline: central;
 }
 
 /* A station is a link into its room (§14, ADR-0013): the focus is a yellow ring of 1.5 px. */
@@ -256,63 +283,85 @@ body,
   outline: none;
 }
 
-.station-link:hover .station__ticks {
-  opacity: 1;
-}
-
-.station-link:focus-visible .station__ticks {
+.station-link:focus-visible .station__outline,
+.station-link:focus-visible .station__fill {
   stroke: var(--yellow);
   stroke-width: 1.5;
-  stroke-dasharray: none;
-  opacity: 1;
 }
 
-/* Instruments and nodes: data only, never larger than the circuit (principle 1). */
-.telemetry {
+/* Each node's short name, and the telemetry at the end of its guide line (§7). */
+.node-label {
   fill: var(--text-2);
-  font: 10.5px var(--mono);
+  font: 10px var(--mono);
+  text-anchor: middle;
+  dominant-baseline: central;
 }
 
-.node text {
-  fill: var(--text-2);
-  font: 13px var(--sans);
-}
-
-.node__dot {
-  fill: var(--bg);
-  stroke: var(--label);
-  stroke-width: 1.2;
-}
-
-.node.is-filled .node__dot {
+.node-label.is-filled {
   fill: var(--bone);
+  font-weight: 500;
+}
+
+.node-label.is-muted {
+  fill: var(--off);
+}
+
+.telemetry__lead {
+  fill: none;
   stroke: var(--bone);
+  stroke-opacity: 0.5;
+  stroke-width: 0.8;
 }
 
-.node.is-filled text {
+.telemetry__back {
+  fill: var(--bg);
+}
+
+.telemetry text {
+  font: 10.5px var(--mono);
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.telemetry__primary {
   fill: var(--bone);
 }
 
-.station--waiting .node__dot {
-  stroke: var(--pink);
+.telemetry__secondary {
+  fill: var(--label);
+}
+
+.station--waiting .telemetry__primary {
+  fill: var(--yellow);
+}
+
+.station--person.station--waiting .telemetry__primary,
+.station--stopped .telemetry__primary,
+.station--failed .telemetry__primary {
+  fill: var(--pink);
+}
+
+.station--skipped .telemetry__primary {
+  fill: var(--off);
 }
 
 .confidence__track {
   fill: none;
-  stroke: var(--off);
-  stroke-width: 1;
-  opacity: 0.6;
+  stroke: var(--bone);
+  stroke-opacity: 0.2;
+  stroke-width: 3;
 }
 
 .confidence__value {
   fill: none;
   stroke: var(--bone);
-  stroke-width: 2.5;
+  stroke-width: 3;
+  stroke-linecap: round;
 }
 
 .confidence__threshold {
-  stroke: var(--pink);
-  stroke-width: 2;
+  stroke: var(--bone);
+  stroke-width: 3;
 }
 
 /* Reduced motion (§14, ADR-0013 E6): clean cuts, no zoom and no fade. */

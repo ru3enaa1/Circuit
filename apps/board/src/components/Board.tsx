@@ -2,9 +2,10 @@ import type { CircuitInfo, CrmTool, RunEvent, RunSummary } from '../api.ts';
 import { layoutFor } from '../layout.ts';
 import { idleView, projectRun } from '../projection.ts';
 import { CIRCUIT_ROUTE, resolveRoute, routeHash, type Route } from '../route.ts';
+import { sceneOf } from '../scene.ts';
 import { RUN_TEXTS } from '../texts.ts';
 import { Orbit } from './Orbit.tsx';
-import { ClockPanel, Dock, RequestPanel, ToolList, BrandLine, type FeedStatus } from './Panels.tsx';
+import { BrandLine, ClockPanel, Dock, RequestPanel, StopCard, ToolList, runState, type FeedStatus } from './Panels.tsx';
 import { Room, RoomHeader } from './Room.tsx';
 
 /**
@@ -42,13 +43,16 @@ export function Board(props: BoardProps) {
   const layout = layoutFor(props.width, props.height, info.stations);
   // The address is the user's input: only a view the events brought can open (ADR-0013 E1).
   const route = resolveRoute(props.route ?? CIRCUIT_ROUTE, view);
+  const scene = sceneOf(view, layout, info);
+  const state = runState(props.status, props.runId, view, props.events);
   const className = ['board', layout.narrow ? 'is-narrow' : '', route.kind === 'circuit' ? '' : 'is-room'].filter((name) => name !== '').join(' ');
   return (
     <main className={className} data-finished={view.finished ? 'true' : 'false'} data-route={route.kind}>
       {route.kind === 'circuit' ? (
         <>
-          <Orbit view={view} layout={layout} info={info} returningFrom={route.from} />
-          <RequestPanel info={info} status={props.status} runs={props.runs} runId={props.runId} view={view} events={props.events} onSelectRun={props.onSelectRun} />
+          <Orbit view={view} layout={layout} info={info} scene={scene} returningFrom={route.from} />
+          <StopCard view={view} scene={scene} layout={layout} events={props.events} />
+          <RequestPanel info={info} runs={props.runs} runId={props.runId} events={props.events} onSelectRun={props.onSelectRun} />
         </>
       ) : (
         <>
@@ -57,7 +61,7 @@ export function Board(props: BoardProps) {
           <RoomHeader brand={<BrandLine info={info} />} view={view} route={route} />
         </>
       )}
-      <ClockPanel view={view} events={props.events} runs={props.runs} info={info} />
+      <ClockPanel state={state} view={view} events={props.events} runs={props.runs} info={info} />
       <Dock view={view} narrow={layout.narrow} selected={route.kind === 'circuit' ? null : route.station} />
       {layout.narrow || route.kind !== 'circuit' ? null : <ToolList tools={props.tools} />}
     </main>

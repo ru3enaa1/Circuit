@@ -1,33 +1,38 @@
 /*
- * What surrounds the circuit (docs/diseno.md §6, §9): the request, the clock, the dock and the
- * CRM's tools. The variables come from styles.css, imported first.
+ * What surrounds the circuit (docs/diseno.md §6, §9), as boceto B1 sets it: the request on the
+ * top left, the state and the clock on the top right, the dock at the bottom and the CRM's
+ * tools. The variables come from styles.css, imported first.
  */
 
 /* The request, on the top left (§6). */
 .request {
   position: absolute;
-  top: 28px;
-  left: 36px;
-  max-width: 60ch;
+  top: 22px;
+  left: 28px;
+  width: clamp(170px, 24vw, 380px);
+}
+
+.request.is-room {
+  width: auto;
 }
 
 .request__brand {
   display: flex;
   align-items: center;
-  margin: 0 0 6px;
+  margin: 0;
   color: var(--label);
-  font: 500 13px var(--sans);
+  font: 11px var(--mono);
+  white-space: nowrap;
 }
 
 /* The logo beside the name (§12): the mark carries its own colors, so only its spacing lives here. */
 .request__brand .logo {
   flex: none;
-  margin-right: 10px;
+  margin-right: 8px;
 }
 
 .brand__name {
-  color: var(--bone);
-  font: 600 15px var(--sans);
+  color: var(--text-2);
 }
 
 .brand__detail {
@@ -44,9 +49,10 @@
 }
 
 .request__title {
-  display: inline;
-  margin: 0;
-  font: 600 clamp(26px, 3.2vw, 44px) / 1.1 var(--sans);
+  display: inline-block;
+  margin: 10px 0 0;
+  font: 600 clamp(22px, 2.2vw, 44px) / 1.02 var(--sans);
+  letter-spacing: -0.03em;
 }
 
 .runs__list {
@@ -67,6 +73,7 @@
   color: var(--text-2);
   font: 13px var(--mono);
   text-align: left;
+  white-space: nowrap;
   background: none;
   border: 0;
   border-radius: 6px;
@@ -87,28 +94,24 @@
   font-size: 13px;
 }
 
-.request__state {
-  margin: 6px 0 0;
-  color: var(--yellow);
-  font: 500 15px var(--sans);
-}
-
 .request__text {
   display: -webkit-box;
-  margin: 10px 0 0;
+  margin: 8px 0 0;
   overflow: hidden;
-  color: var(--text-2);
-  font: 13px / 1.5 var(--sans);
+  color: var(--bone);
+  font: 13px / 1.4 var(--sans);
+  text-wrap: pretty;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
 }
 
-/* The run's clock, on the top right (§6, §7). */
+/* The state and the run's clock, on the top right (§6, §7). */
 .clock {
   position: absolute;
-  top: 28px;
-  right: 36px;
+  top: 22px;
+  right: 28px;
+  font-family: var(--mono);
   text-align: right;
 }
 
@@ -116,32 +119,70 @@
   margin: 0;
 }
 
-.clock__time {
-  font: 500 26px var(--mono);
+.clock__state {
+  font-size: 11px;
+  white-space: nowrap;
 }
 
-.clock__label,
-.clock__spent,
-.clock__runs {
-  margin-top: 4px;
+.clock__state--running {
+  color: var(--yellow);
+}
+
+.clock__state--alert {
+  color: var(--pink);
+}
+
+.clock__state--quiet {
   color: var(--label);
-  font: 13px var(--mono);
 }
 
-/* The dock, at the bottom center (§6). */
+.clock__time {
+  margin-top: 10px !important;
+  font: 500 clamp(22px, 2.2vw, 44px) / 1.02 var(--mono);
+  letter-spacing: -0.04em;
+}
+
+.clock__unit {
+  color: var(--label);
+  font-size: 0.45em;
+  letter-spacing: 0;
+}
+
+.clock__since,
+.clock__spent {
+  margin-top: 6px !important;
+  font-size: 11px;
+}
+
+.clock__since {
+  color: var(--pink);
+}
+
+.clock__runs {
+  display: inline-block;
+  margin-top: 8px !important;
+  padding: 4px 10px;
+  font-size: 11px;
+  white-space: nowrap;
+  border: 1px solid rgba(243, 241, 236, 0.3);
+  border-radius: 20px;
+}
+
+/* The dock, at the bottom center (§6): one pill per station, its icon and its name. */
 .dock {
   position: absolute;
-  bottom: 20px;
+  bottom: 14px;
   left: 50%;
   transform: translateX(-50%);
-  padding: 8px;
+  padding: 14px 10px 8px;
   background: var(--dock);
-  border-radius: 999px;
+  border-radius: 36px;
 }
 
 .dock ol {
   display: flex;
-  gap: 6px;
+  gap: 4px;
+  align-items: center;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -150,20 +191,29 @@
 .pill {
   position: relative;
   display: flex;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
-  padding: 8px 14px;
+  justify-content: center;
+  width: 118px;
+  height: 44px;
   color: var(--text-2);
-  font: 500 13px var(--sans);
+  font: 500 12px var(--sans);
   white-space: nowrap;
   text-decoration: none;
-  border-radius: 999px;
+  border: 1px solid transparent;
+  border-radius: 22px;
   outline: none;
-  transition: color var(--ease), background var(--ease);
+  transition: color var(--ease), background var(--ease), border-color var(--ease);
+}
+
+@media (max-width: 1400px) {
+  .pill {
+    width: 104px;
+  }
 }
 
 .pill:hover {
-  color: var(--bone);
+  border-color: var(--bone);
 }
 
 .pill:focus-visible {
@@ -171,22 +221,20 @@
   outline-offset: 2px;
 }
 
-.pill__number {
-  display: inline-grid;
-  width: 20px;
-  height: 20px;
-  place-items: center;
-  font: 500 10.5px var(--mono);
-  border: 1px solid currentColor;
-  border-radius: 50%;
-}
-
-.pill--completed {
-  color: var(--bone);
+.pill__icon {
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .pill--skipped {
   color: var(--off);
+}
+
+.pill--skipped .pill__name {
   text-decoration: line-through;
 }
 
@@ -195,43 +243,80 @@
   color: var(--pink);
 }
 
-.pill.is-current {
-  color: var(--bg);
-  background: var(--yellow);
+/* The marked pill: the open room, else the run's station. An outline, and the yellow bar above. */
+.pill.is-marked {
+  color: var(--bone);
+  background: rgba(243, 241, 236, 0.08);
+  border-color: var(--bone);
 }
 
-/* In a room, the bubble goes over the station whose room is open (ADR-0013). */
-.pill.is-selected {
-  outline: 1.5px solid var(--yellow);
-}
-
-/* Yellow text only off the yellow pill of the run's current station, or it would not read. */
-.pill.is-selected:not(.is-current) {
-  color: var(--yellow);
-}
-
-.dock.has-selection .pill.is-current:not(.is-selected)::before {
-  display: none;
-}
-
-.pill.is-current::before,
-.pill.is-selected::before {
+.pill.is-marked::before {
   position: absolute;
-  top: -12px;
+  top: -11px;
   left: 50%;
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 6px;
   content: '';
   background: var(--yellow);
-  border-radius: 50%;
+  border-radius: 3px;
   transform: translateX(-50%);
+}
+
+/* The stop's card, beside the stop's small bubble (B1). */
+.stop-card {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 16px;
+  background: var(--bg);
+  border: 1.5px dashed var(--pink);
+  border-radius: 18px;
+}
+
+.stop-card p {
+  margin: 0;
+}
+
+.stop-card__title {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--pink);
+  font: 600 14px var(--sans);
+}
+
+.stop-card__square {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  background: var(--pink);
+}
+
+.stop-card__detail {
+  color: var(--bone);
+  font: 10.5px var(--mono);
+}
+
+.stop-card__text {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--text-2);
+  font: 12.5px / 1.4 var(--sans);
+  text-decoration: line-through;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
 }
 
 /* The CRM's tools, small, on the bottom left. */
 .tools {
   position: absolute;
-  bottom: 24px;
-  left: 36px;
+  bottom: 18px;
+  left: 22px;
+  /* Cierre's line to the edge passes behind the list, never through its words. */
+  padding: 6px;
+  background: var(--bg);
   color: var(--label);
   font: 10.5px var(--mono);
 }
@@ -252,11 +337,11 @@
   color: var(--text-2);
 }
 
-/* Half a screen: the header and the clock share a band of two lines on top (§9). */
+/* Half a screen: the header and the clock share a band on top; the dock shows icons only (§9). */
 .board.is-narrow .request {
   top: 16px;
   left: 20px;
-  max-width: calc(100vw - 180px);
+  width: calc(100vw - 200px);
 }
 
 .board.is-narrow .clock {
@@ -264,10 +349,6 @@
   right: 20px;
 }
 
-.board.is-narrow .clock__time {
-  font-size: 18px;
-}
-
 .board.is-narrow .pill {
-  padding: 6px;
+  width: 44px;
 }
